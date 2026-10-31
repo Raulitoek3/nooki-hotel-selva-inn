@@ -184,7 +184,7 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 
 1. **Preparación (Raúl):** correo del hotel → cuenta de Supabase con ese correo → organización del hotel (plan Free) → invitar a oficinavirtual@nooki.pe como **Developer** → conectar el conector de Supabase de Claude a esa cuenta.
 2. **Proyecto Supabase** del hotel en São Paulo. Migraciones SQL versionadas en `supabase/migraciones/` (aplicadas con el conector). Tablas propuestas: `config`, `tipos_habitacion`, `habitaciones`, `temporadas`, `clientes`, `reservas`, `reserva_huespedes`, `consumos`, `pagos`, `comprobantes` (con `nooki_id`, `numero`, `estado`, `enlace_pdf`), `productos`, `movimientos_stock`, `mesas`, `pedidos`, `caja_turnos`, `caja_movimientos`, `limpieza`, `cierres`, `pedidos_whatsapp`, `auditoria` (solo insertar), `personal`. RLS en todas: solo usuarios del hotel; el dueño con rol de solo lectura donde corresponda.
-3. **Edge Functions:** `facturar` (emite boleta/factura/NC en Nooki con Idempotency-Key y guarda el resultado), `nooki-aviso` (webhook con firma), `nooki-estado` (consulta un comprobante), `verificar-clave` (clave de administrador con hash).
+3. **Edge Functions:** `facturar` (emite boleta/factura/NC en Nooki con Idempotency-Key y guarda el resultado), `nooki-aviso` (webhook con firma), `nooki-estado` (consulta un comprobante). La clave de administrador ya quedó como funciones RPC en la base (ver sección 9).
 4. **Pantallas:** pasar el prototipo a leer y guardar en Supabase manteniendo el mismo diseño. Separar en archivos (HTML/CSS/JS sin compilación, como el portal de Nooki) o un proyecto Vite si crece. Cola local para cuando no hay internet.
 5. **Nooki (en su chat):** dar de alta la empresa del hotel en beta, series B001/F001/BC01/FC01, llaves de API; Raúl sube certificado y SOL en el portal. Prueba en beta con todos los casos; luego producción.
 6. **Publicar** en Cloudflare Pages (proyecto `nooki-hotel-selva-inn`, rama `main`) con dominio `hotel.nooki.pe`.
@@ -192,8 +192,32 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 8. Vista del dueño en celular; módulo de tarjetas ZKTeco con el puente; WhatsApp.
 9. Prueba en paralelo con el sistema actual del hotel (Smart Hotel, de Smart System Perú), capacitación y arranque.
 
-## 9. Estado al 31/10/2026
+## 9. Base de datos (Supabase del hotel)
+
+- Organización: `hotelselvainn@gmail.com's Org` (id `nlrlhpgzelfehcycjdla`, plan Free).
+- Proyecto: **`nooki-hotel-selva-inn`**, ref **`cuwfogndinvrjszsbcpc`**, región `sa-east-1`. URL: `https://cuwfogndinvrjszsbcpc.supabase.co`.
+- Migraciones en `supabase/migraciones/` (aplicadas con el conector, en orden). **Toda migración nueva va como archivo nuevo numerado (0006, 0007…); nunca editar una ya aplicada.**
+  - `0001_base`: extensiones (`pgcrypto`, `btree_gist`), `usuarios`, funciones de rol, clave de administrador, `auditoria`.
+  - `0002_ajustes`: `config` (una fila), `series`, `tipos_habitacion`, `habitaciones`, `temporadas`, `origenes`, `formas_pago`, `motivos_viaje`, `motivos_caja`, `personal`, `mesas`, `impresoras`.
+  - `0003_operacion`: `clientes`, `productos`, `movimientos_stock`, `reservas`, `reserva_huespedes`, `pedidos`, `pedido_items`, `consumos`, `caja_turnos`, `comprobantes`, `pagos`, `caja_movimientos`, `limpieza`, `cierres`, `pedidos_whatsapp`, `avisos_nooki`.
+  - `0004_seguridad`: RLS, permisos y auditoría automática.
+  - `0005_datos_iniciales`: config, series B001/F001/BC01/FC01/NV01, 7 tipos y 35 habitaciones, orígenes, formas de pago, motivos de viaje, 22 mesas, 4 impresoras (sin IP). **Sin** productos, personal ni temporadas: se cargan en Ajustes.
+
+### Reglas de la base (decididas)
+- **Usuarios** (`usuarios`, ligado a `auth.users`): rol `recepcion` (la PC; lee y escribe) o `dueno` (solo lectura). Sin fila en `usuarios` = no ve nada. Sin sesión (`anon`) = no ve nada. Las cuentas se crean en Supabase → Authentication y luego se registran en `usuarios` desde el servidor (Claude con el conector).
+- **Ajustes** (config, series, tipos, habitaciones, temporadas, orígenes, formas de pago, motivos, personal, mesas, impresoras): escribir pide `recepcion` **y** clave abierta.
+- **Clave de administrador**: hecha como funciones RPC en la base (no Edge Function): `hay_clave()`, `cambiar_clave(actual, nueva)` (la primera vez solo la nueva, mínimo 4 caracteres), `verificar_clave(clave)` → `{ok, hasta}` o `{ok:false, motivo: incorrecta|espera|sin_clave|sin_permiso}`, `renovar_clave()`, `bloquear_clave()`. Hash bcrypt en `clave_admin` (sin acceso desde el navegador). 10 minutos; 5 fallos = 1 minuto de espera. La sesión abierta vive en `sesiones_admin`.
+- **Reservas**: no se pueden cruzar en la misma habitación (restricción `reservas_sin_cruce`, salvo anuladas/no_show). Cambiar `tarifa` o pasar a `anulada` pide clave (disparador). No se borran.
+- **Comprobantes** y **avisos_nooki**: el navegador solo lee; los escribe el servidor (Edge Functions con `service_role`).
+- **Auditoría**: disparador `auditar()` en las tablas importantes (en cambios guarda solo los campos que cambiaron, y si la clave estaba abierta). El navegador puede agregar eventos propios (`tipo` cambio/alerta, sin `tabla`). No se edita ni se borra (disparador que lo impide).
+- **Stock**: se cambia solo con `movimientos_stock` (disparador que suma/resta y no deja quedar en negativo).
+- Una sola caja abierta a la vez; una limpieza abierta por habitación; un pedido abierto por mesa.
+- Pruebas de las reglas: se corren en un bloque `do $$ … raise exception $$` para que todo se deshaga (la auditoría no se puede borrar, así que nunca probar con datos que queden). Al 31/10 pasaron las 19.
+
+## 10. Estado al 31/10/2026
 
 - Prototipo v11 terminado (162 pruebas pasando): facturación simulada con Nooki, sin usuarios, clave de administrador, auditoría, reportes con filtros y Excel, gestión de habitaciones y tipos, títulos del menú en `#242833`.
-- Pendiente inmediato: paso 1 del plan (cuenta de Supabase del hotel) y crear el proyecto.
+- Repositorio `Raulitoek3/nooki-hotel-selva-inn` (privado) creado.
+- Paso 1 y paso 2 del plan hechos: proyecto Supabase del hotel creado y base de datos lista (32 tablas, RLS en todas, pruebas de reglas pasando).
+- Siguiente: Raúl crea las cuentas (recepción y dueño) en Supabase → Authentication; Claude las registra en `usuarios`. Luego paso 3 (Edge Functions `facturar`, `nooki-aviso`, `nooki-estado`) y paso 4 (pasar las pantallas a Supabase).
 - Datos del hotel por confirmar: razón social, RUC (no por chat), régimen de IGV, política de adelantos, dominio final (`hotel.nooki.pe` acordado).
