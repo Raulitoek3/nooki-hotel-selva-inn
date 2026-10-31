@@ -10,16 +10,32 @@ const OUT = process.env.NOOKI_OUT || path.join(__dirname, '..', 'capturas', 'app
 fs.mkdirSync(OUT, { recursive: true });
 
 // ---------- servidor local de la carpeta app ----------
-// Usa las mismas cabeceras de seguridad que Cloudflare Pages (app/_headers)
-const CABECERAS = {};
+// Aplica app/_headers como Cloudflare: reglas por ruta (con * al final),
+// "! Nombre" quita una cabecera puesta por una regla anterior.
+const REGLAS = [];
 fs.readFileSync(path.join(RAIZ, '_headers'), 'utf8').split('\n').forEach((l) => {
-  const m = l.match(/^\s+([A-Za-z-]+):\s*(.+)$/); if (m) CABECERAS[m[1]] = m[2];
+  if (/^\s*#/.test(l) || !l.trim()) return;
+  if (!/^\s/.test(l)) { REGLAS.push({ patron: l.trim(), poner: [], quitar: [] }); return; }
+  const r = REGLAS[REGLAS.length - 1];
+  const q = l.match(/^\s+!\s*([A-Za-z-]+)\s*$/); if (q) { r.quitar.push(q[1].toLowerCase()); return; }
+  const m = l.match(/^\s+([A-Za-z-]+):\s*(.+)$/); if (m) r.poner.push([m[1], m[2]]);
 });
+function cabecerasPara(ruta) {
+  const h = {};
+  REGLAS.forEach((r) => {
+    const ok = r.patron.endsWith('*') ? ruta.startsWith(r.patron.slice(0, -1)) : ruta === r.patron;
+    if (!ok) return;
+    r.quitar.forEach((n) => Object.keys(h).forEach((k) => { if (k.toLowerCase() === n) delete h[k]; }));
+    r.poner.forEach(([k, v]) => { h[k] = v; });
+  });
+  return h;
+}
 const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 const srv = http.createServer((req, res) => {
-  const p = path.join(RAIZ, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html'));
-  if (!p.startsWith(RAIZ) || !fs.existsSync(p)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, Object.assign({ 'Content-Type': TIPOS[path.extname(p)] || 'application/octet-stream' }, CABECERAS));
+  const ruta = decodeURIComponent(req.url.split('?')[0]);
+  let p = path.join(RAIZ, ruta.endsWith('/') ? ruta + 'index.html' : ruta);
+  if (!p.startsWith(RAIZ) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404, cabecerasPara(ruta)); return res.end(); }
+  res.writeHead(200, Object.assign({ 'Content-Type': TIPOS[path.extname(p)] || 'application/octet-stream' }, cabecerasPara(ruta)));
   fs.createReadStream(p).pipe(res);
 });
 
@@ -32,11 +48,13 @@ function estadoNuevo() {
     cuentas: {   // correo → { id, clave }
       'oficinavirtual@nooki.pe': { id: 'u-admin', clave: 'Prueba-Admin-1' },
       'recepcion@ejemplo.test': { id: 'u-rec', clave: 'Prueba-Rec-1' },
-      'sinacceso@ejemplo.test': { id: 'u-sin', clave: 'Prueba-Sin-1' }
+      'sinacceso@ejemplo.test': { id: 'u-sin', clave: 'Prueba-Sin-1' },
+      'dueno.activo@ejemplo.test': { id: 'u-due', clave: 'Prueba-Due-1' }
     },
     usuarios: [
       { id: 'u-admin', nombre: 'Nooki (administrador)', correo: 'oficinavirtual@nooki.pe', rol: 'admin', activo: true, creado_en: '2026-10-31T19:00:00Z', ultimo_ingreso: '2026-10-31T19:30:00Z' },
-      { id: 'u-rec', nombre: 'Recepción de prueba', correo: 'recepcion@ejemplo.test', rol: 'recepcion', activo: true, creado_en: '2026-10-31T19:05:00Z', ultimo_ingreso: null }
+      { id: 'u-rec', nombre: 'Recepción de prueba', correo: 'recepcion@ejemplo.test', rol: 'recepcion', activo: true, creado_en: '2026-10-31T19:05:00Z', ultimo_ingreso: null },
+      { id: 'u-due', nombre: 'Dueño de prueba', correo: 'dueno.activo@ejemplo.test', rol: 'dueno', activo: true, creado_en: '2026-10-31T19:06:00Z', ultimo_ingreso: null }
     ],
     llamadas: []
   };
@@ -156,7 +174,7 @@ async function entrar(page, correo, clave) {
     await entrar(page, 'oficinavirtual@nooki.pe', 'Prueba-Admin-1');
     await page.waitForSelector('.tabla');
     prueba('admin entra directo a Usuarios', page.url().endsWith('#usuarios'));
-    prueba('lista con 2 usuarios', (await page.$$('.tabla tbody tr')).length === 2);
+    prueba('lista con 3 usuarios', (await page.$$('.tabla tbody tr')).length === 3);
     prueba('menú muestra Usuarios', (await page.textContent('#nav')).includes('Usuarios'));
     prueba('sin scroll de lado (usuarios)', await sinScrollLateral(page));
     await page.screenshot({ path: path.join(OUT, nombreVista + '-2-usuarios.png'), fullPage: true });
@@ -176,7 +194,7 @@ async function entrar(page, correo, clave) {
     await page.fill('#fClave', 'Prueba-Dueno-1');
     await page.click('#mOk');
     await page.waitForSelector('#velo', { state: 'hidden' });
-    await page.waitForFunction(() => document.querySelectorAll('.tabla tbody tr').length === 3);
+    await page.waitForFunction(() => document.querySelectorAll('.tabla tbody tr').length === 4);
     prueba('usuario creado aparece en la lista', (await page.textContent('#lista')).includes('dueno@ejemplo.test'));
     prueba('aviso de creado', (await page.textContent('#aviso')).includes('creado'));
 
@@ -205,6 +223,25 @@ async function entrar(page, correo, clave) {
     await page.screenshot({ path: path.join(OUT, nombreVista + '-4-editar.png') });
     await page.click('#mCancelar');
 
+    // Inicio del admin: mapa de todos los módulos
+    await page.click('#nav a[href="#inicio"]');
+    await page.waitForSelector('.modulos');
+    prueba('admin ve los 19 módulos', (await page.$$('.modulo')).length === 19);
+    prueba('Usuarios figura como Conectado', (await page.textContent('.modulo[href="#usuarios"]')).includes('Conectado'));
+    prueba('Panel abre la vista previa en otra pestaña',
+      (await page.getAttribute('.modulo[href="/vista-previa/#panel"]', 'target')) === '_blank');
+    prueba('sin scroll de lado (módulos)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-6-modulos-admin.png'), fullPage: true });
+
+    // Clic en un módulo: abre la vista previa con esa pantalla
+    const [pv] = await Promise.all([ctx.waitForEvent('page'), page.click('.modulo[href="/vista-previa/#reportes"]')]);
+    pv.on('pageerror', (e) => errores.push(nombreVista + ' vista previa: ' + e.message));
+    await pv.waitForSelector('#view h1');
+    prueba('el enlace abre Reportes en la vista previa', (await pv.textContent('#view h1')).includes('Reportes'));
+    await pv.close();
+    await page.click('#nav a[href="#usuarios"]');
+    await page.waitForSelector('.tabla');
+
     // Contraseña nueva para recepción
     await page.click('tr:has-text("recepcion@ejemplo.test") button[data-act="clave"]');
     await page.fill('#fClave', 'Nueva-Rec-22');
@@ -218,6 +255,7 @@ async function entrar(page, correo, clave) {
     prueba('salir vuelve al ingreso', true);
     await entrar(page, 'recepcion@ejemplo.test', 'Nueva-Rec-22');
     await page.waitForSelector('.bienvenida');
+    prueba('recepción ve 18 módulos (sin Usuarios)', (await page.$$('.modulo')).length === 18);
     prueba('recepción no ve Usuarios en el menú', !(await page.textContent('#nav')).includes('Usuarios'));
     await page.evaluate(() => { location.hash = '#usuarios'; });
     await page.waitForTimeout(150);
@@ -231,6 +269,35 @@ async function entrar(page, correo, clave) {
     await entrar(page, 'dueno@ejemplo.test', 'Prueba-Dueno-1');
     await page.waitForFunction(() => document.querySelector('#iError').textContent.length > 0);
     prueba('usuario desactivado no entra', await page.isVisible('#vIngreso'));
+
+    // Dueño: solo lo que le corresponde
+    await entrar(page, 'dueno.activo@ejemplo.test', 'Prueba-Due-1');
+    await page.waitForSelector('.modulos');
+    const deDueno = await page.$$eval('.modulo b', (bs) => bs.map((b) => b.textContent));
+    prueba('dueño ve 10 módulos', deDueno.length === 10, deDueno.join(', '));
+    prueba('dueño no ve Nueva reserva, Restaurante ni Ajustes',
+      !deDueno.includes('Nueva reserva') && !deDueno.includes('Restaurante') && !deDueno.includes('Ajustes'));
+    prueba('dueño ve Reportes, Caja y Auditoría',
+      deDueno.includes('Reportes') && deDueno.includes('Caja') && deDueno.includes('Auditoría'));
+    prueba('aviso de solo lectura', (await page.textContent('.bienvenida')).includes('Solo lectura'));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-7-modulos-dueno.png'), fullPage: true });
+
+    // Vista previa: todas las pantallas del prototipo cargan sin errores
+    const vp = await ctx.newPage();
+    vp.on('pageerror', (e) => errores.push(nombreVista + ' vista previa: ' + e.message));
+    vp.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) errores.push(nombreVista + ' vista previa (seguridad): ' + m.text()); });
+    let vistasOk = 0;
+    const VISTAS = ['inicio', 'panel', 'timeline', 'nueva', 'reservas', 'limpieza', 'restaurante', 'whatsapp', 'ventas',
+      'caja', 'cierre', 'productos', 'almacen', 'clientes', 'reportes', 'impresion'];
+    for (const v of VISTAS) {
+      await vp.goto(URL0 + 'vista-previa/#' + v);
+      await vp.waitForSelector('#view h1', { timeout: 5000 }).catch(() => {});
+      if (await vp.$('#view h1')) vistasOk++;
+      if (v === 'panel' || v === 'inicio') await vp.waitForTimeout(1200), await vp.screenshot({ path: path.join(OUT, nombreVista + '-8-vista-previa-' + v + '.png') });
+    }
+    prueba('vista previa: las ' + VISTAS.length + ' pantallas cargan', vistasOk === VISTAS.length, vistasOk + ' de ' + VISTAS.length);
+    prueba('vista previa sin scroll de lado', await sinScrollLateral(vp));
+    await vp.close();
 
     await ctx.close();
   }

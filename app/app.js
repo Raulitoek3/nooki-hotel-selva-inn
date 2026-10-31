@@ -114,13 +114,50 @@
   }
   window.addEventListener('hashchange', mostrarVista);
 
+  /* Mapa de módulos. "conectado" = ya funciona con datos reales.
+     El resto se ve en /vista-previa/ (prototipo con datos de ejemplo). */
+  var MODULOS = [
+    { k: 'inicio',      l: 'Resumen del día',       d: 'Ocupación, llegadas, salidas, ventas y por cobrar.',           roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'panel',       l: 'Panel de habitaciones', d: 'Habitaciones por piso y color de estado; check-in y check-out.', roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'timeline',    l: 'Timeline',              d: 'Calendario del mes con todas las reservas.',                   roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'nueva',       l: 'Nueva reserva',         d: 'Cliente, fechas, habitaciones y precio por temporada.',        roles: ['admin', 'recepcion'] },
+    { k: 'reservas',    l: 'Reservas',              d: 'Lista y búsqueda; anular pide la clave.',                      roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'limpieza',    l: 'Limpieza',              d: 'Por limpiar, limpiando y por revisar, con camarera.',          roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'restaurante', l: 'Restaurante',           d: 'Mesas, pedidos, comanda y cargo a la habitación.',             roles: ['admin', 'recepcion'] },
+    { k: 'whatsapp',    l: 'WhatsApp',              d: 'Pedidos de reserva: revisar pago, confirmar o rechazar.',      roles: ['admin', 'recepcion'] },
+    { k: 'ventas',      l: 'Ventas',                d: 'Boletas y facturas con estado SUNAT, PDF y notas de crédito.', roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'caja',        l: 'Caja',                  d: 'Abrir y cerrar caja, ingresos, salidas y arqueo.',             roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'cierre',      l: 'Cierre del día',        d: 'Revisión de pendientes antes de pasar al día siguiente.',      roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'productos',   l: 'Productos',             d: 'Precios, categorías y listas de precios.',                     roles: ['admin', 'recepcion'] },
+    { k: 'almacen',     l: 'Almacén',               d: 'Stock, entradas, salidas y vencimientos.',                     roles: ['admin', 'recepcion'] },
+    { k: 'clientes',    l: 'Clientes',              d: 'Fichas, historial y "no grato".',                              roles: ['admin', 'recepcion'] },
+    { k: 'reportes',    l: 'Reportes',              d: 'Ocupación, ventas, MINCETUR y caja, con descarga a Excel.',    roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'impresion',   l: 'Impresión',             d: 'Impresoras y cola de tickets y comandas.',                     roles: ['admin', 'recepcion'] },
+    { k: 'auditoria',   l: 'Auditoría',             d: 'Todo lo que pasa, con fecha y hora.',                          roles: ['admin', 'recepcion', 'dueno'] },
+    { k: 'ajustes',     l: 'Ajustes',               d: 'Empresa, facturación, habitaciones, tarifas y clave.',         roles: ['admin', 'recepcion'] },
+    { k: 'usuarios',    l: 'Usuarios',              d: 'Cuentas que entran al sistema.',                               roles: ['admin'], conectado: true }
+  ];
+
   function renderInicio() {
+    var mios = MODULOS.filter(function (m) { return m.roles.indexOf(yo.rol) >= 0; });
+    var listos = mios.filter(function (m) { return m.conectado; }).length;
+    var intro = {
+      admin: 'Tienes acceso a todo el sistema.',
+      recepcion: 'Estos son los módulos de la PC de recepción.',
+      dueno: 'Esto es lo que verás desde tu celular. Solo lectura: no cambias nada.'
+    }[yo.rol];
     $('#contenido').innerHTML =
       '<div class="cabeza"><div><h1>Hola, ' + esc(yo.nombre) + '</h1>' +
       '<p class="sub">' + esc(ROLES[yo.rol].d) + '.</p></div></div>' +
-      '<div class="card bienvenida"><h2>Sistema en preparación</h2>' +
-      '<p>Las pantallas del hotel (panel, reservas, caja, ventas…) se están pasando del prototipo a esta versión conectada. ' +
-      (yo.rol === 'admin' ? 'Mientras tanto, desde <a href="#usuarios">Usuarios</a> puedes crear las cuentas del hotel.' : '') + '</p></div>';
+      '<div class="card bienvenida"><h2>Módulos del sistema</h2>' +
+      '<p>' + intro + ' ' + listos + ' de ' + mios.length + ' ya ' + (listos === 1 ? 'funciona' : 'funcionan') +
+      ' con datos reales. Los marcados <b>Vista previa</b> abren el diseño final con <b>datos de ejemplo</b>: puedes probarlos, pero nada se guarda.</p></div>' +
+      '<div class="modulos">' + mios.map(function (m) {
+        var href = m.conectado ? '#' + m.k : '/vista-previa/#' + m.k;
+        return '<a class="card modulo" href="' + href + '"' + (m.conectado ? '' : ' target="_blank" rel="noopener"') + '>' +
+          '<span class="pill ' + (m.conectado ? 'e-on">Conectado' : 'r-dueno">Vista previa') + '</span>' +
+          '<b>' + esc(m.l) + '</b><span class="ayuda">' + esc(m.d) + '</span></a>';
+      }).join('') + '</div>';
   }
 
   /* ---------------- Usuarios ---------------- */
