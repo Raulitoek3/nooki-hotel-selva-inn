@@ -1,11 +1,11 @@
 // Pruebas de la app real (ingreso y usuarios) con Supabase simulado en el navegador.
-// Uso:  node app/pruebas_app.js            (capturas en capturas/app/)
+// Uso:  node pruebas/pruebas_app.js            (capturas en capturas/app/)
 const { chromium } = require('playwright');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const RAIZ = path.join(__dirname);
+const RAIZ = path.join(__dirname, '..', 'app');
 const OUT = process.env.NOOKI_OUT || path.join(__dirname, '..', 'capturas', 'app');
 fs.mkdirSync(OUT, { recursive: true });
 

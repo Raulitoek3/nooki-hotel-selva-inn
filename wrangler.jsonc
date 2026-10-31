@@ -1,0 +1,20 @@
+// Publicación del sistema del hotel en Cloudflare (Workers con archivos estáticos).
+// Cloudflare lo despliega solo con cada push a main ("npx wrangler deploy").
+// Solo se publica la carpeta app/. El prototipo y supabase/ no salen a internet.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "nooki-hotel-selva-inn",
+  "compatibility_date": "2026-10-13",
+  "assets": {
+    "directory": "./app",
+    "not_found_handling": "404-page"
+  },
+  // Subdominio del hotel (regla: <negocio>.nooki.pe). El DNS de nooki.pe está
+  // en esta misma cuenta de Cloudflare, así que el registro se crea solo.
+  "routes": [
+    { "pattern": "selvainn.nooki.pe", "custom_domain": true }
+  ],
+  // Dirección provisional *.workers.dev para revisar antes del dominio
+  "workers_dev": true,
+  "preview_urls": false
+}
