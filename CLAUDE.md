@@ -229,3 +229,8 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 - La red de las sesiones de Claude en la nube no llega a `*.supabase.co`: se trabaja con el conector y las pruebas de pantallas simulan Supabase.
 - Siguiente: Raúl crea **oficinavirtual@nooki.pe** en Supabase → Authentication (queda admin solo) y desde la app crea las cuentas de recepción y del dueño. Publicar `app/` en Cloudflare Pages (paso 6, puede adelantarse). Luego paso 3 (Edge Functions `facturar`, `nooki-aviso`, `nooki-estado`) y paso 4 (resto de pantallas).
 - Datos del hotel por confirmar: razón social, RUC (no por chat), régimen de IGV, política de adelantos, dominio final (`hotel.nooki.pe` acordado).
+
+## 11. Skills de Claude en este repositorio
+
+- **`ui-ux-pro-max`** (en `.claude/skills/ui-ux-pro-max/`): base local de estilos, colores, tipografías y reglas de UX/accesibilidad para diseñar pantallas. Copiada de `nextlevelbuilder/ui-ux-pro-max-skill` (versión 2.15.0, commit `bf41cbc`, licencia MIT, sin conexión a internet). Se usa así: `python3 .claude/skills/ui-ux-pro-max/scripts/search.py "<consulta>" --domain ux` (el SKILL.md habla de `${CLAUDE_PLUGIN_ROOT}`; aquí la ruta es la de arriba).
+- Sus resultados son **sugerencias**: el estilo ya decidido del sistema (sección 5: Geist, azul cobalto `#2448c7`, botones de 44–58 px, colores por estado) manda sobre lo que recomiende la skill. No usar `--persist` sin pedirlo Raúl.
