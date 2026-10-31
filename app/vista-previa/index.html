@@ -1,14 +1,15 @@
 <!doctype html>
 <html lang="es">
 <head>
-<!-- COPIA GENERADA de prototipo/Nooki-Hotel-prototipo.html (vista previa con datos de ejemplo). No editar aquí: editar el prototipo y volver a copiar. -->
+<!-- COPIA GENERADA de prototipo/Nooki-Hotel-prototipo.html con la marca del hotel (vista previa con datos de ejemplo). No editar aquí: editar el prototipo y correr pruebas/copiar_vista_previa.py. -->
 <meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Vista previa · Nooki Hotel</title>
+<title>Vista previa · Hotel Selva Inn</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: app shell táctil — menú lateral claro, barra superior fija; tarjetas teñidas por estado; todo control mide 44–52 px para tocarse con el dedo. */
 :root{
@@ -1181,6 +1182,20 @@ button.lt-r:active{background:var(--press)}
 .hb-main:hover{background:var(--hover)}.hb-main b{font-size:16px}.hb-main small{color:var(--text-3);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 </style>
 <style>body{margin:0}[hidden]{display:none!important}</style>
+<style id="marca-hotel">
+:root{--bg:#f7f3ed;--side:#f0eadf;--surface-2:#fbf8f3;--sunken:#efe9e0;--border:#e8e1d6;--border-2:#d9d0c2;
+--text:#1c1a17;--text-2:#4d4740;--text-3:#6e665c;--grp-h:#3a2f22;
+--primary:#9a5a0e;--primary-h:#7a4a10;--on-primary:#ffffff;
+--accent:#9a5a0e;--accent-soft:#fbf1e2;--on-accent:#ffffff;--focus:rgba(219,142,31,.35);
+--sans:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+:root[data-ui="dark"]{--bg:#12100d;--side:#16130f;--surface:#1b1814;--surface-2:#211d18;--sunken:#0f0d0b;
+--border:#2e2923;--border-2:#3d362e;--text:#f1ece4;--text-2:#c2b8aa;--text-3:#9b9083;--grp-h:#eadfce;
+--primary:#e9a94a;--primary-h:#f0b65c;--on-primary:#141210;
+--accent:#e9a94a;--accent-soft:#2c2112;--on-accent:#141210;--focus:rgba(233,169,74,.35)}
+h1{font-family:"Playfair Display",Georgia,serif;font-weight:600;letter-spacing:-.01em}
+.brand b,.lock-brand b{font-family:"Playfair Display",Georgia,serif;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.brand small{color:var(--accent);text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:600}
+</style>
 </head>
 <body>
 
@@ -1233,8 +1248,8 @@ button.lt-r:active{background:var(--press)}
 <div class="app">
   <aside class="side" id="side" aria-label="Menú principal">
     <div class="brand">
-      <svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="116" fill="#2448C7"/><path d="M168 364 V236 a88 88 0 0 1 176 0 V364" fill="none" stroke="#FFFFFF" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/><circle cx="282" cy="300" r="19" fill="#F5A524"/></svg>
-      <div><b>Nooki Hotel</b><small>Selva Inn · Puerto Maldonado</small></div>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true"> <circle cx="50" cy="50" r="50" fill="#DB8E1F"/> <g fill="#FFFFFF"> <path d="M41 86 C42 72 43.5 58 46.8 41 L49.6 41.6 C46.8 58.4 45.4 72.4 44.8 86 Z"/> <path d="M48 40 C40 31 30 30 22 35 C31 33 39 35 46 42 Z"/> <path d="M48 40 C44 28 36 22 27 22 C35 26 41 31 45.5 41 Z"/> <path d="M48 40 C50 29 57 22 66 21 C58 26 53 32 50 41 Z"/> <path d="M48 40 C57 33 67 33 75 39 C66 37 58 38 50.5 43 Z"/> <path d="M48 40 C52 45 54 52 53 59 C51 52 49 47 46.5 43 Z"/> <path d="M48 40 C42 44 37 50 35 57 C39 51 43 46 48.5 42.5 Z"/> <path d="M63 86 C63.5 77 64.5 69 66.6 60 L68.8 60.4 C67 69.4 66.2 77.4 66 86 Z"/> <path d="M67.6 59.4 C63 54 57 53.5 52 56.5 C57.5 55.5 62 56.5 66.4 61 Z"/> <path d="M67.6 59.4 C66 52 70 46 76 44 C72 48 70 53 68.8 60.6 Z"/> <path d="M67.6 59.4 C73 55 79 55.5 83 59.5 C78 58 73 58.5 69 61.8 Z"/> <path d="M67.6 59.4 C70.5 63 71.6 67.5 70.8 72 C69.6 67.6 68.4 64.6 66.6 62 Z"/> <path d="M24 86.5 C38 83.5 62 83.5 76 86.5 L76 88.5 C62 86 38 86 24 88.5 Z"/> </g> </svg>
+      <div><b>Hotel Selva Inn</b><small>Puerto Maldonado · Perú</small></div>
     </div>
     <nav class="nav" id="nav"></nav>
     <div class="side-f">
@@ -1502,7 +1517,7 @@ function updateNav(){
   var lb=$('[data-bd="limpieza"]');if(lb&&typeof HK!=='undefined'){var ln=hkPending();lb.textContent=ln?String(ln):'';lb.title=ln?plural(ln,'habitación por limpiar o revisar','habitaciones por limpiar o revisar'):'';}
   var L=LABEL[state.view]||['','Panel de habitaciones'];
   $('#crumbs').innerHTML=(L[0]?'<span class="cg">'+esc(L[0])+'</span><span class="cg">'+ic('chevron-right')+'</span>':'')+'<b>'+esc(L[1])+'</b>';
-  document.title='Nooki Hotel';
+  document.title='Vista previa · Hotel Selva Inn';
 }
 function go(k){closeSide();if(location.hash==='#'+k){render();return;}location.hash=k;}
 window.addEventListener('hashchange',function(){var k=location.hash.slice(1)||'panel';if(k==='nueva'&&!state.form)state.form=newForm();state.view=k;render();});
@@ -2062,7 +2077,7 @@ function closeCajaModal(){
       $('#ccGo',w).onclick=go2;inp.addEventListener('keydown',function(e){if(e.key==='Enter')go2();});}});
 }
 /* ---------- configuración del hotel ---------- */
-var CFG={name:'Selva Inn',legal:'',ruc:'',addr:'Puerto Maldonado · Madre de Dios',phone:'',mail:'',sol:'',env:'Producción',igv:10.5,ci:'09:00',co:'11:00',maxco:'11:30',retoque:30,early:'06:00',earlyPct:50,late:'14:00',latePct:50,aviso:15};
+var CFG={name:'Hotel Selva Inn',legal:'',ruc:'',addr:'Jr. 28 de Julio 541, Puerto Maldonado',phone:'+51 946 895 818',mail:'info@hotelselvainn.com',sol:'',env:'Producción',igv:10.5,ci:'09:00',co:'11:00',maxco:'11:30',retoque:30,early:'06:00',earlyPct:50,late:'14:00',latePct:50,aviso:15};
 function keepRender(id){var el=document.getElementById(id),pos=el?el.selectionStart:0;render({soft:true});var n=document.getElementById(id);if(n){n.focus({preventScroll:true});try{n.setSelectionRange(pos,pos);}catch(e){}}}
 function newCliModal(){var pf=personFields();openModal({title:'Nuevo cliente',body:pf.html,foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pfGo">Guardar cliente</button>',onMount:function(w){$('#pfGo',w).onclick=function(){var g=pf.read(w);if(!g)return;if(cliData().some(function(c){return c.g.doc===g.doc;})){var e=$('#pfErr',w);e.textContent='Ya existe un cliente con ese documento.';e.hidden=false;return;}CLI_EXTRA.push(g);closeModal(true);toast('Cliente registrado: '+short(g.name),{icon:'user'});render({soft:true});};}});}
 /* ---------- utilidades de listas, interruptores y gráficos ---------- */
@@ -2539,7 +2554,7 @@ var LOCK={step:'who',u:null,pin:''};
 function lockHTML(){
   if(LOCK.step==='who'){
     var list=EMP.filter(function(e){return e.on;});
-    return '<div class="lock-brand"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="116" fill="#2448C7"/><path d="M168 364 V236 a88 88 0 0 1 176 0 V364" fill="none" stroke="#FFFFFF" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/><circle cx="282" cy="300" r="19" fill="#F5A524"/></svg><div><b>Nooki Hotel</b><small>'+esc(CFG.name)+' · '+cap(fmtDL(TODAY))+'</small></div></div>'+
+    return '<div class="lock-brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true"> <circle cx="50" cy="50" r="50" fill="#DB8E1F"/> <g fill="#FFFFFF"> <path d="M41 86 C42 72 43.5 58 46.8 41 L49.6 41.6 C46.8 58.4 45.4 72.4 44.8 86 Z"/> <path d="M48 40 C40 31 30 30 22 35 C31 33 39 35 46 42 Z"/> <path d="M48 40 C44 28 36 22 27 22 C35 26 41 31 45.5 41 Z"/> <path d="M48 40 C50 29 57 22 66 21 C58 26 53 32 50 41 Z"/> <path d="M48 40 C57 33 67 33 75 39 C66 37 58 38 50.5 43 Z"/> <path d="M48 40 C52 45 54 52 53 59 C51 52 49 47 46.5 43 Z"/> <path d="M48 40 C42 44 37 50 35 57 C39 51 43 46 48.5 42.5 Z"/> <path d="M63 86 C63.5 77 64.5 69 66.6 60 L68.8 60.4 C67 69.4 66.2 77.4 66 86 Z"/> <path d="M67.6 59.4 C63 54 57 53.5 52 56.5 C57.5 55.5 62 56.5 66.4 61 Z"/> <path d="M67.6 59.4 C66 52 70 46 76 44 C72 48 70 53 68.8 60.6 Z"/> <path d="M67.6 59.4 C73 55 79 55.5 83 59.5 C78 58 73 58.5 69 61.8 Z"/> <path d="M67.6 59.4 C70.5 63 71.6 67.5 70.8 72 C69.6 67.6 68.4 64.6 66.6 62 Z"/> <path d="M24 86.5 C38 83.5 62 83.5 76 86.5 L76 88.5 C62 86 38 86 24 88.5 Z"/> </g> </svg><div><b>Hotel Selva Inn</b><small>'+cap(fmtDL(TODAY))+'</small></div></div>'+
     '<h2 class="lock-t">¿Quién eres?</h2><p class="lock-s">Toca tu nombre para entrar</p>'+
     '<div class="lock-users">'+list.map(function(e){return '<button type="button" class="lu" data-lu="'+EMP.indexOf(e)+'"><span class="av lg c'+(EMP.indexOf(e)%6)+'">'+ini(e.name)+'</span><b>'+esc(e.name)+'</b><small>'+esc(e.cargo)+'</small></button>';}).join('')+'</div>';
   }
@@ -2557,7 +2572,7 @@ function lockHTML(){
 function showLock(){
   closeDrawer&&state.dw&&closeDrawer();closeModal(true);closePop(true);
   LOCK={step:'who',u:null,pin:''};
-  var el=$('#lock');if(!el){el=document.createElement('div');el.id='lock';el.className='lock';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Ingresar a Nooki Hotel');document.body.appendChild(el);
+  var el=$('#lock');if(!el){el=document.createElement('div');el.id='lock';el.className='lock';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Ingresar a Hotel Selva Inn');document.body.appendChild(el);
     el.addEventListener('click',function(e){
       var b=e.target.closest('[data-lu]');if(b){LOCK.step='pin';LOCK.u=+b.dataset.lu;LOCK.pin='';drawLock();return;}
       if(e.target.closest('[data-lk="back"]')){LOCK.step='who';LOCK.pin='';drawLock();return;}
@@ -2960,7 +2975,7 @@ document.addEventListener('submit',function(e){
 
 /* ================= v7: facturación electrónica con Nooki (api.nooki.pe) ================= */
 /* Prototipo: la conexión con Nooki está simulada. En la versión real, el servidor
-   local de Nooki Hotel guarda la llave de API y llama a api.nooki.pe con el módulo
+   local del sistema guarda la llave de API y llama a api.nooki.pe con el módulo
    nooki.mjs; SUNAT responde por webhooks a la nube y se sincroniza a la PC. */
 CFG.amazonia=false;CFG.adel='cobro';CFG.autoPrint=true;
 var NOOKI={online:true,lastOk:'',api:'api.nooki.pe',portal:'portal.nooki.pe'};
@@ -3506,13 +3521,13 @@ function xlSheet(s){
     '<sheetFormatPr defaultRowHeight="16.5"/><cols>'+w.map(function(x,i){return '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+x+'" customWidth="1"/>';}).join('')+'</cols>'+
     '<sheetData>'+rows.join('')+'</sheetData>'+(s.rows.length?'<autoFilter ref="A'+H+':'+last+end+'"/>':'')+
     '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="'+(n>6?'landscape':'portrait')+'" fitToWidth="1" fitToHeight="0"/>'+
-    '<headerFooter><oddFooter>&amp;L'+xe(CFG.name)+' · Nooki Hotel&amp;RPágina &amp;P de &amp;N</oddFooter></headerFooter></worksheet>';
+    '<headerFooter><oddFooter>&amp;L'+xe(CFG.name)+'&amp;RPágina &amp;P de &amp;N</oddFooter></headerFooter></worksheet>';
 }
 function xlsxBlob(sheets){
   var names=[];sheets.forEach(function(s){var b=s.name.replace(/[\[\]:*?\/\\]/g,'').slice(0,31),x=b,i=2;while(names.indexOf(x)>-1)x=b.slice(0,28)+' '+(i++);names.push(x);});
   var files=[['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map(function(s,i){return '<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';}).join('')+'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'],
     ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'],
-    ['docProps/core.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xe(CFG.name+' · Reportes')+'</dc:title><dc:creator>Nooki Hotel</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'+new Date().toISOString().slice(0,19)+'Z</dcterms:created></cp:coreProperties>'],
+    ['docProps/core.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xe(CFG.name+' · Reportes')+'</dc:title><dc:creator>Hotel Selva Inn</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'+new Date().toISOString().slice(0,19)+'Z</dcterms:created></cp:coreProperties>'],
     ['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>'+names.map(function(n,i){return '<sheet name="'+xe(n)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>';}).join('')+'</sheets><definedNames>'+sheets.map(function(s,i){if(!s.rows.length)return '';var q="'"+names[i].replace(/'/g,"''")+"'";return '<definedName name="_xlnm._FilterDatabase" localSheetId="'+i+'" hidden="1">'+xe(q)+'!$A$5:$'+colL(s.c.length-1)+'$'+(5+s.rows.length)+'</definedName><definedName name="_xlnm.Print_Titles" localSheetId="'+i+'">'+xe(q)+'!$5:$5</definedName>';}).join('')+'</definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'],
     ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map(function(s,i){return '<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>';}).join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
     ['xl/styles.xml',xlStyles()]];
@@ -3520,7 +3535,7 @@ function xlsxBlob(sheets){
   return zipBlob(files,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 function repSheet(k){var x=REPS.find(function(r){return r[0]===k;}),d=repData(k),ft=repFiltTxt(k);
-  return {name:x[1],title:CFG.name+' · '+x[1],sub:'Período: '+repPerTxt(k)+(ft?' · '+ft:''),sub2:(CFG.legal?CFG.legal+' · ':'')+(CFG.ruc?'RUC '+CFG.ruc+' · ':'')+'Generado el '+fullD(TODAY)+' a las '+nowHM()+' con Nooki Hotel',c:d.c,rows:d.rows,nota:d.nota};}
+  return {name:x[1],title:CFG.name+' · '+x[1],sub:'Período: '+repPerTxt(k)+(ft?' · '+ft:''),sub2:(CFG.legal?CFG.legal+' · ':'')+(CFG.ruc?'RUC '+CFG.ruc+' · ':'')+'Generado el '+fullD(TODAY)+' a las '+nowHM(),c:d.c,rows:d.rows,nota:d.nota};}
 var LAST_XLSX=null;
 function bajar(blob,name){LAST_XLSX={name:name,blob:blob};var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);}
 function slug(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');}

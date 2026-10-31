@@ -30,7 +30,7 @@ function cabecerasPara(ruta) {
   });
   return h;
 }
-const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
+const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 const srv = http.createServer((req, res) => {
   const ruta = decodeURIComponent(req.url.split('?')[0]);
   let p = path.join(RAIZ, ruta.endsWith('/') ? ruta + 'index.html' : ruta);
@@ -52,7 +52,7 @@ function estadoNuevo() {
       'dueno.activo@ejemplo.test': { id: 'u-due', clave: 'Prueba-Due-1' }
     },
     usuarios: [
-      { id: 'u-admin', nombre: 'Nooki (administrador)', correo: 'oficinavirtual@nooki.pe', rol: 'admin', activo: true, creado_en: '2026-10-31T19:00:00Z', ultimo_ingreso: '2026-10-31T19:30:00Z' },
+      { id: 'u-admin', nombre: 'Administrador', correo: 'oficinavirtual@nooki.pe', rol: 'admin', activo: true, creado_en: '2026-10-31T19:00:00Z', ultimo_ingreso: '2026-10-31T19:30:00Z' },
       { id: 'u-rec', nombre: 'Recepción de prueba', correo: 'recepcion@ejemplo.test', rol: 'recepcion', activo: true, creado_en: '2026-10-31T19:05:00Z', ultimo_ingreso: null },
       { id: 'u-due', nombre: 'Dueño de prueba', correo: 'dueno.activo@ejemplo.test', rol: 'dueno', activo: true, creado_en: '2026-10-31T19:06:00Z', ultimo_ingreso: null }
     ],
@@ -161,6 +161,8 @@ async function entrar(page, correo, clave) {
     await page.waitForSelector('#vIngreso:not([hidden])');
     prueba('muestra el ingreso', await page.isVisible('#fIngreso'));
     prueba('sin scroll de lado (ingreso)', await sinScrollLateral(page));
+    prueba('se ve el logo del hotel', await page.$eval('.marca-grande img', (i) => i.complete && i.naturalWidth > 0));
+    prueba('dice Hotel Selva Inn y no Nooki', (await page.textContent('body')).includes('Hotel Selva Inn') && !/nooki/i.test(await page.title() + await page.textContent('#vIngreso')));
     await page.screenshot({ path: path.join(OUT, nombreVista + '-1-ingreso.png') });
 
     await entrar(page, 'oficinavirtual@nooki.pe', 'mala-clave');

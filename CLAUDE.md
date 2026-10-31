@@ -135,6 +135,15 @@ Archivo **`prototipo/Nooki-Hotel-prototipo.html`**: un solo archivo con todo (HT
 
 Estilo: serio y moderno (tipo Shopify / Claude Code), modo claro por defecto y oscuro opcional, letra Geist, azul cobalto `#2448c7`, botones grandes (44–58 px) para pantalla táctil, colores por estado de habitación. Títulos de grupos del menú en `#242833` (en oscuro `#dfe3ec`).
 
+**Marca del hotel en su sistema (decidido 31/10/2026):** lo que ve el hotel (`app/` y la vista previa) **no dice "Nooki"**: lleva el logo y el nombre del hotel, con el estilo de su web (https://www.hotelselvainn.com). "Nooki Hotel" queda solo como nombre interno del producto (repo, prototipo).
+- Logo: `app/logo.svg` (círculo dorado `#DB8E1F` con dos palmeras blancas, redibujado de su web) + "HOTEL SELVA INN" en mayúsculas con serifa + "PUERTO MALDONADO · PERÚ" en dorado. También es el ícono de la pestaña.
+- Letras: **Playfair Display** (títulos y nombre) y **Plus Jakarta Sans** (textos), de Google Fonts.
+- Colores: dorado `#DB8E1F` solo en logo y adornos; botones y enlaces en ámbar oscuro **`#9A5A0E`** (contraste 5.46:1 con blanco); fondo crema `#F7F3ED`; en oscuro el acento es `#E9A94A` con texto oscuro. Los colores por estado de habitación no cambian.
+- Nombre y lugar en `app/config.js` (`window.CONFIG_HOTEL`: `hotel`, `lugar`).
+- La vista previa se marca sola al copiarla (`pruebas/copiar_vista_previa.py` cambia logo, nombre, colores, letras y datos; el prototipo original no se toca). Ahí siguen las menciones a **Nooki como facturador** (pantallas de facturación electrónica): pendiente que Raúl decida si se cambian por "facturador" genérico.
+- El admin se muestra como "Administrador" (migración `0007`).
+- La dirección web sigue siendo `selvainn.nooki.pe`. Si el hotel no quiere "nooki" ni en la dirección, se suma `sistema.hotelselvainn.com` (hace falta acceso al DNS de su dominio).
+
 ### Pantallas
 | Pantalla | Qué hace |
 |---|---|
@@ -208,6 +217,7 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
   - `0004_seguridad`: RLS, permisos y auditoría automática.
   - `0005_datos_iniciales`: config, series B001/F001/BC01/FC01/NV01, 7 tipos y 35 habitaciones, orígenes, formas de pago, motivos de viaje, 22 mesas, 4 impresoras (sin IP). **Sin** productos, personal ni temporadas: se cargan en Ajustes.
   - `0006_rol_admin`: rol `admin`, columna `usuarios.correo`, `es_admin()`, y disparador `alta_admin_nooki` en `auth.users`: la cuenta **oficinavirtual@nooki.pe** queda como `admin` sola apenas se crea en Authentication.
+  - `0007_marca_y_datos_hotel`: datos públicos del hotel en `config` (nombre comercial "Hotel Selva Inn", dirección Jr. 28 de Julio 541, teléfono +51 946 895 818, correo info@hotelselvainn.com) y admin con nombre "Administrador".
 
 ### Reglas de la base (decididas)
 - **Usuarios** (`usuarios`, ligado a `auth.users`), tres roles:
@@ -230,7 +240,7 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 - Prototipo v11 terminado (162 pruebas pasando): facturación simulada con Nooki, sin usuarios, clave de administrador, auditoría, reportes con filtros y Excel, gestión de habitaciones y tipos, títulos del menú en `#242833`.
 - Repositorio `Raulitoek3/nooki-hotel-selva-inn` (privado) creado.
 - Paso 1 y paso 2 del plan hechos: proyecto Supabase del hotel creado y base de datos lista (32 tablas, RLS en todas, pruebas de reglas pasando).
-- Rol `admin` y Edge Function `usuarios` publicados. Primera parte de la app real en **`app/`** (HTML/CSS/JS sin compilación): ingreso con correo y contraseña, Inicio y pantalla **Usuarios** (solo admin: agregar, editar rol/nombre, desactivar, contraseña nueva). `app/config.js` tiene la URL y la llave *publishable* (pública). supabase-js va copiado en `app/vendor/` (versión fija 2.117.3). Pruebas: `node pruebas/pruebas_app.js` (Playwright con Supabase simulado; 71 pasando: ingreso, usuarios, mapa de módulos por rol y las 16 pantallas de la vista previa sin errores ni bloqueos de seguridad; capturas en `capturas/app/`).
+- Rol `admin` y Edge Function `usuarios` publicados. Primera parte de la app real en **`app/`** (HTML/CSS/JS sin compilación): ingreso con correo y contraseña, Inicio y pantalla **Usuarios** (solo admin: agregar, editar rol/nombre, desactivar, contraseña nueva). `app/config.js` tiene la URL y la llave *publishable* (pública). supabase-js va copiado en `app/vendor/` (versión fija 2.117.3). Pruebas: `node pruebas/pruebas_app.js` (Playwright con Supabase simulado; 75 pasando: ingreso con logo y sin "Nooki", usuarios, mapa de módulos por rol y las 16 pantallas de la vista previa sin errores ni bloqueos de seguridad; capturas en `capturas/app/`).
 - **Inicio = mapa de módulos** (`MODULOS` en `app/app.js`): cada módulo con su estado (**Conectado** = datos reales; **Vista previa** = abre `/vista-previa/#<pantalla>` en otra pestaña) y filtrado por rol. Admin ve 19, recepción 18 (sin Usuarios), **dueño 10**: Resumen del día, Panel, Timeline, Reservas, Limpieza, Ventas, Caja, Cierre del día, Reportes y Auditoría (solo lectura). Al conectar un módulo: poner `conectado: true` y agregarlo a `VISTAS` en `app/app.js`.
 - **Vista previa** (`app/vista-previa/index.html`): **copia generada** del prototipo con `noindex`. No editarla: editar `prototipo/` y volver a copiar con `python3 pruebas/copiar_vista_previa.py`. Datos de ejemplo, nada se guarda. Es pública para quien tenga el enlace (no tiene datos reales). Tiene su propia CSP en `app/_headers` (`! Content-Security-Policy` y una que permite el código dentro de la página); el resto del sitio mantiene la estricta. Verificado con `wrangler dev`.
 - La red de las sesiones de Claude en la nube no llega a `*.supabase.co`: se trabaja con el conector y las pruebas de pantallas simulan Supabase.

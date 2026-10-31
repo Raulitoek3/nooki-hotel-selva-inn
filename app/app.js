@@ -1,9 +1,9 @@
-/* Nooki Hotel · sistema real (primera parte: ingreso y usuarios)
+/* Hotel Selva Inn · sistema real (primera parte: ingreso y usuarios)
    Lee y guarda en el Supabase del hotel. Sin librerías salvo supabase-js. */
 (function () {
   'use strict';
 
-  var CFG = window.NOOKI_HOTEL;
+  var CFG = window.CONFIG_HOTEL;
   var sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
 
   var ROLES = {
@@ -39,6 +39,8 @@
 
   $('#hotelNombre').textContent = CFG.hotel;
   $('#hotelNombre2').textContent = CFG.hotel;
+  $('#hotelLugar').textContent = CFG.lugar;
+  $('#hotelLugar2').textContent = CFG.lugar;
 
   /* ---------------- Ingreso ---------------- */
   function mostrarIngreso(msg) {
