@@ -31,14 +31,19 @@ Nooki (oficinavirtual@nooki.pe)
 Hotel Selva Inn (cuenta propia, con correo del hotel)                        │
 ├── Supabase propio (plan gratis al inicio) → toda la operación del hotel ──┘
 │     tablas + RLS + Auth + Edge Functions (facturar, avisos de Nooki)
-└── pantallas publicadas en hotel.nooki.pe (Cloudflare Pages, cuenta de Nooki)
+└── pantallas publicadas en selvainn.nooki.pe (Cloudflare Pages, cuenta de Nooki)
 ```
 
 - **Un Supabase por cliente, en la cuenta del cliente** (organización propia creada con el correo del hotel, que es Owner). Nooki no paga por proyecto. Si el hotel necesita el plan Pro (unos 25 USD al mes), lo paga el hotel.
 - **oficinavirtual@nooki.pe se invita como Developer**, nunca Owner ni Administrator. Si fuera administrador, Supabase le contaría a Nooki los proyectos gratis del cliente y no dejaría crear más.
 - **Región: São Paulo (sa-east-1).**
 - El conector de Supabase de Claude trabaja con **una organización a la vez**. Para este repo, Raúl lo conecta con la cuenta del hotel. Al terminar, lo vuelve a la cuenta de Nooki.
-- **Pantallas en `hotel.nooki.pe`**: Cloudflare Pages en la cuenta de Nooki (oficinavirtual@nooki.pe, id `bc28dd013d13ff6329a108a3ce937619`), conectado a este repositorio, que publica solo con cada push a `main`. El **DNS de nooki.pe está en Cloudflare** (nameservers `liv`/`ram.ns.cloudflare.com`), así que el subdominio se agrega en el mismo proyecto de Pages (Custom domains). Vercel ya no se usa para Nooki.
+- **Pantallas en `selvainn.nooki.pe`**: Cloudflare Pages en la cuenta de Nooki (oficinavirtual@nooki.pe, id `bc28dd013d13ff6329a108a3ce937619`), conectado a este repositorio, que publica solo con cada push a `main`. El **DNS de nooki.pe está en Cloudflare** (nameservers `liv`/`ram.ns.cloudflare.com`), así que el subdominio se agrega en el mismo proyecto de Pages (Custom domains). Vercel ya no se usa para Nooki.
+- **Subdominios de los negocios (decidido 31/10/2026): `<negocio>.nooki.pe`**, solo con el nombre comercial del negocio. El hotel queda en **`selvainn.nooki.pe`** (antes se había pensado `hotel.nooki.pe`; se descartó porque es el nombre del rubro y no sirve si Nooki tiene un segundo hotel).
+  - Regla: nombre comercial en minúsculas, sin espacios, tildes ni símbolos (`ñ` → `n`). Sin "nooki" (ya va en `.nooki.pe`) y sin el rubro.
+  - Si choca con otro cliente o con un nombre reservado de Nooki (`api`, `portal`, `www`, `app`, `admin`, `mail`), se agrega la ciudad con guion: `selvainn-pmaldonado.nooki.pe`.
+  - Un solo nivel (`x.nooki.pe`), nunca `x.hotel.nooki.pe`: el certificado gratis de Cloudflare solo cubre un nivel.
+  - Si un cliente tiene dominio propio y lo pide, se puede sumar después (por ejemplo `sistema.<sudominio>`), sin quitar el de `nooki.pe`.
 - **Plan gratis de Supabase: dos cosas que cubrimos nosotros.**
   1. **Respaldos**: el plan gratis no hace copias. Hay que montar una copia diaria (pg_dump) guardada del lado de Nooki o en un Drive del hotel. Pendiente.
   2. **Pausa**: el proyecto gratis se pausa tras 7 días sin uso. El hotel lo usa a diario, pero se deja una revisión automática que lo mantenga activo.
@@ -187,7 +192,7 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 3. **Edge Functions:** `facturar` (emite boleta/factura/NC en Nooki con Idempotency-Key y guarda el resultado), `nooki-aviso` (webhook con firma), `nooki-estado` (consulta un comprobante). La clave de administrador ya quedó como funciones RPC en la base (ver sección 9).
 4. **Pantallas:** pasar el prototipo a leer y guardar en Supabase manteniendo el mismo diseño. Separar en archivos (HTML/CSS/JS sin compilación, como el portal de Nooki) o un proyecto Vite si crece. Cola local para cuando no hay internet.
 5. **Nooki (en su chat):** dar de alta la empresa del hotel en beta, series B001/F001/BC01/FC01, llaves de API; Raúl sube certificado y SOL en el portal. Prueba en beta con todos los casos; luego producción.
-6. **Publicar** en Cloudflare Pages (proyecto `nooki-hotel-selva-inn`, rama `main`) con dominio `hotel.nooki.pe`.
+6. **Publicar** en Cloudflare Pages (proyecto `nooki-hotel-selva-inn`, rama `main`) con dominio `selvainn.nooki.pe`.
 7. **Respaldo diario** y revisión para que el proyecto gratis no se pause.
 8. Vista del dueño en celular; módulo de tarjetas ZKTeco con el puente; WhatsApp.
 9. Prueba en paralelo con el sistema actual del hotel (Smart Hotel, de Smart System Perú), capacitación y arranque.
@@ -227,8 +232,8 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 - Paso 1 y paso 2 del plan hechos: proyecto Supabase del hotel creado y base de datos lista (32 tablas, RLS en todas, pruebas de reglas pasando).
 - Rol `admin` y Edge Function `usuarios` publicados. Primera parte de la app real en **`app/`** (HTML/CSS/JS sin compilación): ingreso con correo y contraseña, Inicio y pantalla **Usuarios** (solo admin: agregar, editar rol/nombre, desactivar, contraseña nueva). `app/config.js` tiene la URL y la llave *publishable* (pública). supabase-js va copiado en `app/vendor/` (versión fija 2.117.3). Pruebas: `node app/pruebas_app.js` (Playwright con Supabase simulado; 47 pasando; capturas en `capturas/app/`).
 - La red de las sesiones de Claude en la nube no llega a `*.supabase.co`: se trabaja con el conector y las pruebas de pantallas simulan Supabase.
-- Siguiente: Raúl crea **oficinavirtual@nooki.pe** en Supabase → Authentication (queda admin solo) y desde la app crea las cuentas de recepción y del dueño. Publicar `app/` en Cloudflare Pages (paso 6, puede adelantarse). Luego paso 3 (Edge Functions `facturar`, `nooki-aviso`, `nooki-estado`) y paso 4 (resto de pantallas).
-- Datos del hotel por confirmar: razón social, RUC (no por chat), régimen de IGV, política de adelantos, dominio final (`hotel.nooki.pe` acordado).
+- Siguiente: Raúl crea **oficinavirtual@nooki.pe** en Supabase → Authentication (queda admin solo) y desde la app crea las cuentas de recepción y del dueño. Publicar `app/` en Cloudflare Pages en `selvainn.nooki.pe` (paso 6, puede adelantarse). Luego paso 3 (Edge Functions `facturar`, `nooki-aviso`, `nooki-estado`) y paso 4 (resto de pantallas).
+- Datos del hotel por confirmar: razón social, RUC (no por chat), régimen de IGV, política de adelantos, dominio final: `selvainn.nooki.pe` (decidido).
 
 ## 11. Skills de Claude en este repositorio
 
