@@ -202,10 +202,16 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
   - `0003_operacion`: `clientes`, `productos`, `movimientos_stock`, `reservas`, `reserva_huespedes`, `pedidos`, `pedido_items`, `consumos`, `caja_turnos`, `comprobantes`, `pagos`, `caja_movimientos`, `limpieza`, `cierres`, `pedidos_whatsapp`, `avisos_nooki`.
   - `0004_seguridad`: RLS, permisos y auditoría automática.
   - `0005_datos_iniciales`: config, series B001/F001/BC01/FC01/NV01, 7 tipos y 35 habitaciones, orígenes, formas de pago, motivos de viaje, 22 mesas, 4 impresoras (sin IP). **Sin** productos, personal ni temporadas: se cargan en Ajustes.
+  - `0006_rol_admin`: rol `admin`, columna `usuarios.correo`, `es_admin()`, y disparador `alta_admin_nooki` en `auth.users`: la cuenta **oficinavirtual@nooki.pe** queda como `admin` sola apenas se crea en Authentication.
 
 ### Reglas de la base (decididas)
-- **Usuarios** (`usuarios`, ligado a `auth.users`): rol `recepcion` (la PC; lee y escribe) o `dueno` (solo lectura). Sin fila en `usuarios` = no ve nada. Sin sesión (`anon`) = no ve nada. Las cuentas se crean en Supabase → Authentication y luego se registran en `usuarios` desde el servidor (Claude con el conector).
-- **Ajustes** (config, series, tipos, habitaciones, temporadas, orígenes, formas de pago, motivos, personal, mesas, impresoras): escribir pide `recepcion` **y** clave abierta.
+- **Usuarios** (`usuarios`, ligado a `auth.users`), tres roles:
+  - `admin`: cuenta de Nooki (oficinavirtual@nooki.pe). Todas las funciones; para él la clave siempre cuenta como abierta (`admin_abierto()` = true); puede poner una clave de administrador nueva sin saber la anterior; crea y maneja los usuarios del hotel.
+  - `recepcion`: la PC de recepción; lee y escribe; lo delicado pide la clave.
+  - `dueno`: solo lectura.
+  - Sin fila en `usuarios` (o `activo = false`) = no ve nada. Sin sesión (`anon`) = no ve nada.
+  - **Las cuentas se crean desde el portal** (pantalla Usuarios, solo `admin`), que llama a la Edge Function **`usuarios`** (`supabase/funciones/usuarios/index.ts`, `verify_jwt` activo). Acciones: `listar`, `crear` (correo, nombre, rol, contraseña ≥ 8), `cambiar` (nombre, rol, activo; desactivar también bloquea el ingreso en Auth), `clave` (contraseña nueva). No deja quitar el último admin ni quitarse el rol a uno mismo. Usa la `service_role` que Supabase pone sola en el entorno de la función. Todo queda en auditoría.
+- **Ajustes** (config, series, tipos, habitaciones, temporadas, orígenes, formas de pago, motivos, personal, mesas, impresoras): escribir pide `recepcion` **y** clave abierta (o ser `admin`).
 - **Clave de administrador**: hecha como funciones RPC en la base (no Edge Function): `hay_clave()`, `cambiar_clave(actual, nueva)` (la primera vez solo la nueva, mínimo 4 caracteres), `verificar_clave(clave)` → `{ok, hasta}` o `{ok:false, motivo: incorrecta|espera|sin_clave|sin_permiso}`, `renovar_clave()`, `bloquear_clave()`. Hash bcrypt en `clave_admin` (sin acceso desde el navegador). 10 minutos; 5 fallos = 1 minuto de espera. La sesión abierta vive en `sesiones_admin`.
 - **Reservas**: no se pueden cruzar en la misma habitación (restricción `reservas_sin_cruce`, salvo anuladas/no_show). Cambiar `tarifa` o pasar a `anulada` pide clave (disparador). No se borran.
 - **Comprobantes** y **avisos_nooki**: el navegador solo lee; los escribe el servidor (Edge Functions con `service_role`).
@@ -219,5 +225,7 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 - Prototipo v11 terminado (162 pruebas pasando): facturación simulada con Nooki, sin usuarios, clave de administrador, auditoría, reportes con filtros y Excel, gestión de habitaciones y tipos, títulos del menú en `#242833`.
 - Repositorio `Raulitoek3/nooki-hotel-selva-inn` (privado) creado.
 - Paso 1 y paso 2 del plan hechos: proyecto Supabase del hotel creado y base de datos lista (32 tablas, RLS en todas, pruebas de reglas pasando).
-- Siguiente: Raúl crea las cuentas (recepción y dueño) en Supabase → Authentication; Claude las registra en `usuarios`. Luego paso 3 (Edge Functions `facturar`, `nooki-aviso`, `nooki-estado`) y paso 4 (pasar las pantallas a Supabase).
+- Rol `admin` y Edge Function `usuarios` publicados. Primera parte de la app real en **`app/`** (HTML/CSS/JS sin compilación): ingreso con correo y contraseña, Inicio y pantalla **Usuarios** (solo admin: agregar, editar rol/nombre, desactivar, contraseña nueva). `app/config.js` tiene la URL y la llave *publishable* (pública). supabase-js va copiado en `app/vendor/` (versión fija 2.117.3). Pruebas: `node app/pruebas_app.js` (Playwright con Supabase simulado; 47 pasando; capturas en `capturas/app/`).
+- La red de las sesiones de Claude en la nube no llega a `*.supabase.co`: se trabaja con el conector y las pruebas de pantallas simulan Supabase.
+- Siguiente: Raúl crea **oficinavirtual@nooki.pe** en Supabase → Authentication (queda admin solo) y desde la app crea las cuentas de recepción y del dueño. Publicar `app/` en Cloudflare Pages (paso 6, puede adelantarse). Luego paso 3 (Edge Functions `facturar`, `nooki-aviso`, `nooki-estado`) y paso 4 (resto de pantallas).
 - Datos del hotel por confirmar: razón social, RUC (no por chat), régimen de IGV, política de adelantos, dominio final (`hotel.nooki.pe` acordado).

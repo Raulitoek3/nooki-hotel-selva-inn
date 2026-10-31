@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nooki Hotel · Selva Inn</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<!-- Ingreso -->
+<main id="vIngreso" class="ingreso" hidden>
+  <form id="fIngreso" class="card ingreso-card" novalidate>
+    <div class="marca">
+      <span class="logo" aria-hidden="true">N</span>
+      <div><b>Nooki Hotel</b><small id="hotelNombre">Selva Inn</small></div>
+    </div>
+    <h1>Iniciar sesión</h1>
+    <label>Correo<input id="iCorreo" type="email" autocomplete="username" required></label>
+    <label>Contraseña<input id="iClave" type="password" autocomplete="current-password" required></label>
+    <p id="iError" class="err" role="alert" hidden></p>
+    <button class="btn btn-pri btn-lg" type="submit" id="iEntrar">Entrar</button>
+  </form>
+</main>
+
+<!-- Sistema -->
+<div id="vApp" class="app" hidden>
+  <header class="top">
+    <div class="marca">
+      <span class="logo" aria-hidden="true">N</span>
+      <div><b>Nooki Hotel</b><small id="hotelNombre2">Selva Inn</small></div>
+    </div>
+    <nav class="nav" id="nav" aria-label="Secciones"></nav>
+    <div class="yo">
+      <span class="av" id="yoAv" aria-hidden="true"></span>
+      <div class="yo-txt"><b id="yoNombre"></b><small id="yoRol"></small></div>
+      <button class="btn" type="button" id="bSalir">Salir</button>
+    </div>
+  </header>
+  <main class="contenido" id="contenido"></main>
+</div>
+
+<!-- Ventana -->
+<div id="velo" class="velo" hidden>
+  <div class="card modal" role="dialog" aria-modal="true" aria-labelledby="mTitulo">
+    <div class="m-head"><h2 id="mTitulo"></h2><button type="button" class="btn-icon" id="mCerrar" aria-label="Cerrar">✕</button></div>
+    <form id="mForm" novalidate><div id="mCuerpo" class="m-body"></div>
+      <p id="mError" class="err" role="alert" hidden></p>
+      <div class="m-foot"><button type="button" class="btn" id="mCancelar">Cancelar</button><button type="submit" class="btn btn-pri" id="mOk">Guardar</button></div>
+    </form>
+  </div>
+</div>
+
+<div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+
+<script src="vendor/supabase-2.117.3.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
