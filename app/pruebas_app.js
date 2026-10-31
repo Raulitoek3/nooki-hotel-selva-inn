@@ -10,11 +10,16 @@ const OUT = process.env.NOOKI_OUT || path.join(__dirname, '..', 'capturas', 'app
 fs.mkdirSync(OUT, { recursive: true });
 
 // ---------- servidor local de la carpeta app ----------
+// Usa las mismas cabeceras de seguridad que Cloudflare Pages (app/_headers)
+const CABECERAS = {};
+fs.readFileSync(path.join(RAIZ, '_headers'), 'utf8').split('\n').forEach((l) => {
+  const m = l.match(/^\s+([A-Za-z-]+):\s*(.+)$/); if (m) CABECERAS[m[1]] = m[2];
+});
 const TIPOS = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8' };
 const srv = http.createServer((req, res) => {
   const p = path.join(RAIZ, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html'));
   if (!p.startsWith(RAIZ) || !fs.existsSync(p)) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'Content-Type': TIPOS[path.extname(p)] || 'application/octet-stream' });
+  res.writeHead(200, Object.assign({ 'Content-Type': TIPOS[path.extname(p)] || 'application/octet-stream' }, CABECERAS));
   fs.createReadStream(p).pipe(res);
 });
 
@@ -131,6 +136,7 @@ async function entrar(page, correo, clave) {
     const ctx = await browser.newContext({ viewport, locale: 'es-PE' });
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errores.push(nombreVista + ': ' + e.message));
+    page.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) errores.push(nombreVista + ' (seguridad): ' + m.text()); });
     await simular(page, E);
     await page.goto(URL0);
 

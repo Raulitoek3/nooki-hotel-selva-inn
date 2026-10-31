@@ -192,7 +192,7 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 3. **Edge Functions:** `facturar` (emite boleta/factura/NC en Nooki con Idempotency-Key y guarda el resultado), `nooki-aviso` (webhook con firma), `nooki-estado` (consulta un comprobante). La clave de administrador ya quedó como funciones RPC en la base (ver sección 9).
 4. **Pantallas:** pasar el prototipo a leer y guardar en Supabase manteniendo el mismo diseño. Separar en archivos (HTML/CSS/JS sin compilación, como el portal de Nooki) o un proyecto Vite si crece. Cola local para cuando no hay internet.
 5. **Nooki (en su chat):** dar de alta la empresa del hotel en beta, series B001/F001/BC01/FC01, llaves de API; Raúl sube certificado y SOL en el portal. Prueba en beta con todos los casos; luego producción.
-6. **Publicar** en Cloudflare Pages (proyecto `nooki-hotel-selva-inn`, rama `main`) con dominio `selvainn.nooki.pe`.
+6. **Publicar** en Cloudflare Pages (proyecto `nooki-hotel-selva-inn`, rama `main`) con dominio `selvainn.nooki.pe`. Configuración: conectado a GitHub, *Framework preset* None, **sin comando de build**, **carpeta de salida `app`** (solo se publica `app/`; el prototipo y `supabase/` no). `app/_headers` pone las cabeceras de seguridad (CSP que solo deja hablar con el Supabase del hotel y Google Fonts, sin iframes, `noindex`). Si se agrega otro servicio externo, sumarlo a la CSP.
 7. **Respaldo diario** y revisión para que el proyecto gratis no se pause.
 8. Vista del dueño en celular; módulo de tarjetas ZKTeco con el puente; WhatsApp.
 9. Prueba en paralelo con el sistema actual del hotel (Smart Hotel, de Smart System Perú), capacitación y arranque.
