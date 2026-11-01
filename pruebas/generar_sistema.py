@@ -47,7 +47,7 @@ aviso = ("\n/* Aviso: todavía no se guardan los cambios */\n"
 <link rel="stylesheet" href="sistema.css">
 </head>
 <body>{cuerpo}
-<div class="aviso-conexion" id="avisoConexion" role="status"><b>Datos reales · conexión en curso</b>Lo que ves es del hotel. Los cambios hechos aquí todavía no se guardan: para guardar usa el <a href="/anterior.html">sistema anterior</a> mientras termino de conectarlo.</div>
+
 <script src="vendor/supabase-2.117.3.js"></script>
 <script src="config.js"></script>
 <script src="puente.js"></script>

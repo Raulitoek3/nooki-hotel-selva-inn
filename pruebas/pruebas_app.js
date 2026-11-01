@@ -952,6 +952,42 @@ async function entrar(page, correo, clave) {
       await page.waitForTimeout(250);
     }
     prueba('las pantallas del prototipo abren sin errores', true);
+
+    if (nombreVista === 'escritorio') {
+      // ===== GUARDAR: lo que se hace en el prototipo llega a la base =====
+      const esperar = async (cond, ms = 8000) => { for (let i = 0; i < ms / 100 && !cond(); i++) await page.waitForTimeout(100); return cond(); };
+      const r4 = () => E.tablas.reservas.find((r) => r.id === 4);
+      await page.evaluate(() => { const r = NKS.res().find((x) => x.id === 4); NKS.checkin(r); });
+      prueba('Guardar: check-in llega a la base', await esperar(() => r4().estado === 'ocupado' && r4().checkin_en));
+      await page.evaluate(() => { const r = NKS.res().find((x) => x.id === 4); r.items.push({ n: 'Lavandería', p: 4, q: 2 }); NKS.refresh(); });
+      prueba('Guardar: consumo nuevo', await esperar(() => E.tablas.consumos.some((c) => c.reserva_id === 4 && c.descripcion === 'Lavandería' && c.cantidad === 2)));
+      await page.evaluate(() => { const r = NKS.res().find((x) => x.id === 4); r.items[0].q = 3; NKS.refresh(); });
+      prueba('Guardar: cambiar la cantidad del consumo', await esperar(() => E.tablas.consumos.some((c) => c.descripcion === 'Lavandería' && c.cantidad === 3)));
+      await page.evaluate(() => NKS.caja(true, 50));
+      prueba('Guardar: abrir caja', await esperar(() => E.tablas.caja_turnos.length === 1 && Number(E.tablas.caja_turnos[0].monto_inicial) === 50));
+      await page.evaluate(() => { const r = NKS.res().find((x) => x.id === 4); NKS.pagar(r, 100, 'Yape', 'Boleta'); });
+      prueba('Guardar: cobro + boleta por el facturador', await esperar(() => E.tablas.pagos.length === 1 && E.tablas.comprobantes.length === 1 && E.tablas.pagos[0].turno_id === E.tablas.caja_turnos[0].id));
+      prueba('Guardar: el pago muestra el número real del comprobante', await esperar(() => true) && (await page.evaluate(() => NKS.res().find((x) => x.id === 4).pays[0].doc)) === 'B001-1');
+      await page.evaluate(() => { const r = NKS.res().find((x) => x.id === 4); NKS.checkout(r); });
+      prueba('Guardar: check-out y habitación a limpieza', await esperar(() => r4().estado === 'finalizada' && E.tablas.limpieza.some((l) => l.habitacion === '201' && l.estado === 'sucia')));
+      await page.evaluate(() => {
+        const h = NKS.hoy();
+        NKS.res().push({ id: 99001, group: 99001, room: '202', guest: { name: 'Nuevo Ficticio', doc: '87654321', docType: 'DNI', nat: 'Perú' }, company: null, origin: 'Directo', ext: '', motivo: 'Vacaciones', ref: 'Ninguna',
+          ci: h, co: h + 2, rate: 160, tarifa: 'Regular', persons: 1, state: 'confirmado', items: [], pays: [], notes: [], extra: [], log: [] });
+        NKS.refresh();
+      });
+      prueba('Guardar: nueva reserva con cliente nuevo', await esperar(() => E.tablas.reservas.some((r) => r.habitacion === '202' && r.estado === 'confirmado') && E.tablas.clientes.some((c) => c.num_doc === '87654321')));
+      prueba('Guardar: la reserva toma el número real de la base', await page.evaluate(() => !NKS.res().some((x) => x.id === 99001)));
+      await page.evaluate(() => {
+        const h = NKS.hoy();
+        NKS.res().push({ id: 99002, group: 99002, room: '202', guest: { name: 'Otro Ficticio', doc: '87654322', docType: 'DNI', nat: 'Perú' }, company: null, origin: 'Directo', ext: '', motivo: '', ref: 'Ninguna',
+          ci: h, co: h + 1, rate: 160, tarifa: 'Regular', persons: 1, state: 'confirmado', items: [], pays: [], notes: [], extra: [], log: [] });
+        NKS.refresh();
+      });
+      let quitada = false;
+      for (let i = 0; i < 60 && !quitada; i++) { await page.waitForTimeout(100); quitada = await page.evaluate(() => !NKS.res().some((x) => x.id === 99002)); }
+      prueba('Guardar: no deja cruzar reservas (la quita y avisa)', quitada && E.tablas.reservas.filter((r) => r.habitacion === '202').length === 1 && /No se guardó/.test(await page.textContent('body')));
+    }
     await ctx.close();
   }
 
