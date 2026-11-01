@@ -1,74 +1,106 @@
 <!doctype html>
 <html lang="es">
 <head>
+<!-- GENERADO por pruebas/generar_sistema.py desde prototipo/Nooki-Hotel-prototipo.html. No editar aquí. -->
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
 <title>Hotel Selva Inn · Sistema</title>
-<link rel="icon" href="logo.svg" type="image/svg+xml">
-<meta name="robots" content="noindex">
+<link rel="icon" href="/logo.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="sistema.css">
 </head>
 <body>
 
-<!-- Ingreso -->
-<main id="vIngreso" class="ingreso" hidden>
-  <form id="fIngreso" class="card ingreso-card" novalidate>
-    <div class="marca-grande">
-      <img src="logo.svg" alt="" width="88" height="88">
-      <b class="marca-nombre" id="hotelNombre">Hotel Selva Inn</b>
-      <small class="marca-lugar" id="hotelLugar">Puerto Maldonado · Perú</small>
-    </div>
-    <div>
-      <h1>Iniciar sesión</h1>
-      <p class="sub">Sistema de gestión del hotel</p>
-    </div>
-    <label>Correo<input id="iCorreo" type="email" autocomplete="username" required></label>
-    <label>Contraseña<input id="iClave" type="password" autocomplete="current-password" required></label>
-    <p id="iError" class="err" role="alert" hidden></p>
-    <button class="btn btn-pri btn-lg" type="submit" id="iEntrar">Entrar</button>
-  </form>
-</main>
 
-<!-- Sistema -->
-<div id="vApp" class="app" hidden>
-  <header class="top">
-    <div class="marca">
-      <img src="logo.svg" alt="" width="40" height="40">
-      <div><b class="marca-nombre" id="hotelNombre2">Hotel Selva Inn</b><small class="marca-lugar" id="hotelLugar2">Puerto Maldonado · Perú</small></div>
-    </div>
-    <nav class="nav" id="nav" aria-label="Secciones"></nav>
-    <div class="yo">
-      <span class="av" id="yoAv" aria-hidden="true"></span>
-      <div class="yo-txt"><b id="yoNombre"></b><small id="yoRol"></small></div>
-      <button class="btn" type="button" id="bSalir">Salir</button>
-    </div>
-  </header>
-  <main class="contenido" id="contenido"></main>
-</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-bed" viewBox="0 0 24 24"><path d="M2.5 5v15M2.5 9h16a3 3 0 0 1 3 3v8M2.5 16.5h19M7 9v7.5"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16.5" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M4 3v7a3 3 0 0 0 6 0V3M7 3v18M17 21V3c-2.5 1.5-4 4-4 8h4"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 12a8.5 8.5 0 0 1-12.6 7.4L3 21l1.6-5.2A8.5 8.5 0 1 1 21 12z"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h12v4"/><path d="M3 7v11a2 2 0 0 0 2 2h16V9H5a2 2 0 0 1-2-2z"/><path d="M16.5 14.5h.01"/></symbol>
+  <symbol id="i-package" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+  <symbol id="i-warehouse" viewBox="0 0 24 24"><path d="M3 21V9l9-5 9 5v12"/><path d="M7 21v-8h10v8M7 17h10"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.7-3.4 3.3-5.5 6.5-5.5s5.8 2.1 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c1.9.7 3.2 2.5 3.5 5.2"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7.5 15v2.5M11.5 11v6.5M15.5 7v10.5M19.5 12v5.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h9M18 6h2M4 12h3M12 12h8M4 18h11M20 18h0"/><circle cx="15.5" cy="6" r="2.2"/><circle cx="9.5" cy="12" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol><symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol><symbol id="i-printer" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 14h12v7H6z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><path d="M5 12h.01M12 12h.01M19 12h.01" stroke-width="3"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-login" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11 3l1.9 4.9L18 10l-5.1 2.1L11 17l-1.9-4.9L4 10l5.1-2.1z"/><path d="M19 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19M6 15h4"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M5.5 7l1 13a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4.2-6 8-6s7 2 8 6"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 7h.01M15 7h.01M9 11h.01M15 11h.01M9 15h.01M15 15h.01M10 21v-3h4v3"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5M12 16h.01"/></symbol>
+  <symbol id="i-dollar" viewBox="0 0 24 24"><path d="M12 3v18M16.5 7.5c-.6-1.5-2.3-2.5-4.5-2.5-2.5 0-4.5 1.3-4.5 3.3 0 4.6 9 2.4 9 7.2 0 2-2 3.5-4.5 3.5-2.4 0-4.2-1.1-4.8-2.8"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-enter" viewBox="0 0 24 24"><path d="M20 5v7a3 3 0 0 1-3 3H5M9 11l-4 4 4 4"/></symbol>
+</svg>
 
-<!-- Ventana -->
-<div id="velo" class="velo" hidden>
-  <div class="card modal" role="dialog" aria-modal="true" aria-labelledby="mTitulo">
-    <div class="m-head"><h2 id="mTitulo"></h2><button type="button" class="btn-icon" id="mCerrar" aria-label="Cerrar">✕</button></div>
-    <form id="mForm" novalidate><div id="mCuerpo" class="m-body"></div>
-      <p id="mError" class="err" role="alert" hidden></p>
-      <div class="m-foot"><button type="button" class="btn" id="mCancelar">Cancelar</button><button type="submit" class="btn btn-pri" id="mOk">Guardar</button></div>
-    </form>
+<a class="sr" href="#view">Saltar al contenido</a>
+<div class="app">
+  <aside class="side" id="side" aria-label="Menú principal">
+    <div class="brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true"> <circle cx="50" cy="50" r="50" fill="#DB8E1F"/> <g fill="#FFFFFF"> <path d="M41 86 C42 72 43.5 58 46.8 41 L49.6 41.6 C46.8 58.4 45.4 72.4 44.8 86 Z"/> <path d="M48 40 C40 31 30 30 22 35 C31 33 39 35 46 42 Z"/> <path d="M48 40 C44 28 36 22 27 22 C35 26 41 31 45.5 41 Z"/> <path d="M48 40 C50 29 57 22 66 21 C58 26 53 32 50 41 Z"/> <path d="M48 40 C57 33 67 33 75 39 C66 37 58 38 50.5 43 Z"/> <path d="M48 40 C52 45 54 52 53 59 C51 52 49 47 46.5 43 Z"/> <path d="M48 40 C42 44 37 50 35 57 C39 51 43 46 48.5 42.5 Z"/> <path d="M63 86 C63.5 77 64.5 69 66.6 60 L68.8 60.4 C67 69.4 66.2 77.4 66 86 Z"/> <path d="M67.6 59.4 C63 54 57 53.5 52 56.5 C57.5 55.5 62 56.5 66.4 61 Z"/> <path d="M67.6 59.4 C66 52 70 46 76 44 C72 48 70 53 68.8 60.6 Z"/> <path d="M67.6 59.4 C73 55 79 55.5 83 59.5 C78 58 73 58.5 69 61.8 Z"/> <path d="M67.6 59.4 C70.5 63 71.6 67.5 70.8 72 C69.6 67.6 68.4 64.6 66.6 62 Z"/> <path d="M24 86.5 C38 83.5 62 83.5 76 86.5 L76 88.5 C62 86 38 86 24 88.5 Z"/> </g> </svg>
+      <div><b>Hotel Selva Inn</b><small>Puerto Maldonado · Perú</small></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-f">
+      <a class="ni" href="#ajustes" data-to="ajustes" title="Ajustes"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>Ajustes</span></a>
+      <button class="me" data-act="me" aria-haspopup="menu" aria-expanded="false"><span class="av">RE</span><span><b>Recepción</b><small>Administrador del hotel</small></span><svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
+    </div>
+  </aside>
+  <div class="side-scrim" id="sideScrim" data-act="side-close"></div>
+
+  <div class="main" id="mainScroll">
+    <header class="top">
+      <button class="btn-icon" data-act="side-open" aria-label="Mostrar u ocultar el menú" id="menuBtn"><svg class="ic" aria-hidden="true"><use href="#i-menu"/></svg></button>
+      <nav class="crumbs" id="crumbs" aria-label="Ubicación"></nav>
+      <button class="search-trig" data-act="palette" aria-label="Buscar huésped, habitación o acción"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span>Buscar huésped, habitación o acción</span><kbd id="kbdK">Ctrl K</kbd></button>
+      <div class="top-r">
+        <span class="tag day" title="Día de trabajo">Día <b>210</b></span>
+        <button class="tag" id="cajaBtn" data-act="caja" aria-haspopup="dialog" aria-expanded="false"><i class="dot"></i><span>Caja cerrada</span></button>
+        <button class="tag" id="tcBtn" data-act="tc" aria-haspopup="dialog" aria-expanded="false">T.C. <b id="tcVal">—</b></button>
+        <button class="btn-icon" id="themeBtn" data-act="theme" aria-label="Cambiar tema"></button>
+      </div>
+    </header>
+    <main class="view" id="view" tabindex="-1"></main>
   </div>
 </div>
 
-<div id="aviso" class="aviso" role="status" aria-live="polite" hidden></div>
+<div class="dw" id="dw">
+  <div class="dw-scrim" data-act="dw-close"></div>
+  <aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="dwTitle"><div id="dwIn"></div></aside>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<div class="tip" id="tip" role="tooltip"></div>
 
+
+<div class="aviso-conexion" id="avisoConexion" role="status"><b>Datos reales · conexión en curso</b>Lo que ves es del hotel. Los cambios hechos aquí todavía no se guardan: para guardar usa el <a href="/anterior.html">sistema anterior</a> mientras termino de conectarlo.</div>
 <script src="vendor/supabase-2.117.3.js"></script>
 <script src="config.js"></script>
-<script src="app.js"></script>
-<script src="reservas.js"></script>
-<script src="caja.js"></script>
-<script src="ventas.js"></script>
-<script src="operacion.js"></script>
-<script src="mas.js"></script>
+<script src="puente.js"></script>
 </body>
 </html>

@@ -239,6 +239,13 @@ Revisa todas las vistas en escritorio (1440 px) y celular (390 px, sin scroll de
 
 ## 10. Estado al 31/10/2026
 
+> **DECISIÓN 01/11/2026 (Raúl): el sistema del hotel ES el prototipo del zip, con su mismo diseño.** Las pantallas propias que se hicieron antes (más simples) quedan solo como **sistema anterior** en `/anterior.html` (Usuarios, probar la conexión con el facturador y, mientras tanto, guardar). No volver a hacer pantallas nuevas: todo cambio de diseño se hace en `prototipo/` y se regenera.
+> - `python3 pruebas/generar_sistema.py` arma `app/index.html` + `app/sistema.css` + `app/sistema.js` desde el prototipo (con la marca del hotel) e inserta `pruebas/datos_reales.js` justo antes del arranque. **No editar** esos tres archivos generados.
+> - `app/puente.js`: exige sesión (si no, `/ingreso.html`), carga los datos reales a `window.DATOS_HOTEL` y luego carga `sistema.js`. `datos_reales.js` reemplaza los datos de ejemplo (tipos, habitaciones, reservas con consumos y pagos, clientes, productos, personal, temporadas, orígenes, formas de pago, mesas, limpieza, caja, config), usa la **clave de administrador del servidor** (`verificar_clave`) en vez de la "1234" de demostración, el nombre real del usuario y agrega "Salir" al menú.
+> - **Pendiente inmediato: que cada acción del prototipo GUARDE en la base** (nueva reserva, check-in/out, consumos, cobros con `facturar`, caja, limpieza, ajustes…). Mientras tanto un aviso abajo dice que los cambios aún no se guardan.
+> - CSP: `style-src` permite `'unsafe-inline'` (el prototipo usa estilos en línea); `script-src` sigue solo `'self'`.
+
+
 - Prototipo v11 terminado (162 pruebas pasando): facturación simulada con Nooki, sin usuarios, clave de administrador, auditoría, reportes con filtros y Excel, gestión de habitaciones y tipos, títulos del menú en `#242833`.
 - Repositorio `Raulitoek3/nooki-hotel-selva-inn` (privado) creado.
 - Paso 1 y paso 2 del plan hechos: proyecto Supabase del hotel creado y base de datos lista (32 tablas, RLS en todas, pruebas de reglas pasando).

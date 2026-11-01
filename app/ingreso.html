@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Iniciar sesión · Hotel Selva Inn</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<main class="ingreso">
+  <form id="fIngreso" class="card ingreso-card" novalidate>
+    <div class="marca-grande">
+      <img src="logo.svg" alt="" width="88" height="88">
+      <b class="marca-nombre">Hotel Selva Inn</b>
+      <small class="marca-lugar">Puerto Maldonado · Perú</small>
+    </div>
+    <div><h1>Iniciar sesión</h1><p class="sub">Sistema de gestión del hotel</p></div>
+    <label>Correo<input id="iCorreo" type="email" autocomplete="username" required></label>
+    <label>Contraseña<input id="iClave" type="password" autocomplete="current-password" required></label>
+    <p id="iError" class="err" role="alert" hidden></p>
+    <button class="btn btn-pri btn-lg" type="submit" id="iEntrar">Entrar</button>
+  </form>
+</main>
+<script src="vendor/supabase-2.117.3.js"></script>
+<script src="config.js"></script>
+<script src="ingreso.js"></script>
+</body>
+</html>

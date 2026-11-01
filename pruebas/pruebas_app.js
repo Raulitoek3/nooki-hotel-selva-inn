@@ -381,7 +381,7 @@ async function entrar(page, correo, clave) {
     page.on('pageerror', (e) => errores.push(nombreVista + ': ' + e.message));
     page.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) errores.push(nombreVista + ' (seguridad): ' + m.text()); });
     await simular(page, E);
-    await page.goto(URL0);
+    await page.goto(URL0 + 'anterior.html');
 
     await page.waitForSelector('#vIngreso:not([hidden])');
     prueba('muestra el ingreso', await page.isVisible('#fIngreso'));
@@ -916,6 +916,42 @@ async function entrar(page, correo, clave) {
     prueba('vista previa sin scroll de lado', await sinScrollLateral(vp));
     await vp.close();
 
+    await ctx.close();
+  }
+
+  // ===== SISTEMA PRINCIPAL: el prototipo (mismo diseño) con datos reales =====
+  for (const [nombreVista, viewport] of [['escritorio', { width: 1440, height: 900 }], ['celular', { width: 390, height: 844 }]]) {
+    console.log('\nSISTEMA (diseño del prototipo) · ' + nombreVista.toUpperCase());
+    const E = estadoNuevo();
+    const ctx = await browser.newContext({ viewport, locale: 'es-PE' });
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errores.push('sistema ' + nombreVista + ': ' + e.message));
+    page.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) errores.push('sistema ' + nombreVista + ' (seguridad): ' + m.text()); });
+    await simular(page, E);
+    await page.goto(URL0);
+    await page.waitForURL(/ingreso\.html/);
+    prueba('sin sesión manda a la página de ingreso', true);
+    prueba('ingreso con el logo del hotel', await page.$eval('.marca-grande img', (i) => i.complete && i.naturalWidth > 0));
+    await page.screenshot({ path: path.join(OUT, 'sistema-' + nombreVista + '-1-ingreso.png') });
+    await entrar(page, 'oficinavirtual@nooki.pe', 'Prueba-Admin-1');
+    await page.waitForSelector('#view h1', { timeout: 15000 });
+    prueba('entra al sistema con el diseño del prototipo (menú lateral)', !!(await page.$('#side')) && !!(await page.$('#view')));
+    await page.evaluate(() => { location.hash = '#panel'; });
+    await page.waitForFunction(() => /Panel de habitaciones/.test(((document.querySelector('#view h1') || {}).textContent || '')));
+    await page.waitForTimeout(1500);
+    const vista = await page.textContent('#view');
+    if (!vista.includes('301')) console.log('   [depuración panel]', vista.slice(0, 600));
+    prueba('el panel muestra las habitaciones reales', vista.includes('301') && vista.includes('203') && vista.includes('Auditorio') && !vista.includes('405'));
+    prueba('el panel muestra los huéspedes reales (no los de ejemplo)', vista.includes('Huésped Ficticio Uno') && !vista.includes('Luis Alberto Torres'));
+    prueba('dice Hotel Selva Inn y no Nooki Hotel', (await page.textContent('#side')).includes('Hotel Selva Inn') && !(await page.content()).includes('Nooki Hotel'));
+    prueba('el usuario que entró aparece en el menú', (await page.textContent('.me')).includes('Administrador'));
+    prueba('sin scroll de lado (sistema)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, 'sistema-' + nombreVista + '-2-panel.png') });
+    for (const v of ['inicio', 'timeline', 'reservas', 'caja', 'ventas', 'limpieza', 'reportes', 'ajustes']) {
+      await page.evaluate((h) => { location.hash = '#' + h; }, v);
+      await page.waitForTimeout(250);
+    }
+    prueba('las pantallas del prototipo abren sin errores', true);
     await ctx.close();
   }
 

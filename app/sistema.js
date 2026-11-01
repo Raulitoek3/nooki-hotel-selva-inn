@@ -1,0 +1,2500 @@
+/* GENERADO por pruebas/generar_sistema.py desde el prototipo. No editar aquí. */
+
+(function(){
+'use strict';
+var TODAY=16, NOW_H=10.5;
+var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function $(s,r){return (r||document).querySelector(s);}
+function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function norm(s){return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();}
+function fm(n){return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function money(n){return 'S/ '+fm(n);}
+function money0(n){return 'S/ '+Math.round(n).toLocaleString('en-US');}
+function pad(n){return String(n).padStart(2,'0');}
+var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+var DOW=['dom','lun','mar','mié','jue','vie','sáb'];
+function dt(d){return new Date(Date.UTC(2026,9,d));}
+function fmtD(d){var x=dt(d);return x.getUTCDate()+' '+MES[x.getUTCMonth()];}
+function fmtDL(d){var x=dt(d);return DOW[x.getUTCDay()]+' '+x.getUTCDate()+' '+MES[x.getUTCMonth()];}
+function iso(d){return dt(d).toISOString().slice(0,10);}
+function fromIso(s){var t=Date.parse(s);return isNaN(t)?null:Math.round((t-Date.UTC(2026,9,1))/864e5)+1;}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+function ic(n,c){return '<svg class="ic'+(c?' '+c:'')+'" aria-hidden="true"><use href="#i-'+n+'"/></svg>';}
+function ini(n){return n.split(/\s+/).filter(Boolean).slice(0,2).map(function(w){return w[0];}).join('').toUpperCase();}
+function short(n){var p=n.split(/\s+/);return p.length>1?p[0]+' '+p[p.length>2?p.length-2:1]:n;}
+function nowHM(){var d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes());}
+function plural(n,a,b){return n+' '+(n===1?a:b);}
+
+/* ---------- datos de ejemplo ---------- */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+var rand=rng(20261016);
+function ri(a,b){return a+Math.floor(rand()*(b-a+1));}
+function pick(a){return a[Math.floor(rand()*a.length)];}
+
+var TYPES={P:{n:'Personal',rate:160,beds:1,cap:1},D:{n:'Doble',rate:200,beds:2,cap:2},T:{n:'Triple',rate:260,beds:3,cap:3},MQ:{n:'Matrimonial Queen',rate:180,beds:1,cap:2},MK:{n:'Matrimonial King',rate:220,beds:1,cap:2},KD:{n:'King Decorada',rate:280,beds:1,cap:2},AU:{n:'Auditorio',rate:125,beds:0,cap:40}};
+var TYPE_ORDER=['P','D','T','MQ','MK','KD','AU'];
+var ROOMS=[['101','P',1],['102','P',1],['103','P',1],['104','P',1],['201','MQ',2],['202','P',2],['204','D',2],['205','MK',2],['206','P',2],['301','MK',3],['302','P',3],['303','P',3],['304','MQ',3],['306','MQ',3],['307','T',3],['308','MK',3],['309','P',3],['310','MQ',3],['311','P',3],['312','D',3],['313','P',3],['314','D',3],['401','MQ',4],['402','P',4],['403','P',4],['405','KD',4],['406','MQ',4],['407','T',4],['408','MK',4],['409','P',4],['410','MQ',4],['411','MQ',4],['412','D',4],['413','D',4],['AUD','AU',0]].map(function(x){return {n:x[0],t:x[1],f:x[2],off:false,cleaning:false};});
+function room(n){return ROOMS.find(function(r){return r.n===n;});}
+function rname(n){return n==='AUD'?'Auditorio':n;}
+
+var FIRST=['Carmen','Luis Alberto','Rosa','Jorge','Ana Lucía','Miguel','Patricia','Diego','Silvia','Renzo','Milagros','Óscar','Karina','Fernando','Lucía','Raúl','Gabriela','Héctor','Valeria','Julio','Elena','Andrés','Sofía','Marco','Daniela','Iván','Roxana','César','Pamela','Wilber','Yesenia','Alonso','Nathaly','Edwin','Flor','Kevin'];
+var LAST=['Quispe','Mamani','Huamán','Condori','Flores','Ramírez','Torres','Rojas','Vargas','Paredes','Salazar','Castillo','Chávez','Delgado','Gutiérrez','Mendoza','Apaza','Ccahuana','Loayza','Villanueva','Aguilar','Cárdenas','Ponce','Zevallos','Benavides','Huanca','Paucar','Ttito','Arce','Medina','Saavedra','Inca'];
+var FOREIGN=[['Brasil','Pasaporte'],['Bolivia','Pasaporte'],['Estados Unidos','Pasaporte'],['Alemania','Pasaporte'],['Chile','Pasaporte']];
+function makeGuest(){var nat='Perú',dt2='DNI',doc=String(ri(40000000,79999999));if(rand()<.08){var f=pick(FOREIGN);nat=f[0];dt2=f[1];doc=String.fromCharCode(65+ri(0,25))+ri(1000000,9999999);}return {name:pick(FIRST)+' '+pick(LAST)+' '+pick(LAST),doc:doc,docType:dt2,nat:nat};}
+var COMPANIES=[{name:'Constructora Amazonía S.A.C.',ruc:'20600000011'},{name:'Transportes Madre de Dios S.A.C.',ruc:'20600000022'},{name:'Consultora Andes E.I.R.L.',ruc:'20600000033'},{name:'Agroexport Tambopata S.A.C.',ruc:'20600000044'}];
+var ORIGINS=[{n:'Directo',c:0},{n:'WhatsApp',c:0},{n:'Booking',c:15},{n:'Airbnb',c:15},{n:'Facebook',c:0},{n:'TikTok',c:0},{n:'Amistades',c:0},{n:'Redes sociales',c:0}];
+var ORW=['Directo','Directo','Directo','WhatsApp','WhatsApp','WhatsApp','Booking','Booking','Airbnb','Facebook','Amistades','TikTok'];
+var MOTIVOS=['Negocios y motivos profesionales','Trabajo','Vacaciones','Visita familiar','Salud','Por horas'];
+var REFS=['Ninguna','Recomendado'];
+var METHODS=['Efectivo','Yape','Plin','Tarjeta débito','Tarjeta crédito','Transferencia BCP','Transferencia BBVA','Transferencia Interbank','Scotiabank','Página web','Cheque'];
+var PRODUCTS=[
+ {n:'Desayuno buffet',c:'Desayuno',p:25,t:'Servicio',cost:11,rest:true,dest:'Cocina'},
+ {n:'Café pasado',c:'Desayuno',p:6,t:'Kit',cost:1.5,rest:true,dest:'Barra'},
+ {n:'Persona adicional',c:'Servicios',p:50,t:'Servicio'},
+ {n:'Horas adicionales',c:'Servicios',p:20,t:'Servicio'},
+ {n:'Lavandería por prenda',c:'Servicios',p:4,t:'Servicio'},
+ {n:'Agua mineral 625 ml',c:'Bebidas',p:4,t:'Producto',stock:48,min:24,cost:1.6,lot:'L-2291',exp:'2027-05-01',rest:true,dest:'Barra'},
+ {n:'Gaseosa 1/2 L',c:'Bebidas',p:4,t:'Producto',stock:36,min:24,cost:1.9,lot:'L-1830',exp:'2027-02-10',rest:true,dest:'Barra'},
+ {n:'Guaraná',c:'Bebidas',p:5,t:'Producto',stock:8,min:12,cost:2.2,rest:true,dest:'Barra'},
+ {n:'Té verde',c:'Bebidas',p:5,t:'Producto',stock:0,min:10,cost:2,rest:true,dest:'Barra'},
+ {n:'Red Bull',c:'Bebidas',p:9,t:'Producto',stock:14,min:12,cost:5.5,rest:true,dest:'Barra'},
+ {n:'Chicha morada 1 L',c:'Bebidas',p:12,t:'Producto',stock:10,min:6,cost:4,lot:'L-0915',exp:'2026-10-20',rest:true,dest:'Barra'},
+ {n:'Cerveza artesanal',c:'Cervezas artesanales',p:15,t:'Producto',stock:22,min:12,cost:7,lot:'L-0712',exp:'2026-10-28',rest:true,dest:'Barra'},
+ {n:'Pisco sour',c:'Licores',p:18,t:'Kit',cost:6,rest:true,dest:'Barra'},
+ {n:'Lomo saltado',c:'Platos de fondo',p:32,t:'Kit',cost:13,rest:true,dest:'Cocina'},
+ {n:'Juane',c:'Platos de fondo',p:28,t:'Kit',cost:10,rest:true,dest:'Cocina'},
+ {n:'Tacacho con cecina',c:'Platos de fondo',p:30,t:'Kit',cost:11,rest:true,dest:'Cocina'}
+].map(function(x,i){x.id=i+1;x.ant=15;if(x.t!=='Producto')x.stock=null;x.rest=!!x.rest;x.prices={publico:x.p,booking:x.p,personal:Math.round(x.p*8)/10,promo:Math.round(x.p*9)/10};return x;});
+function PROD(n){return PRODUCTS.find(function(p){return p.n===n;});}
+var NATS=['Perú','Bolivia','Brasil','Chile','Colombia','Argentina','Ecuador','Estados Unidos','España','Alemania','Francia','Otro'];
+var DOCTYPES=['DNI','Carné de extranjería','Pasaporte'];
+
+var RES=[], BOL=330, FAC=85, NV=40, PID=0;
+function mk(rn,ci,co,state){var rm=room(rn),t=TYPES[rm.t];var r={id:0,group:0,room:rn,guest:makeGuest(),company:rand()<.16?pick(COMPANIES):null,origin:pick(ORW),ext:'',motivo:pick(MOTIVOS),ref:'Ninguna',ci:ci,co:co,rate:t.rate,tarifa:'Regular',persons:rm.t==='AU'?ri(15,40):ri(1,t.cap),state:state,items:[],pays:[],notes:[],extra:[],log:[]};if(r.origin==='Booking'||r.origin==='Airbnb')r.ext=String(ri(1000000,9999999))+String(ri(100,999));RES.push(r);return r;}
+var OCC={'101':[15,16],'103':[14,17],'104':[15,17],'201':[14,16],'202':[15,17],'204':[15,18],'205':[15,17],'301':[13,17],'302':[15,17],'303':[12,16],'304':[15,18],'306':[14,17],'308':[15,17],'309':[14,16],'311':[15,19],'312':[15,17],'402':[13,16],'406':[14,18],'407':[15,17],'408':[15,17],'410':[15,16]};
+Object.keys(OCC).forEach(function(n){mk(n,OCC[n][0],OCC[n][1],'ocupado');});
+[['314',16,18,'confirmado'],['411',16,19,'confirmado'],['401',16,17,'reservado'],['102',18,20,'confirmado'],['307',20,23,'reservado'],['403',22,24,'confirmado'],['409',17,19,'confirmado'],['412',19,21,'reservado'],['104',17,20,'confirmado'],['202',18,20,'reservado'],['204',18,21,'confirmado'],['311',19,22,'confirmado'],['AUD',24,25,'confirmado'],['301',17,19,'reservado'],['406',18,20,'confirmado']].forEach(function(x){mk(x[0],x[1],x[2],x[3]);});
+['405','413','313'].forEach(function(n){room(n).off=true;});
+['310','206'].forEach(function(n){room(n).cleaning=true;var ci=ri(13,15);fillPast(n,ci);mk(n,ci,16,'finalizada');});
+mk('AUD',3,4,'finalizada');mk('AUD',9,10,'finalizada');
+ROOMS.forEach(function(rm){if(rm.n==='AUD'||rm.cleaning)return;var lim=rm.off?8:15;RES.forEach(function(r){if(r.room===rm.n&&r.state!=='finalizada')lim=Math.min(lim,r.ci);});fillPast(rm.n,lim);});
+function fillPast(n,lim){var d=ri(1,2);for(;;){var k=ri(1,4);if(d+k>lim)break;mk(n,d,d+k,'finalizada');d+=k+ri(0,2);}}
+RES.sort(function(a,b){return a.ci-b.ci||a.co-b.co;});
+RES.forEach(function(r,i){r.id=11520+i;r.group=r.id;});
+var nid=RES[RES.length-1].id;
+var STAFF=['Luis','Rosa (turno noche)'];
+function lg(r,d,h,text,who){r.log.push({d:d,h:h,text:text,who:who||ME()});}
+function addPay(r,amount,method,kind,d,h,who){var doc=nextDoc(kind);var p={id:++PID,r:r,doc:doc,method:method,amount:amount,kind:kind,d:d,h:h,sunat:kind==='Nota de venta'?'interno':'aceptado',anulado:false};r.pays.push(p);lg(r,d,h,'Pago de '+money(amount)+' con '+method+' · '+doc,who);return p;}
+function nights(r){return Math.max(1,r.co-r.ci);}
+function itemsTotal(r){return r.items.reduce(function(s,i){return s+i.q*i.p;},0);}
+function total(r){return nights(r)*r.rate+itemsTotal(r);}
+function paid(r){return r.pays.reduce(function(s,p){return s+(p.anulado?0:p.amount);},0);}
+function due(r){return Math.max(0,Math.round((total(r)-paid(r))*100)/100);}
+RES.forEach(function(r){
+  var created=r.ci-ri(1,6);lg(r,created,pad(ri(8,20))+':'+pad(ri(0,59)),'Reserva creada · origen '+r.origin,pick(STAFF));
+  if(r.state==='finalizada'||r.state==='ocupado'){
+    lg(r,r.ci,'09:'+pad(ri(0,59)),'Check-in',pick(STAFF));
+    var k=ri(0,3);for(var i=0;i<k;i++){var p=pick(PRODUCTS);var ex=r.items.find(function(x){return x.n===p.n;});if(ex)ex.q++;else r.items.push({n:p.n,p:p.p,q:ri(1,2)});}
+  }
+  var meth=function(){return pick(['Efectivo','Efectivo','Yape','Yape','Plin','Tarjeta débito','Tarjeta crédito','Transferencia BCP']);};
+  var kind=r.company?'Factura':'Boleta';
+  if(r.state==='finalizada'){addPay(r,total(r),meth(),kind,r.co,'10:'+pad(ri(0,50)),pick(STAFF));lg(r,r.co,'10:5'+ri(0,9),'Check-out',pick(STAFF));}
+  else if(r.state==='ocupado'){var x=rand();if(x<.42)addPay(r,total(r),meth(),kind,r.ci,'09:'+pad(ri(10,59)),pick(STAFF));else if(x<.72)addPay(r,r.rate,meth(),kind,r.ci,'09:'+pad(ri(10,59)),pick(STAFF));}
+  else if(r.state==='confirmado'&&rand()<.5){addPay(r,Math.round(r.rate/2),'Yape','Boleta',r.ci-1,(r.ci-1===TODAY?'08:':'18:')+pad(ri(0,59)),pick(STAFF));}
+});
+var CLEAN_SINCE={'310':'11:20','206':'11:05'};
+(function(){
+  var all=[];RES.forEach(function(r){r.pays.forEach(function(p){all.push(p);});});
+  all.forEach(function(p){if(p.kind!=='Nota de venta'&&p.d>=TODAY-1&&rand()<.4)p.sunat='pendiente';});
+  var facts=all.filter(function(p){return p.kind==='Factura'&&p.d>=11&&p.d<TODAY-1;});
+  if(facts.length){var f=facts[facts.length-1];f.sunat='rechazado';f.obs='SUNAT indica que el RUC del cliente no está activo.';}
+  var bols=all.filter(function(p){return p.kind==='Boleta'&&p.d>=5&&p.d<=13&&p.r.state==='finalizada';});
+  [['El monto de la boleta estaba equivocado','Boleta'],['El cliente pidió factura a nombre de su empresa','Factura']].forEach(function(x,i){
+    var p=bols[i*3];if(!p)return;var h='1'+(1+i)+':20';
+    p.anulado=true;p.sunat='anulado';p.anul={d:p.d,h:h,motivo:x[0],via:'Informado en el resumen diario'};
+    lg(p.r,p.d,h,'Comprobante '+p.doc+' anulado · '+x[0],'Luis');
+    if(x[1]==='Factura'&&!p.r.company)p.r.company=COMPANIES[0];
+    addPay(p.r,p.amount,p.method,x[1],p.d,'1'+(1+i)+':25','Luis');
+  });
+})();
+
+/* ---------- estado ---------- */
+var state={view:'panel',filter:'todas',ptype:'all',q:'',tlType:'all',dw:null,form:null,caja:false,cajaSince:'',tc:null,cajaOpenAmt:0,mov:[],vPer:'7d',vKind:'all',vSun:'all',vQ:'',vTab:'comp',restToRoom:0,amb:'Salón',rcat:'',waF:'all',pcat:'all',prQ:'',aF:'all',aTab:'stock',cTab:'all',cQ:'',rPer:'semana',rSt:'all',rOr:'all',rQ:'',repOpen:'mincetur',set:'empresa'};
+var ST={disponible:{l:'Disponible',c:'ok',i:'check'},ocupado:{l:'Ocupada',c:'occ',i:'bed'},salida:{l:'Sale hoy',c:'out',i:'logout'},llegada:{l:'Llega hoy',c:'conf',i:'login'},confirmado:{l:'Confirmada',c:'conf',i:'calendar'},reservado:{l:'Pre-reserva',c:'res',i:'clock'},limpieza:{l:'Limpieza',c:'clean',i:'sparkles'},inhabilitada:{l:'Inhabilitada',c:'off',i:'ban'},finalizada:{l:'Finalizada',c:'off',i:'check'},anulada:{l:'Anulada',c:'dan',i:'x'}};
+function byId(id){return RES.find(function(r){return r.id===id;});}
+function activeRes(n){return RES.find(function(r){return r.room===n&&r.state==='ocupado';});}
+function arrivalRes(n){return RES.find(function(r){return r.room===n&&(r.state==='reservado'||r.state==='confirmado')&&r.ci===TODAY;});}
+function nextRes(n){return RES.filter(function(r){return r.room===n&&(r.state==='reservado'||r.state==='confirmado')&&r.ci>TODAY;}).sort(function(a,b){return a.ci-b.ci;})[0];}
+function resSt(r){if(r.state==='ocupado')return r.co<=TODAY?'salida':'ocupado';if(r.state==='confirmado')return r.ci===TODAY?'llegada':'confirmado';return r.state;}
+function roomSt(rm){if(rm.off)return 'inhabilitada';var a=activeRes(rm.n);if(a)return resSt(a);var b=arrivalRes(rm.n);if(b)return b.state==='confirmado'?'llegada':'reservado';if(rm.cleaning)return 'limpieza';return 'disponible';}
+function pill(st,solid){return '<span class="pill st-'+ST[st].c+(solid?' solid':'')+'">'+ic(ST[st].i)+ST[st].l+'</span>';}
+function editable(r){return ['ocupado','reservado','confirmado'].indexOf(r.state)>-1;}
+function available(rn,ci,co,skip){var rm=room(rn);if(!rm||rm.off)return false;return !RES.some(function(r){return r!==skip&&r.room===rn&&['ocupado','reservado','confirmado'].indexOf(r.state)>-1&&r.ci<co&&ci<r.co;});}
+
+/* ---------- popover / menús / selects ---------- */
+var POP=null, SEL={};
+function openPop(anchor,html,o){
+  o=o||{};closePop(true);
+  var el=document.createElement('div');el.className='pop'+(o.cls?' '+o.cls:'');el.innerHTML=html;
+  if(o.role)el.setAttribute('role',o.role);
+  document.body.appendChild(el);
+  var r=anchor.getBoundingClientRect();
+  if(o.width==='anchor')el.style.width=Math.max(r.width,200)+'px';else if(o.width)el.style.width=o.width+'px';
+  var pw=el.offsetWidth,ph=el.offsetHeight;
+  var x=o.align==='end'?r.right-pw:r.left;x=Math.max(8,Math.min(x,innerWidth-pw-8));
+  var y=r.bottom+6,ob='top';if(y+ph>innerHeight-8&&r.top-ph-6>8){y=r.top-ph-6;ob='bottom';}
+  el.style.left=x+'px';el.style.top=y+'px';el.style.transformOrigin=(o.align==='end'?'right ':'left ')+ob;
+  POP={el:el,anchor:anchor,onClose:o.onClose};anchor.setAttribute('aria-expanded','true');
+  if(o.onMount)o.onMount(el);
+  if(!o.keepFocus){var f=el.querySelector('input,.mi:not([disabled]),button');if(f)f.focus({preventScroll:true});}
+  return el;
+}
+function closePop(instant){if(!POP)return;var p=POP;POP=null;p.anchor.setAttribute('aria-expanded','false');if(p.onClose)p.onClose();if(instant||reduce){p.el.remove();return;}p.el.classList.add('out');setTimeout(function(){p.el.remove();},130);}
+document.addEventListener('pointerdown',function(e){if(POP&&!POP.el.contains(e.target)&&!POP.anchor.contains(e.target))closePop();},true);
+window.addEventListener('resize',function(){closePop(true);hideTip();});
+$('#mainScroll').addEventListener('scroll',function(){if(POP&&!POP.el.contains(document.activeElement)&&POP.anchor.id!=='cliQ')closePop(true);hideTip();},{passive:true});
+
+function menu(anchor,items,o){
+  o=o||{};
+  var html=(o.search?'<div class="pop-s">'+ic('search')+'<input placeholder="'+esc(o.search)+'" aria-label="'+esc(o.search)+'"></div>':'')+items.map(function(it,i){
+    if(it==='-')return '<div class="sep" role="separator"></div>';
+    if(it.head)return '<div class="mh">'+esc(it.head)+'</div>';
+    return '<button type="button" class="mi'+(it.danger?' danger':'')+'" role="'+(o.select?'option':'menuitem')+'" data-i="'+i+'"'+(it.disabled?' disabled':'')+(o.select?' aria-selected="'+!!it.on+'"':'')+'>'+(it.icon?ic(it.icon):'')+'<span>'+esc(it.label)+'</span>'+(it.hint?'<small>'+esc(it.hint)+'</small>':'')+(it.on?ic('check','tick'):'')+'</button>';
+  }).join('');
+  openPop(anchor,html,{width:o.width,align:o.align,role:o.select?'listbox':'menu',onMount:function(el){
+    el.addEventListener('click',function(e){var b=e.target.closest('.mi');if(!b||b.disabled)return;var it=items[+b.dataset.i];closePop();anchor.focus({preventScroll:true});if(it.run)it.run();});
+    el.addEventListener('keydown',function(e){
+      var its=$$('.mi:not([disabled])',el).filter(function(x){return !x.hidden;});var i=its.indexOf(document.activeElement);
+      if(e.key==='ArrowDown'){e.preventDefault();(its[i+1]||its[0]).focus();}
+      else if(e.key==='ArrowUp'){e.preventDefault();(its[i-1]||its[its.length-1]).focus();}
+      else if(e.key==='Enter'&&e.target.tagName==='INPUT'){e.preventDefault();if(its[0])its[0].click();}
+    });
+    var inp=el.querySelector('.pop-s input');
+    if(inp)inp.addEventListener('input',function(){
+      var q=norm(inp.value.trim());var lastHead=null,headHas=false;
+      Array.prototype.forEach.call(el.children,function(c){
+        if(c.classList.contains('mh')){if(lastHead)lastHead.hidden=!headHas;lastHead=c;headHas=false;}
+        else if(c.classList.contains('mi')){var ok=!q||norm(c.textContent).indexOf(q)>-1;c.hidden=!ok;if(ok)headHas=true;}
+      });
+      if(lastHead)lastHead.hidden=!headHas;
+    });
+    if(!inp){var on=el.querySelector('.mi[aria-selected="true"]');if(on)setTimeout(function(){on.focus({preventScroll:true});},0);}
+  }});
+}
+function sel(key,label,ph,err){return '<button type="button" class="sel'+(label?'':' ph')+(err?' err-b':'')+'" data-sel="'+key+'" aria-haspopup="listbox" aria-expanded="false"><span>'+esc(label||ph||'Elegir')+'</span>'+ic('chevron-down')+'</button>';}
+function openSelect(btn){
+  var s=SEL[btn.dataset.sel];if(!s)return;
+  if(POP&&POP.anchor===btn){closePop();return;}
+  var opts=s.opts();
+  menu(btn,opts.map(function(o){if(o.head)return {head:o.head};return {label:o.l,hint:o.hint,on:o.v===s.value(),disabled:o.disabled,run:function(){s.pick(o.v);}};}),{select:true,width:'anchor',search:opts.length>9?'Buscar…':''});
+}
+
+/* ---------- toast / modal / tooltip ---------- */
+function toastBase(msg,o){o=o||{};var t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.innerHTML=ic(o.icon||'check')+'<span>'+esc(msg)+'</span>';if(o.icon==='alert'||o.icon==='trash')t.querySelector('.ic').style.color='#f97066';$('#toasts').appendChild(t);setTimeout(function(){t.classList.add('out');setTimeout(function(){t.remove();},300);},3400);}
+var MODAL=null;
+function openModal(o){
+  closeModal(true);closePop(true);
+  var w=document.createElement('div');w.className='modal-wrap';
+  w.innerHTML='<div class="m-scrim" data-close></div><div class="modal" role="dialog" aria-modal="true" aria-label="'+esc(o.title)+'" style="--w:'+(o.width||460)+'px"><div class="m-head"><h3>'+esc(o.title)+'</h3><button class="btn-icon" data-close aria-label="Cerrar">'+ic('x')+'</button></div><div class="m-body">'+o.body+'</div>'+(o.foot?'<div class="m-foot">'+o.foot+'</div>':'')+'</div>';
+  document.body.appendChild(w);MODAL={el:w,ret:document.activeElement};
+  requestAnimationFrame(function(){w.classList.add('open');});
+  w.addEventListener('click',function(e){if(e.target.closest('[data-close]'))closeModal();});
+  if(o.onMount)o.onMount(w);
+  var f=w.querySelector('.m-body input:not([type=hidden]),.m-body .sel,.m-foot .btn-primary,.m-foot .btn-danger');if(f)setTimeout(function(){f.focus();},30);
+}
+function closeModal(instant){if(!MODAL)return;var m=MODAL;MODAL=null;if(m.ret&&m.ret.focus&&document.contains(m.ret))m.ret.focus({preventScroll:true});if(instant||reduce){m.el.remove();return;}m.el.classList.remove('open');setTimeout(function(){m.el.remove();},230);}
+var tipEl=$('#tip');
+function showTip(html,x,y){tipEl.innerHTML=html;tipEl.classList.add('on');var w=tipEl.offsetWidth,h=tipEl.offsetHeight;var l=Math.min(x+12,innerWidth-w-8),t=y+16;if(t+h>innerHeight-8)t=y-h-10;tipEl.style.left=l+'px';tipEl.style.top=t+'px';}
+function hideTip(){tipEl.classList.remove('on');}
+
+/* ---------- navegación ---------- */
+var NAV=[
+  {k:'inicio',l:'Inicio',i:'home'},
+  {g:'Operación',items:[{k:'panel',l:'Panel de habitaciones',i:'bed'},{k:'timeline',l:'Timeline',i:'calendar'},{k:'reservas',l:'Reservas',i:'list'},{k:'limpieza',l:'Limpieza',i:'sparkles'},{k:'restaurante',l:'Restaurante',i:'utensils'},{k:'whatsapp',l:'WhatsApp',i:'message'}]},
+  {g:'Ventas y caja',items:[{k:'ventas',l:'Ventas',i:'receipt'},{k:'caja',l:'Caja',i:'wallet'},{k:'cierre',l:'Cierre del día',i:'history'}]},
+  {g:'Inventario',items:[{k:'productos',l:'Productos',i:'package'},{k:'almacen',l:'Almacén',i:'warehouse'}]},
+  {g:'Gestión',items:[{k:'clientes',l:'Clientes',i:'users'},{k:'reportes',l:'Reportes',i:'chart'},{k:'impresion',l:'Impresión',i:'printer'},{k:'auditoria',l:'Auditoría',i:'history'}]}
+];
+var LABEL={nueva:['Operación','Nueva reserva'],ajustes:['','Ajustes']};
+NAV.forEach(function(n){if(n.k)LABEL[n.k]=['',n.l];else n.items.forEach(function(it){LABEL[it.k]=[n.g,it.l];});});
+function navItem(it){return '<a class="ni" href="#'+it.k+'" data-to="'+it.k+'" title="'+esc(it.l)+'">'+ic(it.i)+'<span>'+esc(it.l)+'</span><span class="bd" data-bd="'+it.k+'"></span></a>';}
+$('#nav').innerHTML=NAV.map(function(n){
+  if(n.k)return navItem(n);
+  return '<div class="grp"><button class="grp-h" data-act="grp" aria-expanded="true">'+esc(n.g)+ic('chevron-down')+'</button><div class="grp-b"><div>'+n.items.map(navItem).join('')+'</div></div></div>';
+}).join('');
+/* la barra de scroll del menú va en el margen, sin quitarle espacio a los nombres ni a los globitos */
+function navGutter(){var n=$('.nav');if(!n)return;n.style.marginRight='';var sb=n.offsetWidth-n.clientWidth;n.style.marginRight=sb>0?(-Math.min(sb,10))+'px':'';}
+if(window.ResizeObserver){var navRO=new ResizeObserver(function(){navGutter();});setTimeout(function(){var n=$('.nav');if(!n)return;navRO.observe(n);$$('.nav .grp').forEach(function(g){navRO.observe(g);});},0);}
+function updateNav(){
+  var k=state.view==='nueva'?'panel':state.view;
+  $$('.ni[data-to]').forEach(function(a){var on=a.dataset.to===k;a.classList.toggle('on',on);if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+  var arr=ROOMS.filter(function(r){var s=roomSt(r);return s==='llegada'||s==='reservado';}).length;
+  var b=$('[data-bd="panel"]');if(b){b.textContent=arr?String(arr):'';b.title=arr?plural(arr,'llegada hoy','llegadas hoy'):'';}var wb=$('[data-bd="whatsapp"]');if(wb){var wn=WA.filter(function(w){return w.state==='creado';}).length;wb.textContent=wn?String(wn):'';wb.title=wn?plural(wn,'pedido por revisar','pedidos por revisar'):'';}
+  var lb=$('[data-bd="limpieza"]');if(lb&&typeof HK!=='undefined'){var ln=hkPending();lb.textContent=ln?String(ln):'';lb.title=ln?plural(ln,'habitación por limpiar o revisar','habitaciones por limpiar o revisar'):'';}
+  var L=LABEL[state.view]||['','Panel de habitaciones'];
+  $('#crumbs').innerHTML=(L[0]?'<span class="cg">'+esc(L[0])+'</span><span class="cg">'+ic('chevron-right')+'</span>':'')+'<b>'+esc(L[1])+'</b>';
+  document.title='Vista previa · Hotel Selva Inn';
+}
+function go(k){closeSide();if(location.hash==='#'+k){render();return;}location.hash=k;}
+window.addEventListener('hashchange',function(){var k=location.hash.slice(1)||'panel';if(k==='nueva'&&!state.form)state.form=newForm();state.view=k;render();});
+
+function render(o){
+  o=o||{};closePop(true);hideTip();
+  var v=$('#view'),fn=can(state.view)?(VIEWS[state.view]||renderPlaceholder):renderNoPerm;
+  var sl=o.soft&&$('#tlScroll')?$('#tlScroll').scrollLeft:null;
+  v.classList.remove('enter');v.classList.toggle('soft',!!o.soft);v.classList.toggle('fit',state.view==='nueva'||state.view==='timeline');
+  v.innerHTML=fn();
+  if(!o.soft){void v.offsetWidth;v.classList.add('enter');$('#mainScroll').scrollTop=0;}
+  updateNav();after(o);
+  if(sl!=null&&$('#tlScroll'))$('#tlScroll').scrollLeft=sl;
+}
+function after(o){
+  if(state.view==='panel'){placeSeg();if(!o.soft)countUp($('#view'));}
+  if(state.view==='timeline'){fitTimeline();if(!o.soft)scrollToday(false);}
+}
+function countUp(root){if(reduce)return;$$('[data-count]',root).forEach(function(el){var to=+el.dataset.count,isM=el.hasAttribute('data-money'),t0=performance.now();function f(t){var p=Math.min(1,(t-t0)/750),e=1-Math.pow(1-p,3),v=to*e;el.textContent=isM?fm(v):Math.round(v).toString();if(p<1)requestAnimationFrame(f);}requestAnimationFrame(f);});}
+function refresh(){render({soft:true});if(state.dw)renderDrawer(true);}
+
+/* ---------- panel de habitaciones ---------- */
+var FILTERS=[['todas','Todas'],['disponible','Disponibles'],['ocupado','Ocupadas'],['llegadas','Llegan hoy'],['salidas','Salen hoy'],['limpieza','Limpieza'],['inhabilitada','Inhabilitadas']];
+function inFilter(st,f){if(f==='todas')return true;if(f==='ocupado')return st==='ocupado'||st==='salida';if(f==='llegadas')return st==='llegada'||st==='reservado';if(f==='salidas')return st==='salida';return st===f;}
+function renderPanel(){
+  var sts=ROOMS.map(function(r){return roomSt(r);});
+  var cnt={};FILTERS.forEach(function(f){cnt[f[0]]=sts.filter(function(s){return inFilter(s,f[0]);}).length;});
+  var sellable=ROOMS.filter(function(r){return !r.off&&r.t!=='AU';}).length;
+  var occN=ROOMS.filter(function(r,i){return r.t!=='AU'&&(sts[i]==='ocupado'||sts[i]==='salida');}).length;
+  var pct=Math.round(occN/sellable*100);
+  var pax=0;RES.forEach(function(r){if(r.state==='ocupado')pax+=r.persons;});
+  var dueSum=0,dueN=0;RES.forEach(function(r){if(r.state==='ocupado'){var d=due(r);if(d>0){dueSum+=d;dueN++;}}});
+  SEL['p-type']={value:function(){return state.ptype;},opts:function(){return [{v:'all',l:'Todos los tipos'}].concat(TYPE_ORDER.map(function(t){return {v:t,l:TYPES[t].n,hint:String(ROOMS.filter(function(r){return r.t===t;}).length)};}));},pick:function(v){state.ptype=v;$('[data-sel="p-type"] span').textContent=v==='all'?'Todos los tipos':TYPES[v].n;renderRoomsWrap();}};
+  var FI={todas:['all','list'],disponible:['ok','check'],ocupado:['occ','bed'],llegadas:['conf','login'],salidas:['out','logout'],limpieza:['clean','sparkles'],inhabilitada:['off','ban']};
+  var caja=state.caja
+    ?'<div class="card kpi st-ok"><span class="kpi-ic">'+ic('wallet')+'</span><span class="kpi-t"><span class="k">Caja</span><span class="v">Abierta</span><span class="s">Desde las '+state.cajaSince+' · '+esc(ME())+'</span></span></div>'
+    :'<div class="card kpi st-dan"><span class="kpi-ic">'+ic('wallet')+'</span><span class="kpi-t"><span class="k">Caja</span><span class="v">Cerrada</span><span class="s">Ábrela para cobrar en efectivo</span><button class="btn btn-sm btn-ok" data-act="caja" aria-haspopup="dialog" aria-expanded="false">'+ic('wallet')+'Abrir caja</button></span></div>';
+  return '<div class="page-head"><div><h1>Panel de habitaciones</h1><p class="sub">'+cap(fmtDL(TODAY))+' de 2026 · check-in '+CFG.ci+' · check-out '+CFG.co+'</p></div><div class="head-actions"><a class="btn" href="#timeline">'+ic('calendar')+'Ver timeline</a><button class="btn btn-primary" data-act="new-res">'+ic('plus')+'Nueva reserva</button></div></div>'+
+  '<div class="kpis">'+
+    '<button type="button" class="card kpi st-occ" data-act="filter" data-f="ocupado"><span class="kpi-ic">'+ic('bed')+'</span><span class="kpi-t"><span class="k">Ocupación de hoy</span><span class="v tn"><span data-count="'+pct+'">'+pct+'</span>%</span><span class="meter"><i style="width:'+pct+'%"></i></span><span class="s">'+occN+' de '+sellable+' habitaciones a la venta</span></span></button>'+
+    '<div class="card kpi st-conf"><span class="kpi-ic">'+ic('users')+'</span><span class="kpi-t"><span class="k">Personas en casa</span><span class="v tn" data-count="'+pax+'">'+pax+'</span><span class="s">Huéspedes alojados ahora</span></span></div>'+
+    '<div class="card kpi st-due"><span class="kpi-ic">'+ic('dollar')+'</span><span class="kpi-t"><span class="k">Por cobrar en casa</span><span class="v tn">S/ <span data-count="'+dueSum+'" data-money>'+fm(dueSum)+'</span></span><span class="s">'+plural(dueN,'habitación tiene saldo','habitaciones tienen saldo')+'</span></span></div>'+
+    caja+
+  '</div>'+
+  '<div class="ftiles" role="group" aria-label="Filtrar habitaciones por estado">'+FILTERS.map(function(f){var x=FI[f[0]];return '<button type="button" class="ft st-'+x[0]+'" data-act="filter" data-f="'+f[0]+'" aria-pressed="'+(state.filter===f[0])+'"><span class="ft-ic">'+ic(x[1])+'</span><span class="ft-n">'+cnt[f[0]]+'</span><span class="ft-l">'+f[1]+'</span></button>';}).join('')+'</div>'+
+  '<div class="toolbar">'+sel('p-type',state.ptype==='all'?'Todos los tipos':TYPES[state.ptype].n)+'<div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="pSearch" placeholder="Buscar por huésped, DNI o número de habitación" value="'+esc(state.q)+'" autocomplete="off" aria-label="Buscar en el panel"></div></div>'+
+  '<div id="roomsWrap">'+roomsHTML()+'</div>';
+}
+function roomsHTML(){
+  var q=norm(state.q.trim());var i=0;
+  var groups=pisos().map(function(f){return [f,pisoTxt(f)];});
+  var out=groups.map(function(g){
+    var list=ROOMS.filter(function(r){
+      if(r.f!==g[0])return false;var st=roomSt(r);if(!inFilter(st,state.filter))return false;if(state.ptype!=='all'&&r.t!==state.ptype)return false;
+      if(q){var a=activeRes(r.n)||arrivalRes(r.n);var hay=norm(r.n+' '+TYPES[r.t].n+' '+(a?a.guest.name+' '+a.guest.doc:''));if(hay.indexOf(q)<0)return false;}
+      return true;});
+    if(!list.length)return '';
+    var occ=ROOMS.filter(function(r){var s=roomSt(r);return r.f===g[0]&&(s==='ocupado'||s==='salida');}).length;
+    return '<section class="floor"><div class="floor-h"><h2>'+g[1]+'</h2><span>'+plural(list.length,'habitación','habitaciones')+(g[0]?' · '+occ+' ocupadas en total':'')+'</span></div><div class="rooms">'+list.map(function(r){return roomCard(r,i++);}).join('')+'</div></section>';
+  }).join('');
+  return out||'<div class="empty"><b>No hay habitaciones con este filtro</b>Prueba con otro estado o borra la búsqueda.</div>';
+}
+function renderRoomsWrap(){var w=$('#roomsWrap');if(!w)return;w.innerHTML=roomsHTML();}
+function progress(r){var s=r.ci+9/24,e=r.co+11/24,n=TODAY+NOW_H/24;return Math.max(4,Math.min(100,(n-s)/(e-s)*100));}
+function roomCard(rm,i){
+  var st=roomSt(rm),t=TYPES[rm.t],r=activeRes(rm.n)||arrivalRes(rm.n),body;
+  if(r){var d=due(r);
+    var when=st==='salida'?'Sale hoy, hasta las '+CFG.co:(st==='llegada'||st==='reservado')?'Llega hoy desde las '+CFG.ci:fmtD(r.ci)+' → '+fmtD(r.co)+' · '+plural(nights(r),'noche','noches');
+    body='<span class="rc-guest">'+esc(r.guest.name)+'</span><span class="rc-dates">'+ic(st==='salida'?'logout':st==='ocupado'?'calendar':'login')+when+'</span>'+
+    (r.state==='ocupado'?'<span class="rc-bar" aria-hidden="true"><i style="width:'+progress(r).toFixed(0)+'%"></i></span>':'')+
+    '<span class="rc-foot">'+(d>0?'<span class="badge due">'+ic('dollar')+'Debe '+money(d)+'</span>':'<span class="badge paid">'+ic('check')+(r.pays.length?'Pagado':'Sin deuda')+'</span>')+'<span class="pax" aria-label="'+plural(r.persons,'persona','personas')+'">'+ic('user')+r.persons+'</span></span>';}
+  else if(st==='limpieza')body='<span class="rc-guest mu">Housekeeping la está preparando</span><span class="rc-dates">'+ic('clock')+'En limpieza desde las '+(CLEAN_SINCE[rm.n]||'11:00')+'</span><span class="rc-foot"><span class="badge clean">'+ic('check')+'Toca para marcarla lista</span></span>';
+  else if(st==='inhabilitada')body='<span class="rc-guest mu">Fuera de servicio</span><span class="rc-dates">'+ic('ban')+'En mantenimiento</span>';
+  else{var nx=nextRes(rm.n);body='<span class="rc-guest mu">Lista para vender</span><span class="rc-dates">'+ic('calendar')+(nx?'Próxima llegada: '+fmtD(nx.ci):'Sin reservas próximas')+'</span><span class="rc-foot"><span class="badge free">'+ic('plus')+'Toca para reservar</span></span>';}
+  return '<button type="button" class="room st-'+ST[st].c+'" data-act="room" data-room="'+rm.n+'" style="--i:'+Math.min(i,28)+'"><span class="rc-top"><span><span class="rc-num">'+rname(rm.n)+'</span><span class="rc-type">'+t.n+'</span></span>'+pill(st,true)+'</span><span class="rc-body">'+body+'</span></button>';
+}
+function placeSeg(){}
+
+/* ---------- timeline ---------- */
+var TSHORT={MQ:'Mat. Queen',MK:'Mat. King',KD:'King Deco.',AU:'Auditorio'};
+function renderTimeline(){
+  var types=TYPE_ORDER.filter(function(t){return state.tlType==='all'||state.tlType===t;});
+  var days=[];for(var d=1;d<=31;d++)days.push(d);
+  var wk=function(d){var w=dt(d).getUTCDay();return w===0||w===6;};
+  var monthSum=0,rows='';
+  types.forEach(function(t){ROOMS.filter(function(r){return r.t===t;}).forEach(function(rm,i){var sm=roomRevenue(rm.n);monthSum+=sm;var st=roomSt(rm);
+    rows+='<div class="tl-row'+(i===0?' gstart':'')+'"><div class="tl-label" title="'+esc(rname(rm.n)+' · '+TYPES[t].n)+'"><b>'+(rm.n==='AUD'?'Aud.':rm.n)+'</b><span>'+(TSHORT[t]||TYPES[t].n)+'</span><i class="d st-'+ST[st].c+'" title="'+esc(ST[st].l)+'" role="img" aria-label="'+esc(ST[st].l)+'"></i></div><div class="tl-cells" data-room="'+rm.n+'">'+barsHTML(rm.n)+'</div><div class="tl-sum">'+money0(sm)+'</div></div>';});});
+  SEL['tl-type']={value:function(){return state.tlType;},opts:function(){return [{v:'all',l:'Todas las habitaciones',hint:String(ROOMS.length)}].concat(TYPE_ORDER.map(function(t){return {v:t,l:TYPES[t].n,hint:String(ROOMS.filter(function(r){return r.t===t;}).length)};}));},pick:function(v){state.tlType=v;render({soft:true});}};
+  return '<div class="tl-top"><div class="tl-ttl"><h1>Timeline</h1><p class="sub">Octubre 2026 · '+money0(monthSum)+' en hospedaje</p></div>'+
+  '<div class="legend" aria-label="Leyenda"><span class="st-res"><i></i>Pre-reserva</span><span class="st-conf"><i></i>Confirmada</span><span class="st-occ"><i></i>En casa</span><span class="st-out"><i></i>Sale hoy</span><span class="st-off"><i></i>Finalizada</span></div>'+
+  '<div class="head-actions">'+sel('tl-type',state.tlType==='all'?'Todas las habitaciones':TYPES[state.tlType].n)+'<div class="tl-nav" role="group" aria-label="Mover el calendario"><button class="btn" data-act="tl-prev" aria-label="Semana anterior">'+ic('chevron-left')+'</button><button class="btn" data-act="tl-today">Hoy</button><button class="btn" data-act="tl-next" aria-label="Semana siguiente">'+ic('chevron-right')+'</button></div><button class="btn btn-primary" data-act="new-res">'+ic('plus')+'Nueva reserva</button></div></div>'+
+  '<div class="card tl-card"><div class="tl-scroll" id="tlScroll"><div class="tl" id="tlGrid">'+
+    '<div class="tl-head"><div class="tl-corner"><span class="lg">Habitación</span><span class="sh" style="display:none">Hab.</span></div><div class="tl-days">'+days.map(function(d){return '<div class="tl-day'+(wk(d)?' wk':'')+(d===TODAY?' today':'')+'"'+(function(){var x=seasonOf(d);return x?' title="'+esc(x.n+' '+(x.pct>0?'+':'')+x.pct+'%')+'"':'';})()+'>'+DOW[dt(d).getUTCDay()]+'<b>'+d+'</b>'+(function(){var x=seasonOf(d);return x?'<i class="ssn st-'+ssnSt(x)+'"></i>':'';})()+'</div>';}).join('')+'</div><div class="tl-sumh">Mes</div></div>'+
+    '<div class="tl-body"><div class="tl-grid" aria-hidden="true">'+days.map(function(d){return '<i class="'+(wk(d)?'wk':'')+'"></i>';}).join('')+'</div>'+
+    '<div class="tl-now" style="left:calc(var(--lw) + '+(TODAY-1+NOW_H/24).toFixed(3)+' * var(--cw))" aria-hidden="true"></div>'+rows+'</div>'+
+  '</div></div></div>';
+}
+function fitTimeline(){
+  var sc=$('#tlScroll'),tl=$('#tlGrid');if(!sc||!tl||state.view!=='timeline')return;
+  var cs=getComputedStyle(tl),lw=parseFloat(cs.getPropertyValue('--lw'))||170,sw=parseFloat(cs.getPropertyValue('--sw'))||96;
+  /* tamaño cómodo para el dedo: celdas de al menos 58 px; lo que no entra se desliza dentro del recuadro */
+  if(innerWidth<=900){tl.style.setProperty('--cw','54px');tl.style.setProperty('--rh','56px');return;}
+  var cw=Math.max(58,Math.floor((sc.clientWidth-lw-sw-1)/31));tl.style.setProperty('--cw',cw+'px');tl.style.setProperty('--rh','58px');
+}
+var tlGhost=null;
+function tlDay(c,x){var b=c.getBoundingClientRect();return Math.min(31,Math.max(1,Math.floor((x-b.left)/(b.width/31))+1));}
+document.addEventListener('pointermove',function(e){
+  var c=e.target.closest&&e.target.closest('.tl-cells');
+  if(!c||e.target.closest('.bar')||e.pointerType==='touch'){if(tlGhost){tlGhost.remove();tlGhost=null;}return;}
+  var d=tlDay(c,e.clientX),rn=c.dataset.room,ok=d>=TODAY&&!room(rn).off&&available(rn,d,d+1);
+  if(!ok){if(tlGhost){tlGhost.remove();tlGhost=null;}return;}
+  if(!tlGhost){tlGhost=document.createElement('span');tlGhost.className='tl-ghost';tlGhost.innerHTML=ic('plus');}
+  if(tlGhost.parentNode!==c)c.appendChild(tlGhost);
+  tlGhost.style.left='calc('+(d-1)+' * var(--cw) + 2px)';tlGhost.style.width='calc(var(--cw) - 4px)';
+});
+function tlCellClick(c,e){
+  var d=tlDay(c,e.clientX),rn=c.dataset.room,rm=room(rn);
+  if(d<TODAY){toast('Ese día ya pasó',{icon:'alert'});return;}
+  if(rm.off){toast('La '+rname(rn)+' está fuera de servicio',{icon:'ban'});return;}
+  if(!available(rn,d,d+1)){toast('La '+rname(rn)+' no está libre el '+fmtD(d),{icon:'alert'});return;}
+  if(tlGhost){tlGhost.remove();tlGhost=null;}
+  state.form=newFormAt(rn,d);go('nueva');
+}
+function roomRevenue(n){return RES.filter(function(r){return r.room===n&&r.state!=='anulada';}).reduce(function(s,r){var k=Math.max(0,Math.min(r.co,32)-Math.max(r.ci,1));return s+k*r.rate;},0);}
+function barsHTML(n){
+  return RES.filter(function(r){return r.room===n&&r.state!=='anulada'&&r.co>1&&r.ci<=31;}).map(function(r,i){
+    var st=resSt(r);var s=Math.max(r.ci-.5,0),e=Math.min(r.co-.5,31);
+    return '<button type="button" class="bar st-'+ST[st].c+'" data-act="res" data-id="'+r.id+'" data-tip="'+r.id+'" style="left:calc('+s+' * var(--cw) + 2px);width:calc('+(e-s)+' * var(--cw) - 4px);animation-delay:'+Math.min(i,10)*25+'ms" aria-label="'+esc(r.guest.name+', '+fmtD(r.ci)+' a '+fmtD(r.co)+', '+ST[st].l)+'">'+esc(short(r.guest.name))+((e-s)>=3?'<small>'+plural(r.co-r.ci,'noche','noches')+'</small>':'')+'</button>';
+  }).join('');
+}
+function scrollToday(smooth){var sc=$('#tlScroll'),tl=$('.tl');if(!sc||!tl)return;var cw=parseFloat(tl.style.getPropertyValue('--cw')||getComputedStyle(tl).getPropertyValue('--cw'))||58;sc.style.scrollBehavior=smooth?'':'auto';sc.scrollLeft=Math.max(0,(TODAY-2)*cw);if(!smooth)setTimeout(function(){sc.style.scrollBehavior='';},0);}
+function tlWeek(d){var sc=$('#tlScroll'),tl=$('.tl');if(!sc||!tl)return;var cw=parseFloat(tl.style.getPropertyValue('--cw'))||58;sc.scrollBy({left:d*7*cw,behavior:reduce?'auto':'smooth'});}
+document.addEventListener('pointerover',function(e){var b=e.target.closest&&e.target.closest('.bar');if(!b){return;}var r=byId(+b.dataset.tip);if(!r)return;var st=resSt(r);showTip('<b>'+esc(r.guest.name)+'</b>'+fmtD(r.ci)+' → '+fmtD(r.co)+' · '+plural(nights(r),'noche','noches')+'<br>'+ST[st].l+' · '+esc(r.origin)+(due(r)>0?' · debe '+money(due(r)):''),e.clientX,e.clientY);});
+document.addEventListener('pointermove',function(e){if(tipEl.classList.contains('on')&&e.target.closest&&e.target.closest('.bar'))showTip(tipEl.innerHTML,e.clientX,e.clientY);});
+document.addEventListener('pointerout',function(e){if(e.target.closest&&e.target.closest('.bar'))hideTip();});
+
+/* ---------- panel lateral (reserva / habitación) ---------- */
+var lastFocus=null;
+function curRes(){if(!state.dw||state.dw.kind)return null;if(state.dw.res)return byId(state.dw.res);return activeRes(state.dw.room)||arrivalRes(state.dw.room)||null;}
+function openDrawer(rn,resId){
+  closePop(true);
+  var same=state.dw&&state.dw.room===rn&&state.dw.res===(resId||null);
+  if(!state.dw)lastFocus=document.activeElement;
+  state.dw={room:rn,res:resId||null,tab:same?state.dw.tab:'resumen'};
+  var dw=$('#dw');dw.inert=false;renderDrawer();dw.classList.add('open');
+  setTimeout(function(){var c=$('#dwIn [data-act="dw-close"]');if(c)c.focus({preventScroll:true});},60);
+}
+function closeDrawer(){if(!state.dw)return;state.dw=null;var dw=$('#dw');dw.classList.remove('open');closePop(true);setTimeout(function(){if(!state.dw)dw.inert=true;},500);if(lastFocus&&document.contains(lastFocus))lastFocus.focus({preventScroll:true});}
+function renderDrawer(keepTab){
+  if(!state.dw)return;if(state.dw.kind==='doc'){var dp=findPay(state.dw.pid);$('#dwIn').innerHTML=dp?drawerDoc(dp):'';return;}if(state.dw.kind==='mesa'){$('#dwIn').innerHTML=drawerMesa(tbl(state.dw.id));return;}if(state.dw.kind==='cli'){$('#dwIn').innerHTML=drawerCli(state.dw.doc);return;}var rm=room(state.dw.room),r=curRes();
+  if(r&&!state.dw.res)state.dw.res=r.id;
+  $('#dwIn').innerHTML=r?drawerRes(rm,r):drawerRoom(rm);
+  if(r)renderTab(!keepTab);
+  placeInd();
+}
+function dwHead(rm,sub,st){return '<header class="dw-h st-'+ST[st].c+'"><div><span class="dw-num" id="dwTitle">'+(rm.n==='AUD'?'Auditorio':'Habitación '+rm.n)+'</span><span class="dw-type">'+sub+'</span>'+pill(st,true).replace('class="pill','class="pill pill-m')+'</div><div class="dw-hact">'+pill(st,true)+'<button class="btn-icon" data-act="dw-more" aria-label="Más acciones" aria-haspopup="menu" aria-expanded="false">'+ic('more')+'</button><button class="btn-icon" data-act="dw-close" aria-label="Cerrar panel">'+ic('x')+'</button></div></header>';}
+var TABS=[['resumen','Resumen'],['huespedes','Huéspedes'],['pagos','Pagos'],['historial','Historial']];
+function drawerRes(rm,r){
+  var st=resSt(r),t=TYPES[rm.t],d=due(r),o=ORIGINS.find(function(x){return x.n===r.origin;})||{c:0};
+  var counts={huespedes:1+r.extra.length,pagos:r.pays.length};
+  var foot='';
+  if(st==='ocupado'||st==='salida'){
+    foot=d>0?'<span class="nt">Saldo pendiente</span><button class="btn" data-act="checkout">'+ic('logout')+'Check-out</button><button class="btn btn-ok" data-act="pay">'+ic('dollar')+'Cobrar '+money(d)+'</button>'
+             :'<span class="nt">'+ic('check')+'Cuenta pagada</span><button class="btn btn-out" data-act="checkout">'+ic('logout')+'Hacer check-out</button>';
+  }else if(st==='llegada'||st==='reservado'||st==='confirmado'){
+    var can=r.ci<=TODAY;
+    foot='<span class="nt">'+(can?'Check-in desde las '+CFG.ci:'Llega el '+fmtDL(r.ci))+'</span>'+(d>0?'<button class="btn" data-act="pay">Cobrar adelanto</button>':'')+'<button class="btn btn-occ" data-act="checkin"'+(can?'':' disabled')+'>'+ic('login')+'Hacer check-in</button>';
+  }else{
+    foot='<span class="nt">'+(st==='anulada'?'Reserva anulada':'Estadía finalizada el '+fmtD(r.co))+'</span>'+(d>0&&st!=='anulada'?'<button class="btn btn-ok" data-act="pay">'+ic('dollar')+'Cobrar saldo '+money(d)+'</button>':'');
+  }
+  return dwHead(rm,t.n+' · Reserva #'+r.id,st)+
+  '<div class="dw-body">'+
+    '<div class="guest"><span class="av lg">'+ini(r.guest.name)+'</span><div><b>'+esc(r.guest.name)+'</b><span>'+esc(r.guest.docType)+' '+esc(r.guest.doc)+' · '+esc(r.guest.nat)+'</span></div>'+(r.company?'<span class="chip">'+ic('building')+esc(r.company.name)+'</span>':'')+'</div>'+
+    '<dl class="stay">'+
+      '<div><dt>Llegada</dt><dd>'+cap(fmtDL(r.ci))+'<small>'+CFG.ci+'</small></dd></div>'+
+      '<div><dt>Salida</dt><dd>'+cap(fmtDL(r.co))+'<small>'+CFG.co+'</small></dd></div>'+
+      '<div><dt>Noches</dt><dd class="tn">'+nights(r)+'<small>'+plural(r.persons,'persona','personas')+'</small></dd></div>'+
+      '<div><dt>Tarifa</dt><dd>'+esc(r.tarifa)+'<small>'+money(r.rate)+' por noche</small></dd></div>'+
+      '<div><dt>Origen</dt><dd>'+esc(r.origin)+'<small>'+(o.c?'Comisión '+o.c+'%':'Sin comisión')+(r.ext?' · #'+r.ext:'')+'</small></dd></div>'+
+      '<div><dt>Motivo</dt><dd>'+esc(r.motivo)+'<small>Referencia: '+esc(r.ref)+'</small></dd></div>'+
+    '</dl>'+
+    '<div class="tabs" role="tablist" aria-label="Detalle de la reserva">'+TABS.map(function(tb){return '<button type="button" class="tab" role="tab" id="tab-'+tb[0]+'" aria-controls="dwTab" data-act="dw-tab" data-tab="'+tb[0]+'" aria-selected="'+(state.dw.tab===tb[0])+'" tabindex="'+(state.dw.tab===tb[0]?0:-1)+'">'+tb[1]+(counts[tb[0]]!=null?'<span class="c">'+counts[tb[0]]+'</span>':'')+'</button>';}).join('')+'<span class="tab-ind" aria-hidden="true"></span></div>'+
+    '<div id="dwTab" class="dw-tab" role="tabpanel" aria-labelledby="tab-'+state.dw.tab+'"></div>'+
+  '</div><footer class="dw-f">'+foot+'</footer>';
+}
+function renderTab(anim){
+  var r=curRes(),el=$('#dwTab');if(!r||!el)return;
+  el.innerHTML=TAB_HTML[state.dw.tab](r);el.setAttribute('aria-labelledby','tab-'+state.dw.tab);
+  if(anim){el.classList.remove('in');void el.offsetWidth;el.classList.add('in');}
+}
+function placeInd(){var tabs=$('#dwIn .tabs');if(!tabs)return;var a=tabs.querySelector('[aria-selected="true"]'),ind=tabs.querySelector('.tab-ind');ind.style.width=a.offsetWidth+'px';ind.style.transform='translateX('+a.offsetLeft+'px)';}
+function switchTab(k){if(!state.dw)return;state.dw.tab=k;$$('#dwIn .tab').forEach(function(b){var on=b.dataset.tab===k;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1;});placeInd();renderTab(true);}
+var TAB_HTML={
+  resumen:function(r){
+    var ed=editable(r),fl=state.dw.flash;state.dw.flash=null;
+    var lines='<div class="line"><div><b>Hospedaje '+(r.room==='AUD'?'auditorio':r.room)+'</b><span class="d">'+plural(nights(r),'noche','noches')+' × '+money(r.rate)+'</span></div><span class="qty-ro">× '+nights(r)+'</span><span class="amt">'+money(nights(r)*r.rate)+'</span></div>'+
+      r.items.map(function(it,k){return '<div class="line'+(fl===it.n?' flash':'')+'"><div><b>'+esc(it.n)+'</b><span class="d">'+money(it.p)+' c/u</span></div>'+(ed?'<span class="qty"><button type="button" data-act="item-dec" data-k="'+k+'" aria-label="Quitar uno de '+esc(it.n)+'">−</button><output>'+it.q+'</output><button type="button" data-act="item-inc" data-k="'+k+'" aria-label="Agregar uno de '+esc(it.n)+'">+</button></span>':'<span class="qty-ro">× '+it.q+'</span>')+'<span class="amt">'+money(it.q*it.p)+'</span></div>';}).join('');
+    var d=due(r);
+    return '<div><div class="blk-h"><h3>Cuenta</h3>'+(ed?'<button class="btn btn-sm" data-act="add-item" aria-haspopup="menu" aria-expanded="false">'+ic('plus')+'Agregar consumo</button>':'')+'</div><div class="lines">'+lines+'</div>'+
+      '<div class="tot"><div><span>Total</span><span>'+money(total(r))+'</span></div><div><span>Pagado</span><span>'+money(paid(r))+'</span></div><div class="due-r'+(d>0?' has':'')+'"><span>Saldo</span><b>'+money(d)+'</b></div></div></div>'+
+      '<div class="notes"><h3>Notas para recepción</h3>'+(r.notes.length?r.notes.map(function(n){return '<div class="note">'+esc(n.text)+'<small>'+esc(n.who)+' · '+fmtD(n.d)+' · '+n.h+'</small></div>';}).join(''):'<p class="hint">Sin notas. Úsalas para pedidos especiales o avisos al siguiente turno.</p>')+
+      (ed?'<form class="note-form" data-form="note"><input id="noteIn" placeholder="Ej.: pidió cama extra para mañana" autocomplete="off" aria-label="Nueva nota"><button class="btn">Agregar</button></form>':'')+'</div>';
+  },
+  huespedes:function(r){
+    var all=[{name:r.guest.name,doc:r.guest.docType+' '+r.guest.doc,nat:r.guest.nat,main:true}].concat(r.extra.map(function(g){return {name:g.name,doc:g.docType+' '+g.doc,nat:g.nat};}));
+    return '<div><div class="blk-h"><h3>'+plural(all.length,'huésped registrado','huéspedes registrados')+'</h3>'+(editable(r)?'<button class="btn btn-sm" data-act="add-guest">'+ic('plus')+'Agregar huésped</button>':'')+'</div><div class="rows">'+all.map(function(g){return '<div class="row"><span class="av sm">'+ini(g.name)+'</span><div class="grow"><b>'+esc(g.name)+'</b><small>'+esc(g.doc)+' · '+esc(g.nat)+'</small></div>'+(g.main?'<span class="pill st-occ">Titular</span>':'')+'</div>';}).join('')+'</div>'+
+      (all.length<r.persons?'<p class="hint" style="margin-top:8px">Faltan '+plural(r.persons-all.length,'huésped','huéspedes')+' por registrar para el reporte de MINCETUR.</p>':'')+'</div>';
+  },
+  pagos:function(r){
+    var d=due(r);
+    return '<div><div class="blk-h"><h3>Pagos y comprobantes</h3>'+(d>0&&r.state!=='anulada'?'<button class="btn btn-sm btn-ok" data-act="pay">'+ic('dollar')+'Registrar pago</button>':'')+'</div>'+
+      (r.pays.length?'<div class="rows">'+r.pays.map(function(p){return '<button type="button" class="row" data-act="doc" data-pid="'+p.id+'"><span class="av sm">'+ic(p.method==='Efectivo'?'dollar':'card')+'</span><div class="grow"><b class="mono">'+esc(p.doc)+'</b><small>'+esc(p.kind)+' · '+esc(p.method)+' · '+fmtD(p.d)+' '+p.h+'</small></div>'+(p.anulado?'<span class="pill st-off">'+ic('x')+'Anulado</span>':'<b class="tn">'+money(p.amount)+'</b>')+'</button>';}).join('')+'</div>':'<div class="empty"><b>Aún no hay pagos</b>Cuando cobres, aquí aparece cada boleta o factura emitida.</div>')+
+      '<div class="tot"><div><span>Total de la cuenta</span><span>'+money(total(r))+'</span></div><div class="due-r'+(d>0?' has':'')+'"><span>Saldo</span><b>'+money(d)+'</b></div></div></div>';
+  },
+  historial:function(r){
+    return '<div><h3 style="margin-bottom:12px">Historial de cambios</h3><ul class="hist">'+r.log.slice().reverse().map(function(l){return '<li><b>'+esc(l.text)+'</b><small>'+esc(l.who)+' · '+fmtD(l.d)+' · '+l.h+'</small></li>';}).join('')+'</ul></div>';
+  }
+};
+function drawerRoom(rm){
+  var st=roomSt(rm),t=TYPES[rm.t];
+  var up=RES.filter(function(r){return r.room===rm.n&&(r.state==='reservado'||r.state==='confirmado')&&r.ci>=TODAY;}).sort(function(a,b){return a.ci-b.ci;});
+  var last=RES.filter(function(r){return r.room===rm.n&&r.state==='finalizada';}).sort(function(a,b){return b.co-a.co;})[0];
+  var h=st==='disponible'?{i:'check',t:'Lista para vender',d:'Está limpia y sin huéspedes. Puedes reservarla o registrar a alguien que llega ahora.'}:st==='limpieza'?{i:'sparkles',t:'En limpieza desde las '+(CLEAN_SINCE[rm.n]||'11:00'),d:'Housekeeping está preparándola. Márcala como lista cuando termine la revisión.'}:{i:'ban',t:'Fuera de servicio',d:'No se puede vender ni aparece en la disponibilidad de nuevas reservas.'};
+  var foot=st==='disponible'?'<button class="btn" data-act="toggle-off">'+ic('ban')+'Inhabilitar</button><button class="btn btn-primary" data-act="new-res" data-room="'+rm.n+'">'+ic('plus')+'Reservar esta habitación</button>':st==='limpieza'?'<button class="btn" data-act="toggle-off">'+ic('ban')+'Inhabilitar</button><button class="btn btn-ok" data-act="mark-clean">'+ic('check')+'Marcar como lista</button>':'<button class="btn btn-ok" data-act="toggle-off">'+ic('check')+'Habilitar habitación</button>';
+  return dwHead(rm,t.n+' · Piso '+(rm.f||'—'),st)+
+  '<div class="dw-body"><div class="hero-st st-'+ST[st].c+'"><span class="hi">'+ic(h.i)+'</span><div><b>'+h.t+'</b><p>'+h.d+'</p></div></div>'+
+  '<dl class="stay"><div><dt>Tipo</dt><dd>'+t.n+'</dd></div><div><dt>Camas</dt><dd class="tn">'+(t.beds||'—')+'</dd></div><div><dt>Capacidad</dt><dd>'+plural(t.cap,'persona','personas')+'</dd></div><div><dt>Tarifa regular</dt><dd>'+money(t.rate)+'<small>por noche</small></dd></div><div><dt>Piso</dt><dd>'+(rm.f||'Planta baja')+'</dd></div><div><dt>Último huésped</dt><dd>'+(last?esc(short(last.guest.name))+'<small>salió el '+fmtD(last.co)+'</small>':'—')+'</dd></div></dl>'+
+  '<div><h3 style="margin-bottom:8px">Próximas reservas</h3>'+(up.length?'<div class="rows">'+up.map(function(r){return '<button type="button" class="row" data-act="res" data-id="'+r.id+'"><span class="av sm">'+ini(r.guest.name)+'</span><span class="grow"><b>'+esc(r.guest.name)+'</b><small>'+fmtD(r.ci)+' → '+fmtD(r.co)+' · '+plural(nights(r),'noche','noches')+'</small></span>'+pill(resSt(r))+'</button>';}).join('')+'</div>':'<div class="empty">Sin reservas próximas para esta habitación.</div>')+'</div></div>'+
+  '<footer class="dw-f">'+foot+'</footer>';
+}
+function moreMenu(btn){
+  var r=curRes(),rm=room(state.dw.room),items=[];
+  if(!r){items.push({label:'Ver en el timeline',icon:'calendar',run:function(){closeDrawer();go('timeline');}});menu(btn,items,{align:'end'});return;}
+  var st=resSt(r);
+  if(st==='ocupado'||st==='salida')items.push({label:'Revertir check-in',icon:'undo',run:function(){r.state='confirmado';lg(r,TODAY,nowHM(),'Check-in revertido');toast('Check-in revertido en la '+rname(r.room));refresh();}});
+  if(r.state==='reservado')items.push({label:'Confirmar reserva',icon:'check',run:function(){r.state='confirmado';lg(r,TODAY,nowHM(),'Reserva confirmada');toast('Reserva #'+r.id+' confirmada');refresh();}});
+  items.push({label:'Ver historial de cambios',icon:'history',run:function(){switchTab('historial');}});
+  items.push({label:'Ver en el timeline',icon:'calendar',run:function(){closeDrawer();go('timeline');}});
+  if(editable(r)){items.push('-');items.push({label:'Anular reserva',icon:'trash',danger:true,run:function(){anular(r);}});}
+  menu(btn,items,{align:'end'});
+}
+function checkin(r){if(!r)return;var rm=room(r.room);r.state='ocupado';rm.cleaning=false;lg(r,TODAY,nowHM(),'Check-in');toast('Check-in de '+short(r.guest.name)+' en la '+rname(r.room),{icon:'login'});refresh();}
+function doCheckout(r,withDebt){r.state='finalizada';room(r.room).cleaning=true;CLEAN_SINCE[r.room]=nowHM();HK[r.room]={st:'sucia',who:'',since:nowHM(),kind:'Salida'};lg(r,TODAY,nowHM(),withDebt?'Check-out con saldo pendiente de '+money(due(r)):'Check-out');closeDrawer();toast('Check-out de la '+rname(r.room)+' listo · pasa a limpieza',{icon:'logout'});refresh();}
+function tryCheckout(r){
+  if(!r)return;var d=due(r);if(d<=0){doCheckout(r);return;}
+  openModal({title:'La cuenta tiene saldo',body:'<p>La '+(r.room==='AUD'?'reserva del auditorio':'habitación '+r.room)+' debe <b>'+money(d)+'</b>. Cobra antes de hacer el check-out o deja la deuda registrada a nombre del cliente.</p>',
+    foot:'<button class="btn" id="coDebt">Salir con deuda</button><button class="btn btn-primary" id="coPay">'+ic('card')+'Cobrar '+money(d)+'</button>',
+    onMount:function(w){$('#coDebt',w).onclick=function(){closeModal(true);doCheckout(r,true);};$('#coPay',w).onclick=function(){closeModal(true);openPay(r,'checkout');};}});
+}
+function anularBase(r){
+  openModal({title:'Anular reserva #'+r.id,body:'<p>La '+(r.room==='AUD'?'reserva del auditorio':'habitación '+r.room)+' vuelve a quedar libre en esas fechas. La anulación queda guardada en el historial.</p><div class="field"><label for="anuM">Motivo</label><input id="anuM" placeholder="Ej.: el cliente canceló por WhatsApp" autocomplete="off"></div><p class="ferr" id="anuE" hidden>Escribe el motivo de la anulación.</p>',
+    foot:'<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="anuGo">'+ic('trash')+'Anular reserva</button>',
+    onMount:function(w){var go2=function(){var m=$('#anuM',w).value.trim();if(!m){$('#anuE',w).hidden=false;$('#anuM',w).classList.add('err-b');return;}r.state='anulada';lg(r,TODAY,nowHM(),'Reserva anulada · '+m);closeModal(true);toast('Reserva #'+r.id+' anulada',{icon:'trash'});refresh();};$('#anuGo',w).onclick=go2;$('#anuM',w).addEventListener('keydown',function(e){if(e.key==='Enter')go2();});}});
+}
+function openPay(r,then){
+  if(!r)return;var d=due(r);var f={method:'Efectivo',kind:r.company?'Factura':'Boleta'};
+  SEL['pay-m']={value:function(){return f.method;},opts:function(){return activeMethods().map(function(m){return {v:m,l:m};});},pick:function(v){f.method=v;var w=MODAL&&MODAL.el;if(!w)return;$('[data-sel="pay-m"] span',w).textContent=v;$('#cajaW',w).hidden=!(v==='Efectivo'&&!state.caja);}};
+  openModal({title:'Cobrar · '+(r.room==='AUD'?'Auditorio':'Habitación '+r.room),
+    body:'<div class="pay-due"><span>Saldo de la cuenta</span><b>'+money(d)+'</b></div>'+
+      '<div class="field"><label for="payAmt">Monto a cobrar</label><div class="inp-pre"><span>S/</span><input type="number" id="payAmt" min="0" step="0.01" value="'+(d?d.toFixed(2):'')+'"></div></div>'+
+      '<div class="field"><span class="lb" id="payML">Método de pago</span>'+sel('pay-m',f.method)+'</div>'+
+      '<div class="field"><span class="lb" id="payKL">Comprobante</span><div class="segm" role="radiogroup" aria-labelledby="payKL" id="payKind">'+['Boleta','Factura','Nota de venta'].map(function(k){return '<button type="button" role="radio" aria-checked="'+(f.kind===k)+'" data-k="'+k+'">'+k+'</button>';}).join('')+'</div></div>'+
+      '<div class="field" id="rucF"'+(f.kind==='Factura'?'':' hidden')+'><label for="payRuc">RUC de la empresa</label><input id="payRuc" inputmode="numeric" maxlength="11" value="'+(r.company?r.company.ruc:'')+'" placeholder="11 dígitos" autocomplete="off"></div>'+
+      '<div class="warn" id="cajaW"'+(!state.caja?'':' hidden')+'>'+ic('alert')+'<span>La caja está cerrada. Ábrela para recibir efectivo.</span><button type="button" class="btn btn-sm" id="cajaInline">Abrir caja</button></div>'+
+      '<p class="ferr" id="payErr" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="payGo">'+ic('dollar')+'Cobrar</button>',
+    onMount:function(w){
+      $('#payKind',w).addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(!b)return;f.kind=b.dataset.k;$$('#payKind button',w).forEach(function(x){x.setAttribute('aria-checked',x===b);});$('#rucF',w).hidden=f.kind!=='Factura';});
+      $('#cajaInline',w).onclick=function(){openCaja();$('#cajaW',w).hidden=true;};
+      var amt=$('#payAmt',w),btn=$('#payGo',w);
+      var lab=function(){var v=parseFloat(amt.value);btn.innerHTML=ic('dollar')+'Cobrar'+(v>0?' '+money(v):'');};lab();amt.addEventListener('input',lab);
+      var go2=function(){var v=Math.round(parseFloat(amt.value)*100)/100,er=$('#payErr',w),m='';
+        if(!(v>0))m='Escribe un monto mayor a cero.';else if(v>d+0.001&&d>0)m='El monto supera el saldo de '+money(d)+'.';else if(f.method==='Efectivo'&&!state.caja)m='Abre la caja para cobrar en efectivo o elige otro método.';else if(f.kind==='Factura'&&!/^\d{11}$/.test($('#payRuc',w).value.trim()))m='El RUC debe tener 11 dígitos.';
+        if(m){er.textContent=m;er.hidden=false;return;}
+        var p=addPay(r,v,f.method,f.kind,TODAY,nowHM());addJob('TICKET','Comprobante',p.doc);if(f.method==='Efectivo'&&state.caja)state.mov.push({h:p.h,type:'ingreso',cat:'Cobro de hospedaje',desc:roomOf(r)+' · '+p.doc,amount:v,who:ME()});if(p.kind!=='Nota de venta'){p.sunat='pendiente';setTimeout(function(){if(p.sunat==='pendiente'){p.sunat='aceptado';toast('SUNAT aceptó la '+p.kind.toLowerCase()+' '+p.doc);refresh();}},2800);}closeModal(true);toast(p.kind+' '+p.doc+' emitida · '+money(v));
+        if(then==='checkout'&&due(r)<=0){doCheckout(r);return;}refresh();};
+      btn.onclick=go2;amt.addEventListener('keydown',function(e){if(e.key==='Enter')go2();});
+    }});
+}
+function addItemPop(btn,r){
+  var items=[],last='';PRODUCTS.forEach(function(p){if(p.c!==last){items.push({head:p.c});last=p.c;}var out=p.t==='Producto'&&p.stock<=0;items.push({label:p.n,hint:(p.t==='Producto'?(out?'sin stock · ':'quedan '+p.stock+' · '):'')+money(p.p),disabled:out,run:function(){var ex=r.items.find(function(x){return x.n===p.n;});if(ex)ex.q++;else r.items.push({n:p.n,p:p.p,q:1});stockAdj(p.n,1,'Consumo · '+roomOf(r));lg(r,TODAY,nowHM(),'Consumo agregado: '+p.n);state.dw.flash=p.n;toast('Agregado: '+p.n);refresh();}});});
+  menu(btn,items,{search:'Buscar producto o servicio',width:300,align:'end'});
+}
+function chgItem(r,k,dlt){var it=r.items[k];if(!it)return;if(dlt>0){var pp=PROD(it.n);if(pp&&pp.t==='Producto'&&pp.stock<=0){toast('Sin stock: '+it.n,{icon:'alert'});return;}}it.q+=dlt;stockAdj(it.n,dlt,'Consumo · '+roomOf(r));if(it.q<=0){r.items.splice(k,1);lg(r,TODAY,nowHM(),'Consumo eliminado: '+it.n);toast('Quitado: '+it.n,{icon:'trash'});}refresh();}
+function personFields(pre){
+  pre=pre||{};var f={docType:pre.docType||'DNI',nat:pre.nat||'Perú'};
+  SEL['pf-doc']={value:function(){return f.docType;},opts:function(){return DOCTYPES.map(function(d){return {v:d,l:d};});},pick:function(v){f.docType=v;$('[data-sel="pf-doc"] span').textContent=v;}};
+  SEL['pf-nat']={value:function(){return f.nat;},opts:function(){return NATS.map(function(d){return {v:d,l:d};});},pick:function(v){f.nat=v;$('[data-sel="pf-nat"] span').textContent=v;}};
+  return {f:f,html:'<div class="g2"><div class="field"><span class="lb">Tipo de documento</span>'+sel('pf-doc',f.docType)+'</div><div class="field"><label for="pfDoc">Número</label><input id="pfDoc" inputmode="numeric" autocomplete="off" value="'+esc(pre.doc||'')+'"></div><div class="field span2"><label for="pfName">Nombres y apellidos</label><input id="pfName" autocomplete="off" value="'+esc(pre.name||'')+'"></div><div class="field"><span class="lb">Nacionalidad</span>'+sel('pf-nat',f.nat)+'</div></div><p class="ferr" id="pfErr" hidden></p>',
+    read:function(w){var doc=$('#pfDoc',w).value.trim(),name=$('#pfName',w).value.trim().replace(/\s+/g,' ');var e='';if(f.docType==='DNI'&&!/^\d{8}$/.test(doc))e='El DNI debe tener 8 dígitos.';else if(f.docType!=='DNI'&&!/^[A-Za-z0-9]{6,12}$/.test(doc))e='El documento debe tener entre 6 y 12 caracteres.';else if(name.split(' ').length<2)e='Escribe nombres y apellidos.';if(e){var el=$('#pfErr',w);el.textContent=e;el.hidden=false;return null;}return {name:name.split(' ').map(function(w){return w.charAt(0).toUpperCase()+w.slice(1).toLowerCase();}).join(' '),doc:doc,docType:f.docType,nat:f.nat};}};
+}
+function guestModal(r){var pf=personFields();openModal({title:'Agregar huésped',body:'<p>Se suma a la habitación '+rname(r.room)+' y aparece en el reporte de huéspedes.</p>'+pf.html,foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pfGo">Agregar huésped</button>',onMount:function(w){$('#pfGo',w).onclick=function(){var g=pf.read(w);if(!g)return;r.extra.push(g);r.persons=Math.max(r.persons,1+r.extra.length);lg(r,TODAY,nowHM(),'Huésped agregado: '+g.name);closeModal(true);toast('Huésped agregado');refresh();};}});}
+
+/* ---------- nueva reserva ---------- */
+function newForm(rn){var f={client:null,company:null,origin:'Directo',ext:'',motivo:'Vacaciones',ref:'Ninguna',obs:'',status:'confirmado',ci:TODAY,co:TODAY+1,persons:1,tarifa:'Regular',sel:[],prices:{},err:{}};if(rn&&available(rn,f.ci,f.co))f.sel.push(rn);return f;}
+function newFormAt(rn,ci){var f=newForm();f.ci=ci;f.co=ci+1;if(available(rn,f.ci,f.co))f.sel.push(rn);return f;}
+function fPrice(rn){var f=state.form;return f.prices[rn]!=null?f.prices[rn]:avgRate(TYPES[room(rn).t].rate,f.ci,f.co);}
+function clientsList(){var m={},out=[];for(var i=RES.length-1;i>=0;i--){var g=RES[i].guest;if(!m[g.doc]){m[g.doc]=1;out.push(g);}}CLI_EXTRA.forEach(function(g){if(!m[g.doc]){m[g.doc]=1;out.unshift(g);}});return out;}
+function regForm(){
+  var f=state.form;
+  SEL['f-company']={value:function(){return f.company?f.company.ruc:'';},opts:function(){return [{v:'',l:'Sin empresa'}].concat(COMPANIES.map(function(c){return {v:c.ruc,l:c.name,hint:'RUC '+c.ruc};}));},pick:function(v){f.company=COMPANIES.find(function(c){return c.ruc===v;})||null;reNew('cli');}};
+  SEL['f-origin']={value:function(){return f.origin;},opts:function(){return ORIGINS.map(function(o){return {v:o.n,l:o.n,hint:o.c?o.c+'% comisión':''};});},pick:function(v){f.origin=v;reNew('cli');}};
+  SEL['f-motivo']={value:function(){return f.motivo;},opts:function(){return MOTIVOS.map(function(m){return {v:m,l:m};});},pick:function(v){f.motivo=v;reNew('cli');}};
+  SEL['f-ref']={value:function(){return f.ref;},opts:function(){return REFS.map(function(m){return {v:m,l:m};});},pick:function(v){f.ref=v;reNew('cli');}};
+}
+function freeRooms(){var f=state.form;return ROOMS.filter(function(r){return !r.off&&available(r.n,f.ci,f.co);});}
+function validateSel(){var f=state.form,gone=f.sel.filter(function(rn){return !available(rn,f.ci,f.co);});if(gone.length){f.sel=f.sel.filter(function(rn){return gone.indexOf(rn)<0;});toast('Se quitó la '+gone.map(rname).join(', ')+': no está libre en esas fechas',{icon:'alert'});}}
+function secCli(){
+  var f=state.form,c=f.client,o=ORIGINS.find(function(x){return x.n===f.origin;})||{c:0};
+  var box=c?'<div class="cli-sel"><span class="av">'+ini(c.name)+'</span><div><b>'+esc(c.name)+'</b><span>'+esc(c.docType)+' '+esc(c.doc)+' · '+esc(c.nat)+'</span></div><button class="btn btn-sm" data-act="form-client-clear">Cambiar</button></div>'
+    :'<div class="field"><label for="cliQ">Cliente</label><div class="inp-ic">'+ic('search')+'<input id="cliQ" placeholder="Nombre, apellido o DNI" autocomplete="off" aria-autocomplete="list" aria-expanded="false" class="'+(f.err.client?'err-b':'')+'"></div>'+(f.err.client?'<span class="ferr">'+ic('alert')+f.err.client+'</span>':'')+'</div>';
+  return '<header class="nrc-h"><span class="stepn">1</span><h2>Cliente y detalles</h2></header>'+box+
+  (c&&NOGRATO[c.doc]?'<div class="warn st-dan-w">'+ic('ban')+'<span><b>Cliente no grato.</b> '+esc(NOGRATO[c.doc].motivo)+'</span></div>':'')+
+  '<div class="g2 tight"><div class="field"><span class="lb">Empresa (factura)</span>'+sel('f-company',f.company?f.company.name:'','Sin empresa')+'</div>'+
+  '<div class="field"><span class="lb">Origen</span>'+sel('f-origin',f.origin)+'</div>'+
+  '<div class="field"><label for="fExt">N.º de reserva</label><input id="fExt" data-ff="ext" value="'+esc(f.ext)+'" placeholder="'+(o.c?'Ej.: 4821960173':'Opcional')+'" autocomplete="off"></div>'+
+  '<div class="field"><span class="lb">Motivo de viaje</span>'+sel('f-motivo',f.motivo)+'</div>'+
+  '<div class="field"><span class="lb">Referencia</span>'+sel('f-ref',f.ref)+'</div></div>'+
+  '<div class="field grow"><label for="fObs">Observación</label><textarea id="fObs" data-ff="obs" placeholder="Pedidos especiales, hora estimada de llegada, etc.">'+esc(f.obs)+'</textarea></div>';
+}
+function secRooms(){
+  var f=state.form,n=Math.max(0,f.co-f.ci),free=freeRooms(),eD=f.err.date,eR=f.err.rooms;
+  var groups=TYPE_ORDER.map(function(t){return {t:t,l:free.filter(function(r){return r.t===t;})};}).filter(function(g){return g.l.length;});
+  return '<header class="nrc-h"><span class="stepn">2</span><h2>Fechas y habitaciones</h2></header>'+
+  '<div class="dates"><div class="field"><label for="fCi">Llegada</label><input type="date" id="fCi" data-fd="ci" value="'+iso(f.ci)+'" min="'+iso(TODAY)+'"></div>'+
+  '<div class="field"><label for="fCo">Salida</label><input type="date" id="fCo" data-fd="co" value="'+iso(f.co)+'" min="'+iso(f.ci+1)+'" class="'+(eD?'err-b':'')+'"></div></div>'+
+  (eD?'<span class="ferr">'+ic('alert')+eD+'</span>':'')+
+  '<div class="dates3"><div class="field"><span class="lb" id="nnL">Noches</span><div class="stepper" role="group" aria-labelledby="nnL"><button type="button" data-act="f-nights" data-d="-1" aria-label="Una noche menos">−</button><output>'+n+'</output><button type="button" data-act="f-nights" data-d="1" aria-label="Una noche más">+</button></div></div>'+
+  '<div class="field"><span class="lb" id="pxL" title="Personas por habitación">Personas</span><div class="stepper" role="group" aria-labelledby="pxL"><button type="button" data-act="f-pax" data-d="-1" aria-label="Una persona menos">−</button><output>'+f.persons+'</output><button type="button" data-act="f-pax" data-d="1" aria-label="Una persona más">+</button></div></div>'+
+  '<div class="field"><span class="lb">Tarifa</span>'+(function(){var lab=seasonLabel(f.ci,f.co),r=lab==='Regular';return '<div class="tarifa-box'+(r?'':' ss st-out')+'" title="'+esc(lab)+'">'+ic(r?'check':'calendar')+'<span>'+(r?'Regular':esc(lab.split(' · ')[0]))+'</span></div>';})()+'</div></div>'+
+  '<div class="rp-h"><span class="lb">Libres del '+fmtD(f.ci)+' al '+fmtD(f.co)+': '+free.length+'</span><span class="hint">Toca para elegir</span></div>'+
+  (eR?'<span class="ferr">'+ic('alert')+eR+'</span>':'')+
+  '<div class="rpick'+(eR?' err':'')+'" role="group" aria-label="Habitaciones libres">'+(groups.length?groups.map(function(g){var T=TYPES[g.t];return '<div class="rp-g"><span class="rp-t">'+T.n+' · '+money0(avgRate(T.rate,f.ci,f.co))+(T.cap>1?' · hasta '+T.cap+' personas':'')+'</span><div class="rp-list">'+g.l.map(function(r){var on=f.sel.indexOf(r.n)>-1,tm=f.persons>T.cap&&!on;return '<button type="button" class="rp'+(on?' on':'')+'" data-act="f-room" data-room="'+r.n+'" aria-pressed="'+on+'"'+(tm?' disabled':'')+' title="'+esc(rname(r.n)+' · '+T.n+(r.cleaning?' · en limpieza ahora':'')+(tm?' · capacidad '+T.cap:''))+'">'+(r.n==='AUD'?'Aud.':r.n)+(on?ic('check'):'')+(r.cleaning&&!on?'<i class="rp-dot" aria-hidden="true"></i>':'')+'</button>';}).join('')+'</div></div>';}).join(''):'<div class="empty sm">No hay habitaciones libres en esas fechas.</div>')+'</div>';
+}
+function secSum(){
+  var f=state.form,n=Math.max(0,f.co-f.ci),o=ORIGINS.find(function(x){return x.n===f.origin;})||{c:0};
+  var tot=f.sel.reduce(function(s,rn){return s+n*fPrice(rn);},0),com=tot*o.c/100;
+  return '<header class="nrc-h"><span class="stepn">3</span><h2>Resumen</h2></header>'+
+  '<div class="sum-who'+(f.client?'':' mu')+'">'+ic('user')+'<span>'+(f.client?esc(f.client.name):'Falta elegir el cliente')+'</span></div>'+
+  '<div class="sum-who">'+ic('calendar')+'<span>'+cap(fmtD(f.ci))+' → '+fmtD(f.co)+' · '+plural(n,'noche','noches')+' · '+plural(f.persons,'persona','personas')+'</span></div>'+(seasonLabel(f.ci,f.co)!=='Regular'?'<div class="sum-who">'+ic('dollar')+'<span>'+esc(seasonLabel(f.ci,f.co))+'</span></div>':'')+
+  '<div class="sum-l">'+(f.sel.length?f.sel.map(function(rn){var T=TYPES[room(rn).t];return '<div class="sum-r"><div class="sum-rn"><b>'+(rn==='AUD'?'Auditorio':rn)+'</b><small>'+T.n+'</small></div><span class="inp-pre sm"><span>S/</span><input type="number" data-rp="'+rn+'" value="'+fPrice(rn)+'" min="0" step="1" aria-label="Precio por noche de la '+rname(rn)+'"></span><b class="tn" id="sub-'+rn+'">'+money(n*fPrice(rn))+'</b><button type="button" class="btn-icon sm" data-act="f-room" data-room="'+rn+'" aria-label="Quitar la '+rname(rn)+'">'+ic('x')+'</button></div>';}).join(''):'<div class="empty sm">Toca una habitación libre para agregarla.</div>')+'</div>'+
+  '<div class="sum-foot">'+(o.c?'<div class="sum-li"><span>Comisión '+esc(f.origin)+' ('+o.c+'%)</span><b id="sumCom">− '+money(com)+'</b></div>':'')+
+  '<div class="sum-tot"><span>Total de la estadía</span><b id="sumTot">'+money(tot)+'</b></div>'+
+  '<button class="btn btn-ok btn-block btn-lg" data-act="form-save">'+ic('check')+(f.status==='reservado'?'Guardar pre-reserva':'Guardar reserva')+'</button><a class="btn btn-block" href="#panel">Cancelar</a></div>';
+}
+function sumNums(){var f=state.form,n=Math.max(0,f.co-f.ci),o=ORIGINS.find(function(x){return x.n===f.origin;})||{c:0},tot=0;f.sel.forEach(function(rn){var v=n*fPrice(rn);tot+=v;var e=$('#sub-'+rn);if(e)e.textContent=money(v);});var t=$('#sumTot');if(t)t.textContent=money(tot);var c=$('#sumCom');if(c)c.textContent='− '+money(tot*o.c/100);}
+function renderNew(){
+  if(!state.form)state.form=newForm();regForm();var f=state.form;
+  return '<div class="nr-head"><div class="nr-ttl"><a class="btn-icon" href="#panel" aria-label="Volver al panel de habitaciones">'+ic('chevron-left')+'</a><div><h1>Nueva reserva</h1><p class="sub">Hoy '+fmtDL(TODAY)+' · check-in '+CFG.ci+' · check-out '+CFG.co+'</p></div></div>'+
+  '<div class="segm nr-st" role="radiogroup" aria-label="Estado de la reserva" id="nrSt">'+[['reservado','Pre-reserva'],['confirmado','Confirmada']].map(function(x){return '<button type="button" role="radio" data-act="form-status" data-v="'+x[0]+'" aria-checked="'+(f.status===x[0])+'">'+x[1]+'</button>';}).join('')+'</div></div>'+
+  '<div class="nr2"><section class="card nrc" id="nrCli">'+secCli()+'</section><section class="card nrc" id="nrRooms">'+secRooms()+'</section><aside class="card nrc" id="nrSum">'+secSum()+'</aside></div>';
+}
+function reNew(part){
+  if(state.view!=='nueva')return;regForm();
+  if(part==='cli'||part==='det'||part==='all')$('#nrCli').innerHTML=secCli();
+  if(part==='rooms'||part==='all'){var rp=$('#nrRooms .rpick'),st=rp?rp.scrollTop:0;$('#nrRooms').innerHTML=secRooms();var r2=$('#nrRooms .rpick');if(r2)r2.scrollTop=st;}
+  $('#nrSum').innerHTML=secSum();
+}
+function cliSearch(inp){
+  var q=inp.value.trim(),nq=norm(q),all=clientsList();
+  var m=(nq?all.filter(function(c){return norm(c.name).indexOf(nq)>-1||c.doc.indexOf(q)>-1;}):all).slice(0,6);
+  var html=(nq?'':'<div class="mh">Clientes recientes</div>')+m.map(function(c,i){return '<button type="button" class="mi cli" data-ci="'+i+'">'+'<span class="av sm">'+ini(c.name)+'</span><span><b>'+esc(c.name)+'</b><small>'+esc(c.docType)+' '+esc(c.doc)+(NOGRATO[c.doc]?' · NO GRATO':'')+'</small></span></button>';}).join('')+
+    (nq&&!m.length?'<div class="pop-txt">No encontramos a «'+esc(q)+'».</div>':'')+'<div class="sep"></div><button type="button" class="mi" data-new>'+ic('plus')+'<span>'+(q?'Registrar «'+esc(q)+'» como cliente nuevo':'Registrar cliente nuevo')+'</span></button>';
+  var el;if(POP&&POP.anchor===inp){el=POP.el;el.innerHTML=html;}else el=openPop(inp,html,{keepFocus:true,width:'anchor',role:'listbox',onClose:function(){inp.setAttribute('aria-expanded','false');}});
+  inp.setAttribute('aria-expanded','true');
+  el.onmousedown=function(e){e.preventDefault();};
+  el.onclick=function(e){var b=e.target.closest('.mi');if(!b)return;if(b.hasAttribute('data-new')){closePop(true);newClient(q);return;}pickClient(m[+b.dataset.ci]);};
+  el._first=m[0];
+}
+function pickClient(c){closePop(true);var f=state.form;f.client=c;delete f.err.client;reNew('cli');if(NOGRATO[c.doc])toast('Atención: '+short(c.name)+' está marcado como no grato',{icon:'alert'});else toast('Cliente: '+short(c.name),{icon:'user'});}
+function newClient(q){var pre=/^\d+$/.test(q)?{doc:q}:{name:q};var pf=personFields(pre);openModal({title:'Registrar cliente nuevo',body:pf.html,foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pfGo">Guardar cliente</button>',onMount:function(w){$('#pfGo',w).onclick=function(){var g=pf.read(w);if(!g)return;closeModal(true);pickClient(g);};}});}
+function saveForm(){
+  var f=state.form;f.err={};
+  if(!f.client)f.err.client='Elige un cliente o registra uno nuevo.';
+  if(f.co<=f.ci)f.err.date='La salida debe ser después de la llegada.';
+  if(!f.sel.length)f.err.rooms='Toca al menos una habitación libre.';
+  var bad=f.sel.filter(function(rn){return !available(rn,f.ci,f.co);});if(bad.length)f.err.rooms='La '+rname(bad[0])+' ya no está libre en esas fechas.';
+  if(Object.keys(f.err).length){reNew('all');toast('Falta: '+[f.err.client?'cliente':'',f.err.rooms?'habitación':'',f.err.date?'fechas':''].filter(Boolean).join(', '),{icon:'alert'});return;}
+  var group=nid+1,made=[];
+  f.sel.forEach(function(rn){var cap=TYPES[room(rn).t].cap;var r={id:++nid,group:group,room:rn,guest:f.client,company:f.company,origin:f.origin,ext:f.ext,motivo:f.motivo,ref:f.ref,ci:f.ci,co:f.co,rate:fPrice(rn),tarifa:seasonLabel(f.ci,f.co),persons:Math.max(1,Math.min(f.persons,cap)),state:f.status,items:[],pays:[],notes:f.obs?[{text:f.obs,who:ME(),d:TODAY,h:nowHM()}]:[],extra:[],log:[]};lg(r,TODAY,nowHM(),(f.status==='confirmado'?'Reserva confirmada creada':'Pre-reserva creada')+' · origen '+f.origin);RES.push(r);made.push(r);});
+  state.form=null;
+  toast('Reserva #'+group+' guardada · '+plural(made.length,'habitación','habitaciones'));
+  var first=made[0];
+  if(first.ci===TODAY){go('panel');setTimeout(function(){openDrawer(first.room,first.id);},350);}else go('timeline');
+}
+
+/* ---------- vistas por construir ---------- */
+var PH={
+  inicio:['Resumen del día y del mes, con las mismas cifras que hoy usas en el dashboard.',['Habitaciones ocupadas y personas en casa','Llegadas esperadas del día','Ventas y anulaciones del período','Ventas por mes del año','Ingresos por habitación','Ingresos y egresos de caja chica','Reservas por origen (Booking, Airbnb, WhatsApp…)','Habitaciones más pedidas']],
+  reservas:['Todas las reservas en una tabla con filtros guardados.',['Filtros por fechas, estado, origen y habitación','Búsqueda por cliente, empresa o n.º de reserva del canal','Columnas configurables y orden','Exportar a Excel']],
+  restaurante:['Mesas y pedidos conectados a la cuenta de la habitación.',['Ambientes: salón, piscina, terraza y recepción','Mapa de mesas con estado en vivo','Pedido por categorías y comanda a cocina o barra','Precuenta, transferir mesa, cobrar y liberar','Cargar el consumo a la habitación del huésped']],
+  whatsapp:['Reservas que llegan por WhatsApp, listas para confirmar.',['Estados: en curso, creada, confirmada, rechazada y sin respuesta','Foto del comprobante de pago','Catálogo de habitaciones para WhatsApp','Pasar a reserva con un clic']],
+  ventas:['Comprobantes electrónicos y su estado en SUNAT.',['Tickets, boletas y facturas','Estado de envío a SUNAT','Ventas con saldo pendiente','Notas de crédito','Resumen diario de boletas']],
+  caja:['Apertura, movimientos y cierre del día de trabajo.',['Abrir caja con monto inicial','Ingresos y salidas con su tipo (compras, taxis, adelantos…)','Cerrar día y turno','Historial de turnos por empleado']],
+  productos:['Productos, servicios y kits para la cuenta y el restaurante.',['Precios por tipo: público, personal, Booking y promoción','Afectación de IGV y código de barras','Stock mínimo y aviso de vencimiento','Categorías visibles en restaurante','Impresora de comanda por producto']],
+  almacen:['Inventario por almacén.',['Guías de entrada y salida','Movimientos de stock','Stock bajo y sin stock','Lotes y fechas de vencimiento','Exportar a Excel']],
+  clientes:['Ficha única de cada cliente.',['Búsqueda por DNI','Historial de estadías y consumos','Clientes no gratos','Calificación de comportamiento']],
+  reportes:['Reportes en PDF y Excel.',['MINCETUR mensual y de huéspedes','Reservas por origen','Caja por día de trabajo y empleado','Stock de almacén','Ventas por categoría, método de pago y fechas']],
+  impresion:['Impresoras de tickets, precuentas y comandas.',['Destinos por LAN: ticketera, cocina y barra','PDF o impresión directa y n.º de copias','Historial de impresiones con errores']],
+  ajustes:['Toda la configuración en un solo lugar, en vez de 13 pantallas sueltas.',['Empresa, logo y facturación SUNAT','Horarios de check-in, check-out y limpieza','Recargos de early check-in y late check-out','Tipos de habitación, fotos y tarifas','Habitaciones','Orígenes de reserva y comisiones','Formas de pago y monedas','Personal y cargos']]
+};
+function renderPlaceholder(){
+  var k=PH[state.view]?state.view:'inicio',p=PH[k],L=LABEL[k]||['','Inicio'];
+  return '<div class="page-head"><div><h1>'+esc(L[1])+'</h1><p class="sub">'+esc(p[0])+'</p></div></div><div class="card phc"><div class="ph-top"><span class="pill st-res">Siguiente etapa</span><a class="btn" href="#panel">'+ic('bed')+'Ir al panel de habitaciones</a></div><div><h3 style="margin-bottom:10px">Lo que tendrá esta pantalla</h3><ul class="ph-list">'+p[1].map(function(x){return '<li>'+ic('check')+'<span>'+esc(x)+'</span></li>';}).join('')+'</ul></div></div>';
+}
+/* ---------- ventas ---------- */
+function allPays(){var a=EXTRA.slice();RES.forEach(function(r){r.pays.forEach(function(p){a.push(p);});});return a.sort(function(x,y){return (y.d-x.d)||(x.h<y.h?1:x.h>y.h?-1:0);});}
+function findPay(id){var f=EXTRA.find(function(p){return p.id===id;})||null;if(f)return f;RES.some(function(r){return r.pays.some(function(p){if(p.id===id){f=p;return true;}return false;});});return f;}
+var SUN={aceptado:{l:'Aceptado',c:'ok',i:'check'},pendiente:{l:'Por enviar',c:'clean',i:'clock'},rechazado:{l:'Rechazado',c:'dan',i:'alert'},interno:{l:'Control interno',c:'off',i:'receipt'},anulado:{l:'Anulado',c:'off',i:'x'}};
+function sunPill(p,solid){var s=SUN[p.sunat];return '<span class="pill st-'+s.c+(solid?' solid':'')+'">'+ic(s.i)+s.l+'</span>';}
+function isFact(p){return p.kind==='Factura'&&(p.r?!!p.r.company:true);}
+function clientOf(p){if(!p.r)return p.cli.name;return isFact(p)?p.r.company.name:p.r.guest.name;}
+function placeOf(p){return p.r?roomOf(p.r):p.place;}
+function docOf(p){if(!p.r)return p.cli.doc==='—'?'Sin documento':p.cli.docType+' '+p.cli.doc;return isFact(p)?'RUC '+p.r.company.ruc:p.r.guest.docType+' '+p.r.guest.doc;}
+function roomOf(r){return r.room==='AUD'?'Auditorio':'Hab. '+r.room;}
+function mIcon(m){return m==='Efectivo'?'dollar':(m==='Yape'||m==='Plin')?'wallet':'card';}
+var PER=[['hoy','Hoy'],['7d','Últimos 7 días'],['mes','Octubre']];
+function inPer(d){return state.vPer==='hoy'?d===TODAY:state.vPer==='7d'?(d>TODAY-7&&d<=TODAY):(d>=1&&d<=31);}
+function ventasList(){
+  var q=norm(state.vQ.trim());
+  return allPays().filter(function(p){
+    if(!inPer(p.d))return false;
+    if(state.vTab==='anul')return p.anulado;
+    if(state.vKind!=='all'&&p.kind!==state.vKind)return false;
+    if(state.vSun!=='all'&&p.sunat!==state.vSun)return false;
+    if(q&&norm(p.doc+' '+clientOf(p)+' '+docOf(p)+' '+placeOf(p)+' '+p.method).indexOf(q)<0)return false;
+    return true;});
+}
+function vrow(p,i){
+  var sub=p.anulado&&p.anul?'Motivo: '+p.anul.motivo:docOf(p);
+  return '<button type="button" class="vrow" data-act="doc" data-pid="'+p.id+'" style="--i:'+Math.min(i,24)+'"><span class="vc-d">'+p.h+'</span><span class="vc-doc"><b class="mono">'+esc(p.doc)+'</b><small>'+esc(p.kind)+'</small></span><span class="vc-cli"><b>'+esc(clientOf(p))+'</b><small>'+esc(sub)+'</small></span><span class="vc-room">'+esc(placeOf(p))+'</span><span class="vc-m">'+ic(mIcon(p.method))+'<span>'+esc(p.method)+'</span></span><span class="vc-a'+(p.anulado?' void':'')+'">'+money(p.amount)+'</span><span class="vc-s">'+sunPill(p)+'</span></button>';
+}
+function vlistHTML(list){
+  if(!list.length)return '<div class="empty"><b>No hay comprobantes con estos filtros</b>Cambia el período, el tipo o borra la búsqueda.</div>';
+  var days={},order=[];list.forEach(function(p){if(!days[p.d]){days[p.d]=[];order.push(p.d);}days[p.d].push(p);});
+  var i=0;
+  return '<div class="vlist">'+order.map(function(d){
+    var ps=days[d],t=ps.reduce(function(s,p){return s+(p.anulado?0:p.amount);},0);
+    return '<section><div class="vday"><h2>'+(d===TODAY?'Hoy, ':'')+cap(fmtDL(d))+'</h2><span>'+plural(ps.length,'comprobante','comprobantes')+' · '+money(t)+'</span></div><div class="vtable"><div class="vhead" aria-hidden="true"><span>Hora</span><span>Comprobante</span><span>Cliente</span><span>Habitación</span><span>Método</span><span style="text-align:right">Importe</span><span style="text-align:right">SUNAT</span></div>'+ps.map(function(p){return vrow(p,i++);}).join('')+'</div></section>';
+  }).join('')+'</div>';
+}
+function kpiBox(c,i,k,v,s,act){var tag=act?'button':'div';return '<'+tag+(act?' type="button"':'')+' class="card kpi st-'+c+'"'+(act||'')+'><span class="kpi-ic">'+ic(i)+'</span><span class="kpi-t"><span class="k">'+k+'</span><span class="v tn">'+v+'</span><span class="s">'+s+'</span></span></'+tag+'>';}
+function renderVentas(){
+  var per=allPays().filter(function(p){return inPer(p.d);});
+  var valid=per.filter(function(p){return !p.anulado;});
+  var tot=valid.reduce(function(s,p){return s+p.amount;},0);
+  var pend=per.filter(function(p){return p.sunat==='pendiente';}).length,rech=per.filter(function(p){return p.sunat==='rechazado';}).length,anulN=per.filter(function(p){return p.anulado;}).length;
+  var kL={all:'Todos los comprobantes',Boleta:'Boletas',Factura:'Facturas','Nota de venta':'Notas de venta'};
+  var sL={all:'Todos los estados SUNAT',aceptado:'Aceptados',pendiente:'Por enviar',rechazado:'Rechazados',interno:'Control interno'};
+  SEL['v-kind']={value:function(){return state.vKind;},opts:function(){return Object.keys(kL).map(function(k){return {v:k,l:kL[k]};});},pick:function(v){state.vKind=v;render({soft:true});}};
+  SEL['v-sun']={value:function(){return state.vSun;},opts:function(){return Object.keys(sL).map(function(k){return {v:k,l:sL[k]};});},pick:function(v){state.vSun=v;render({soft:true});}};
+  var perL=PER.find(function(x){return x[0]===state.vPer;})[1].toLowerCase();
+  return '<div class="page-head"><div><h1>Ventas</h1><p class="sub">Boletas, facturas y notas de venta emitidas en recepción y en el restaurante · IGV '+CFG.igv+'%</p></div></div>'+
+  '<div class="kpis">'+
+    kpiBox('ok','dollar','Total vendido · '+perL,money(tot),plural(valid.length,'comprobante válido','comprobantes válidos'))+
+    kpiBox('occ','receipt','Comprobantes',String(per.length),anulN?plural(anulN,'anulado','anulados'):'Ninguno anulado')+
+    kpiBox('clean','clock','Por enviar a SUNAT',String(pend),pend?'Se envían solos; toca para verlos':'Todo enviado',pend?' data-act="v-sunf" data-v="pendiente"':'')+
+    kpiBox('dan','alert','Rechazados por SUNAT',String(rech),rech?'Revisa y vuelve a emitir':'Sin rechazos',rech?' data-act="v-sunf" data-v="rechazado"':'')+
+  '</div>'+
+  '<div class="ptabs" role="tablist" aria-label="Vista de ventas">'+[['comp','Comprobantes',per.length-anulN],['anul','Anulaciones',anulN]].map(function(t){return '<button type="button" role="tab" class="ptab" data-act="v-tab" data-v="'+t[0]+'" aria-selected="'+(state.vTab===t[0])+'">'+t[1]+'<span class="c">'+t[2]+'</span></button>';}).join('')+'</div>'+
+  '<div class="vtool"><div class="segm" role="radiogroup" aria-label="Período">'+PER.map(function(x){return '<button type="button" role="radio" data-act="v-per" data-v="'+x[0]+'" aria-checked="'+(state.vPer===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  (state.vTab==='comp'?sel('v-kind',kL[state.vKind])+sel('v-sun',sL[state.vSun]):'')+
+  '<div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="vSearch" placeholder="Buscar por cliente, número o habitación" value="'+esc(state.vQ)+'" autocomplete="off" aria-label="Buscar comprobantes"></div></div>'+
+  '<div id="vList">'+vlistHTML(ventasList())+'</div>';
+}
+function heroBox(c,i,t,d,extra){return '<div class="hero-st st-'+c+'"><span class="hi">'+ic(i)+'</span><div><b>'+t+'</b><p>'+d+'</p>'+(extra||'')+'</div></div>';}
+function openDoc(pid){var p=findPay(pid);if(!p)return;closePop(true);if(!state.dw)lastFocus=document.activeElement;state.dw={kind:'doc',pid:pid};var dw=$('#dw');dw.inert=false;renderDrawer();dw.classList.add('open');setTimeout(function(){var c=$('#dwIn [data-act="dw-close"]');if(c)c.focus({preventScroll:true});},60);}
+function drawerDoc(p){
+  var r=p.r,s=SUN[p.sunat],F=igvF(),base=p.amount/F,igv=p.amount-base,fact=isFact(p);
+  var kindUp=p.kind==='Nota de venta'?'NOTA DE VENTA':p.kind.toUpperCase()+' ELECTRÓNICA';
+  var lines;
+  if(r){var part=p.amount<total(r)-0.001;lines='<div class="pp-l"><span>'+esc('Hospedaje · '+roomOf(r)+' '+TYPES[room(r.room).t].n+' · '+fmtD(r.ci)+' → '+fmtD(r.co)+(part?' (pago a cuenta)':''))+'</span><b>'+fm(p.amount)+'</b></div>';}
+  else lines=p.items.map(function(i){return '<div class="pp-l"><span>'+i.q+' × '+esc(i.n)+'</span><b>'+fm(i.q*i.p)+'</b></div>';}).join('');
+  var cDoc=r?(fact?r.company.ruc:r.guest.doc):p.cli.doc,cDocL=r?(fact?'RUC':r.guest.docType):p.cli.docType;
+  var sun;
+  if(p.sunat==='aceptado')sun=heroBox('ok','check','Aceptado por SUNAT','La constancia (CDR) con código 0 está guardada junto al XML y el PDF.');
+  else if(p.sunat==='pendiente')sun=heroBox('clean','clock','Por enviar a SUNAT','El sistema lo envía solo y vuelve a intentar si SUNAT no responde. También puedes enviarlo ahora.','<button class="btn btn-sm btn-ok" data-act="doc-send" style="margin-top:12px">'+ic('arrow')+'Enviar ahora</button>');
+  else if(p.sunat==='rechazado')sun=heroBox('dan','alert','Rechazado por SUNAT',esc(p.obs||'')+' Anula este comprobante y emite uno nuevo con los datos correctos.');
+  else if(p.sunat==='interno')sun=heroBox('off','receipt','Control interno','Las notas de venta no se envían a SUNAT. Sirven para llevar la cuenta dentro del hotel.');
+  else sun=heroBox('off','x','Anulado el '+fmtD(p.anul.d)+' a las '+p.anul.h,'Motivo: '+esc(p.anul.motivo)+'. '+esc(p.anul.via)+'.');
+  var origin=r?'<div><h3 style="margin-bottom:10px">Reserva</h3><div class="rows"><button type="button" class="row" data-act="res" data-id="'+r.id+'"><span class="av sm">'+ini(r.guest.name)+'</span><span class="grow"><b>'+esc(r.guest.name)+'</b><small>'+roomOf(r)+' · Reserva #'+r.id+' · '+fmtD(r.ci)+' → '+fmtD(r.co)+'</small></span>'+pill(resSt(r))+'</button></div></div>'
+    :'<div><h3 style="margin-bottom:10px">Origen</h3><div class="rows"><div class="row"><span class="av sm">'+ic('utensils')+'</span><span class="grow"><b>'+esc(p.place)+'</b><small>Venta del restaurante</small></span></div></div></div>';
+  return '<header class="dw-h st-'+s.c+'"><div><span class="dw-num" id="dwTitle">'+esc(p.doc)+'</span><span class="dw-type">'+esc(p.kind)+' · '+cap(fmtDL(p.d))+' · '+p.h+'</span>'+sunPill(p,true).replace('class="pill','class="pill pill-m')+'</div><div class="dw-hact">'+sunPill(p,true)+'<button class="btn-icon" data-act="dw-close" aria-label="Cerrar panel">'+ic('x')+'</button></div></header>'+
+  '<div class="dw-body">'+sun+
+  '<div class="paper" role="img" aria-label="'+esc(p.kind+' '+p.doc+' por '+money(p.amount)+' a nombre de '+clientOf(p))+'">'+
+    '<div class="pp-h"><div><b>'+esc(CFG.name.toUpperCase())+'</b><span>'+esc(CFG.addr)+'</span></div><div class="pp-box">'+(CFG.ruc?'RUC '+esc(CFG.ruc):'RUC de tu empresa')+'<br><b>'+kindUp+'</b><br><span class="mono">'+esc(p.doc)+'</span></div></div>'+
+    '<dl class="pp-dl"><dt>Cliente</dt><dd>'+esc(clientOf(p))+'</dd><dt>'+esc(cDocL)+'</dt><dd class="mono">'+esc(cDoc)+'</dd><dt>Emisión</dt><dd>'+fmtD(p.d)+' 2026 · '+p.h+'</dd><dt>Forma de pago</dt><dd>Contado · '+esc(p.method)+'</dd></dl>'+
+    lines+
+    '<div class="pp-t"><div><span>Op. gravada</span><span>'+fm(base)+'</span></div><div><span>IGV '+CFG.igv+'%</span><span>'+fm(igv)+'</span></div><div class="t"><span>Total</span><span>'+money(p.amount)+'</span></div></div>'+
+    (p.anulado?'<div class="pp-void" aria-hidden="true">ANULADO</div>':'')+
+  '</div>'+origin+
+  '</div><footer class="dw-f">'+(p.anulado?'<span class="nt">Este comprobante ya no suma en las ventas</span>':'<span class="nt">'+ic('check')+(p.method==='Efectivo'?'Cobrado en efectivo':'Cobrado con '+esc(p.method))+'</span><button class="btn btn-dang-o" data-act="doc-void">'+ic('trash')+'Anular</button>')+(r?'<button class="btn" data-act="res" data-id="'+r.id+'">'+ic('bed')+'Ver reserva</button>':'')+'</footer>';
+}
+function voidDoc(p){
+  var via=p.kind==='Factura'?'Enviado a SUNAT como comunicación de baja':p.kind==='Boleta'?'Informado en el resumen diario':'Anulación interna';
+  var txt=p.kind==='Factura'?'Se envía a SUNAT una comunicación de baja. Debe hacerse dentro del plazo que da SUNAT.':p.kind==='Boleta'?'Se informa a SUNAT en el resumen diario de hoy.':'Es un comprobante interno: solo se anula en el sistema.';
+  openModal({title:'Anular '+p.kind.toLowerCase()+' '+p.doc,body:'<div class="pay-due"><span>'+esc(clientOf(p))+'</span><b>'+money(p.amount)+'</b></div><p>'+txt+(p.r?' La reserva vuelve a tener este monto como saldo pendiente.':'')+'</p><div class="field"><label for="vdM">Motivo</label><input id="vdM" placeholder="Ej.: el cliente pidió factura" autocomplete="off"></div><p class="ferr" id="vdE" hidden>Escribe el motivo de la anulación.</p>',
+    foot:'<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="vdGo">'+ic('trash')+'Anular comprobante</button>',
+    onMount:function(w){var go2=function(){var m=$('#vdM',w).value.trim();if(!m){$('#vdE',w).hidden=false;$('#vdM',w).classList.add('err-b');return;}
+      p.anulado=true;p.sunat='anulado';p.anul={d:TODAY,h:nowHM(),motivo:m,via:via};if(p.r)lg(p.r,TODAY,nowHM(),'Comprobante '+p.doc+' anulado · '+m);
+      if(p.method==='Efectivo'&&state.caja)state.mov.push({h:nowHM(),type:'salida',cat:'Devolución por anulación',desc:p.doc+' · '+placeOf(p),amount:p.amount,who:ME()});
+      closeModal(true);toast(p.kind+' '+p.doc+' anulada',{icon:'trash'});refresh();};
+      $('#vdGo',w).onclick=go2;$('#vdM',w).addEventListener('keydown',function(e){if(e.key==='Enter')go2();});}});
+}
+
+/* ---------- caja ---------- */
+var MOVCATS={ingreso:['Adelantos de personal','Otros ingresos'],salida:['Compras lavandería','Compras librería','Compras productos exhibidor','Almuerzo recepción','Taxis','Salida por movilidad','Pago día de descanso','Retiro de efectivo']};
+var TURNOS=[[209,'Rosa (turno noche)','15 oct · 19:00','16 oct · 07:05',200,340,85,455],[209,'Luis','15 oct · 07:00','15 oct · 19:02',200,1120,146.5,1173.5],[208,'Rosa (turno noche)','14 oct · 19:00','15 oct · 07:00',200,260,40,415],[208,'Luis','14 oct · 07:02','14 oct · 19:00',150,980,210,925]].map(function(t){return {day:t[0],who:t[1],from:t[2],to:t[3],a:t[4],inc:t[5],out:t[6],cont:t[7]};});
+function cajaNums(){var i=0,o=0;state.mov.forEach(function(m){if(m.type==='ingreso')i+=m.amount;else o+=m.amount;});return {inc:i,out:o,exp:Math.round((state.cajaOpenAmt+i-o)*100)/100};}
+function renderCaja(){
+  var N=cajaNums(),open=state.caja;
+  var tp=allPays().filter(function(p){return p.d===TODAY&&!p.anulado;});
+  var groups=[['Efectivo',/^Efectivo$/],['Yape',/^Yape$/],['Plin',/^Plin$/],['Tarjetas',/Tarjeta/],['Transferencias',/Transferencia|Scotiabank/],['Otros',/Página web|Cheque/]].map(function(g){var ps=tp.filter(function(p){return g[1].test(p.method);});return {l:g[0],n:ps.length,t:ps.reduce(function(s,p){return s+p.amount;},0)};});
+  var sumT=groups.reduce(function(s,g){return s+g.t;},0),max=Math.max.apply(null,groups.map(function(g){return g.t;}).concat([1]));
+  var nIn=state.mov.filter(function(m){return m.type==='ingreso';}).length,nOut=state.mov.length-nIn;
+  var head='<div class="page-head"><div><h1>Caja</h1><p class="sub">Día de trabajo 210 · '+(open?'abierta desde las '+state.cajaSince+' por '+ME():'cerrada')+'</p></div>'+(open?'<div class="head-actions"><button class="btn btn-out" data-act="mov" data-t="salida">'+ic('minus')+'Registrar salida</button><button class="btn btn-ok" data-act="mov" data-t="ingreso">'+ic('plus')+'Registrar ingreso</button><button class="btn" data-act="caja-close">'+ic('wallet')+'Cerrar caja</button></div>':'')+'</div>';
+  var top=open
+    ?'<div class="kpis">'+kpiBox('off','wallet','Monto de apertura',money(state.cajaOpenAmt),'Con lo que empezó el turno')+kpiBox('ok','plus','Entró en efectivo',money(N.inc),plural(nIn,'movimiento','movimientos'))+kpiBox('out','minus','Salió de la caja',money(N.out),plural(nOut,'movimiento','movimientos'))+kpiBox('occ','dollar','Debe haber en caja',money(N.exp),'Apertura + entradas − salidas')+'</div>'
+    :'<div class="card caja-hero st-dan"><span class="hi">'+ic('wallet')+'</span><div><h2>La caja está cerrada</h2><p>Ábrela al empezar tu turno con el dinero que recibes. Desde ese momento se suman solos los cobros en efectivo y puedes registrar compras, taxis o retiros.</p></div><div class="caja-open"><div class="field"><label for="cajaAmt">Monto de apertura</label><div class="inp-pre"><span>S/</span><input type="number" id="cajaAmt" min="0" step="0.5" placeholder="0.00"></div></div><button class="btn btn-ok btn-lg" data-act="caja-open-page">'+ic('wallet')+'Abrir caja</button></div></div>';
+  var movs='<section class="card cblk"><div class="blk-h"><h3>Movimientos del turno</h3><span class="hint">'+plural(state.mov.length,'movimiento','movimientos')+'</span></div>'+(state.mov.length?'<div>'+state.mov.slice().reverse().map(function(m){var inn=m.type==='ingreso';return '<div class="mov st-'+(inn?'ok':'out')+'"><span class="mv-ic">'+ic(inn?'plus':'minus')+'</span><div class="grow"><b>'+esc(m.cat)+'</b><small>'+esc(m.desc||'Sin detalle')+' · '+m.h+' · '+esc(m.who)+'</small></div><span class="amt tn">'+(inn?'+ ':'− ')+money(m.amount)+'</span></div>';}).join('')+'</div>':'<div class="empty"><b>Aún no hay movimientos</b>Los cobros en efectivo aparecen aquí solos. Las compras y los retiros regístralos con “Registrar salida”.</div>')+'</section>';
+  var meth='<section class="card cblk"><div class="blk-h"><h3>Cobros de hoy por método</h3><b class="tn">'+money(sumT)+'</b></div><div>'+groups.map(function(g){return '<div class="mbar"><span>'+g.l+'<small>'+plural(g.n,'pago','pagos')+'</small></span><span class="trk" aria-hidden="true"><i style="width:'+(g.t/max*100).toFixed(1)+'%"></i></span><b>'+money(g.t)+'</b></div>';}).join('')+'</div><p class="hint">Suma boletas, facturas y notas de venta de todos los turnos de hoy. Solo el efectivo pasa por la caja.</p></section>';
+  var tur='<section class="card cblk"><div class="blk-h"><h3>Turnos anteriores</h3><span class="hint">Resultado del conteo al cerrar</span></div><div class="ttable"><div class="thead" aria-hidden="true"><span>Turno</span><span>Horario</span><span>Apertura</span><span>Entradas</span><span>Salidas</span><span>Contado</span><span>Resultado</span></div>'+TURNOS.map(function(t){var ex=t.a+t.inc-t.out,df=Math.round((t.cont-ex)*100)/100;var st=df===0?['ok','check','Cuadra exacto']:df>0?['occ','alert','Sobran '+money(df)]:['dan','alert','Faltan '+money(-df)];return '<div class="trow"><span><b>Día '+t.day+'</b><small>'+esc(t.who)+'</small></span><span>'+t.from+' → '+t.to+'</span><span data-l="Apertura">'+money(t.a)+'</span><span data-l="Entradas">'+money(t.inc)+'</span><span data-l="Salidas">'+money(t.out)+'</span><span data-l="Contado"><b>'+money(t.cont)+'</b></span><span><span class="pill st-'+st[0]+'">'+ic(st[1])+st[2]+'</span></span></div>';}).join('')+'</div></section>';
+  return head+top+(open?'<div class="cgrid">'+movs+meth+'</div>':meth)+tur;
+}
+function movModal(type){
+  var f={type:type,cat:MOVCATS[type][0]};
+  SEL['mv-cat']={value:function(){return f.cat;},opts:function(){return MOVCATS[f.type].map(function(c){return {v:c,l:c};});},pick:function(v){f.cat=v;var w=MODAL&&MODAL.el;if(w)$('[data-sel="mv-cat"] span',w).textContent=v;}};
+  var ttl=function(t){return t==='ingreso'?'Registrar ingreso de dinero':'Registrar salida de dinero';};
+  openModal({title:ttl(type),body:'<div class="segm" role="radiogroup" aria-label="Tipo de movimiento" id="mvT"><button type="button" role="radio" data-t="ingreso" aria-checked="'+(type==='ingreso')+'">Entra dinero</button><button type="button" role="radio" data-t="salida" aria-checked="'+(type==='salida')+'">Sale dinero</button></div>'+
+    '<div class="field"><span class="lb">Motivo</span>'+sel('mv-cat',f.cat)+'</div>'+
+    '<div class="field"><label for="mvAmt">Monto en efectivo</label><div class="inp-pre"><span>S/</span><input type="number" id="mvAmt" min="0" step="0.5" placeholder="0.00"></div></div>'+
+    '<div class="field"><label for="mvDesc">Detalle</label><input id="mvDesc" placeholder="Ej.: detergente y suavizante para lavandería" autocomplete="off"></div>'+
+    '<p class="hint">Ahora hay '+money(cajaNums().exp)+' en caja.</p><p class="ferr" id="mvErr" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn '+(type==='ingreso'?'btn-ok':'btn-out')+'" id="mvGo">Registrar</button>',
+    onMount:function(w){
+      $('#mvT',w).addEventListener('click',function(e){var b=e.target.closest('[data-t]');if(!b)return;f.type=b.dataset.t;f.cat=MOVCATS[f.type][0];$$('#mvT button',w).forEach(function(x){x.setAttribute('aria-checked',x===b);});$('[data-sel="mv-cat"] span',w).textContent=f.cat;$('#mvGo',w).className='btn '+(f.type==='ingreso'?'btn-ok':'btn-out');$('.m-head h3',w).textContent=ttl(f.type);});
+      var go2=function(){var v=Math.round(parseFloat($('#mvAmt',w).value)*100)/100,e=$('#mvErr',w),m='';
+        if(!(v>0))m='Escribe un monto mayor a cero.';else if(f.type==='salida'&&v>cajaNums().exp+0.001)m='En caja solo hay '+money(cajaNums().exp)+'.';
+        if(m){e.textContent=m;e.hidden=false;return;}
+        state.mov.push({h:nowHM(),type:f.type,cat:f.cat,desc:$('#mvDesc',w).value.trim(),amount:v,who:ME()});closeModal(true);toast((f.type==='ingreso'?'Ingreso':'Salida')+' de '+money(v)+' registrada',{icon:'wallet'});if(state.view==='caja')render({soft:true});};
+      $('#mvGo',w).onclick=go2;$('#mvAmt',w).addEventListener('keydown',function(e){if(e.key==='Enter')go2();});
+    }});
+}
+function closeCajaModal(){
+  if(!state.caja)return;var N=cajaNums();
+  openModal({title:'Cerrar caja · Día '+DAYNO,body:'<p>Cuenta el efectivo que hay en la caja y escríbelo. El sistema lo compara con lo que debería haber.</p>'+
+    '<dl class="stay" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><dt>Apertura</dt><dd>'+money(state.cajaOpenAmt)+'</dd></div><div><dt>Entradas en efectivo</dt><dd>'+money(N.inc)+'</dd></div><div><dt>Salidas</dt><dd>'+money(N.out)+'</dd></div><div><dt>Debe haber</dt><dd>'+money(N.exp)+'</dd></div></dl>'+
+    '<div class="field"><label for="ccAmt">Efectivo contado</label><div class="inp-pre"><span>S/</span><input type="number" id="ccAmt" min="0" step="0.1" placeholder="0.00"></div></div>'+
+    '<div class="diffbox st-off" id="ccDiff" aria-live="polite"><span>Escribe el monto contado</span><b></b></div>'+
+    '<div class="field"><label for="ccObs">Observación</label><input id="ccObs" placeholder="Opcional: explica si falta o sobra dinero" autocomplete="off"></div><p class="ferr" id="ccErr" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ccGo">'+ic('wallet')+'Cerrar caja y turno</button>',
+    onMount:function(w){var inp=$('#ccAmt',w),box=$('#ccDiff',w);
+      inp.addEventListener('input',function(){var v=parseFloat(inp.value);if(isNaN(v)){box.className='diffbox st-off';box.innerHTML='<span>Escribe el monto contado</span><b></b>';return;}var d=Math.round((v-N.exp)*100)/100;box.className='diffbox st-'+(d===0?'ok':d>0?'occ':'dan');box.innerHTML='<span>'+(d===0?'La caja cuadra exacto':d>0?'Sobra dinero':'Falta dinero')+'</span><b>'+money(Math.abs(d))+'</b>';});
+      var go2=function(){var v=parseFloat(inp.value);if(isNaN(v)||v<0){var e=$('#ccErr',w);e.textContent='Escribe cuánto efectivo contaste.';e.hidden=false;inp.classList.add('err-b');return;}
+        TURNOS.unshift({day:DAYNO,who:ME(),from:fmtD(TODAY)+' · '+state.cajaSince,to:fmtD(TODAY)+' · '+nowHM(),a:state.cajaOpenAmt,inc:N.inc,out:N.out,cont:v});
+        var d=Math.round((v-N.exp)*100)/100;closeModal(true);setCaja(false);toast(d===0?'Caja cerrada · cuadra exacto':'Caja cerrada · '+(d>0?'sobran ':'faltan ')+money(Math.abs(d)),{icon:d===0?'check':'alert'});};
+      $('#ccGo',w).onclick=go2;inp.addEventListener('keydown',function(e){if(e.key==='Enter')go2();});}});
+}
+/* ---------- configuración del hotel ---------- */
+var CFG={name:'Hotel Selva Inn',legal:'',ruc:'',addr:'Jr. 28 de Julio 541, Puerto Maldonado',phone:'+51 946 895 818',mail:'info@hotelselvainn.com',sol:'',env:'Producción',igv:10.5,ci:'09:00',co:'11:00',maxco:'11:30',retoque:30,early:'06:00',earlyPct:50,late:'14:00',latePct:50,aviso:15};
+function keepRender(id){var el=document.getElementById(id),pos=el?el.selectionStart:0;render({soft:true});var n=document.getElementById(id);if(n){n.focus({preventScroll:true});try{n.setSelectionRange(pos,pos);}catch(e){}}}
+function newCliModal(){var pf=personFields();openModal({title:'Nuevo cliente',body:pf.html,foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pfGo">Guardar cliente</button>',onMount:function(w){$('#pfGo',w).onclick=function(){var g=pf.read(w);if(!g)return;if(cliData().some(function(c){return c.g.doc===g.doc;})){var e=$('#pfErr',w);e.textContent='Ya existe un cliente con ese documento.';e.hidden=false;return;}CLI_EXTRA.push(g);closeModal(true);toast('Cliente registrado: '+short(g.name),{icon:'user'});render({soft:true});};}});}
+/* ---------- utilidades de listas, interruptores y gráficos ---------- */
+function lt(cols,heads,rows,empty){
+  if(!rows.length)return '<div class="empty">'+(empty||'<b>No hay resultados</b>Prueba con otro filtro o borra la búsqueda.')+'</div>';
+  return '<div class="lt" style="--cols:'+cols+'"><div class="lt-h" aria-hidden="true">'+heads.map(function(h){return '<span'+(h.charAt(0)==='>'?' class="r"':'')+'>'+h.replace(/^>/,'')+'</span>';}).join('')+'</div>'+rows.join('')+'</div>';
+}
+function cell(label,html,cls){return '<span class="c'+(cls?' '+cls:'')+'" data-l="'+esc(label)+'">'+html+'</span>';}
+function sw(on,act,extra,label){return '<button type="button" class="sw" role="switch" aria-checked="'+!!on+'" data-act="'+act+'"'+(extra||'')+(label?' aria-label="'+esc(label)+'"':'')+'><i></i></button>';}
+function niceMax(m){if(m<=0)return 1;var p=Math.pow(10,Math.floor(Math.log10(m))),n=m/p,s=n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10;return s*p;}
+function vbars(data,fmt,h,fixed){
+  var max=Math.max.apply(null,data.map(function(d){return d.v;}).concat([0])),nice=fixed||niceMax(max),ticks=[nice,nice/2,0];
+  var cols='repeat('+data.length+',minmax(0,1fr))';
+  return '<div class="vch" style="--h:'+(h||190)+'px"><div class="vch-y" aria-hidden="true">'+ticks.map(function(t){return '<span>'+fmt(t)+'</span>';}).join('')+'</div><div class="vch-plot"><div class="vch-grid" aria-hidden="true"><i></i><i></i><i></i></div>'+
+  '<div class="vch-bars" style="grid-template-columns:'+cols+'">'+data.map(function(d,i){return '<span class="vb'+(d.hl?' hl':'')+(d.mu?' mu':'')+'" style="--v:'+(d.v/nice*100).toFixed(2)+'%;--d:'+(i*15)+'ms" data-tipt="'+esc(d.tip)+'" tabindex="0" aria-label="'+esc(d.tip)+'"><i></i></span>';}).join('')+'</div>'+
+  '<div class="vch-x" aria-hidden="true" style="grid-template-columns:'+cols+'">'+data.map(function(d){return '<span>'+(d.xl||'')+'</span>';}).join('')+'</div></div></div>';
+}
+function hbars(rows,fmt){var max=Math.max.apply(null,rows.map(function(r){return r.v;}).concat([1]));return '<div>'+rows.map(function(r){return '<div class="mbar" data-tipt="'+esc(r.l+': '+fmt(r.v)+(r.sub?' · '+r.sub:''))+'"><span>'+esc(r.l)+(r.sub?'<small>'+esc(r.sub)+'</small>':'')+'</span><span class="trk" aria-hidden="true"><i style="width:'+(r.v/max*100).toFixed(1)+'%"></i></span><b>'+fmt(r.v)+'</b></div>';}).join('')+'</div>';}
+document.addEventListener('pointerover',function(e){var t=e.target.closest&&e.target.closest('[data-tipt]');if(t)showTip(esc(t.dataset.tipt),e.clientX,e.clientY);});
+document.addEventListener('pointerout',function(e){if(e.target.closest&&e.target.closest('[data-tipt]'))hideTip();});
+document.addEventListener('focusin',function(e){var t=e.target.closest&&e.target.closest('[data-tipt]');if(t){var b=t.getBoundingClientRect();showTip(esc(t.dataset.tipt),b.left,b.top-30);}});
+document.addEventListener('focusout',function(e){if(e.target.closest&&e.target.closest('[data-tipt]'))hideTip();});
+function igvF(){return 1+CFG.igv/100;}
+function copyText(txt,btn){var done=function(){toast('Tabla copiada. Pégala en Excel con Ctrl + V',{icon:'check'});};try{navigator.clipboard.writeText(txt).then(done,function(){toast('No se pudo copiar. Selecciona la tabla y cópiala a mano',{icon:'alert'});});}catch(e){toast('No se pudo copiar. Selecciona la tabla y cópiala a mano',{icon:'alert'});}}
+
+/* ---------- impresión ---------- */
+var PRINTERS=[{id:'TICKET',name:'Ticketera recepción',use:'Comprobantes',ip:'192.168.1.50',on:true},{id:'PRECUENTA',name:'Ticketera restaurante',use:'Precuentas',ip:'192.168.1.51',on:true},{id:'COCINA',name:'Impresora cocina',use:'Comanda de cocina',ip:'192.168.1.52',on:true},{id:'BARRA',name:'Impresora barra',use:'Comanda de barra',ip:'192.168.1.53',on:false}];
+var PCFG={venta:{pdf:true,print:true,copies:1},comanda:{pdf:false,print:true,copies:1},precuenta:{pdf:false,print:true,copies:1}};
+var JOBID=5521;
+var PRINTJOBS=[{id:5521,pr:'TICKET',type:'Comprobante',ref:'B001-00441',state:'ok',copies:1,msg:'Impreso',h:'10:18'},{id:5520,pr:'COCINA',type:'Comanda',ref:'Mesa 3 · Salón',state:'ok',copies:1,msg:'Impreso',h:'12:41'},{id:5519,pr:'BARRA',type:'Comanda',ref:'Mesa 5 · Salón',state:'err',copies:1,msg:'La impresora no responde. Revisa que esté prendida y conectada.',h:'12:16'},{id:5518,pr:'PRECUENTA',type:'Precuenta',ref:'Mesa 5 · Salón',state:'ok',copies:1,msg:'Impreso',h:'13:20'}];
+function printer(id){return PRINTERS.find(function(p){return p.id===id;});}
+function addJob(pr,type,ref){
+  var P=printer(pr),cfgK=type==='Comprobante'?'venta':type==='Precuenta'?'precuenta':'comanda';if(!PCFG[cfgK].print)return;
+  var j={id:++JOBID,pr:pr,type:type,ref:ref,state:'cola',copies:PCFG[cfgK].copies,msg:'En cola',h:nowHM()};PRINTJOBS.unshift(j);
+  setTimeout(function(){if(P&&P.on){j.state='ok';j.msg='Impreso';}else{j.state='err';j.msg='La impresora no responde. Revisa que esté prendida y conectada.';toast('No se pudo imprimir en '+(P?P.name:pr),{icon:'alert'});}if(state.view==='impresion')render({soft:true});},1200);
+}
+var JST={ok:{l:'Impreso',c:'ok',i:'check'},cola:{l:'En cola',c:'clean',i:'clock'},err:{l:'Error',c:'dan',i:'alert'}};
+function renderImpresion(){
+  var cards=PRINTERS.map(function(p){return '<article class="card prn st-'+(p.on?'ok':'dan')+'"><div class="prn-h"><span class="kpi-ic">'+ic('printer')+'</span><div class="grow"><b>'+esc(p.name)+'</b><small>'+esc(p.use)+' · LAN '+esc(p.ip)+'</small></div><span class="pill st-'+(p.on?'ok':'dan')+'">'+ic(p.on?'check':'alert')+(p.on?'En línea':'Sin conexión')+'</span></div><div class="prn-f"><button class="btn btn-sm" data-act="prn-test" data-id="'+p.id+'">'+ic('printer')+'Imprimir prueba</button><button class="btn btn-sm" data-act="prn-edit" data-id="'+p.id+'">Editar</button><span class="prn-sw"><span>Conectada</span>'+sw(p.on,'prn-toggle',' data-id="'+p.id+'"','Impresora conectada')+'</span></div></article>';}).join('');
+  var cfgRows=[['venta','Comprobantes de venta'],['comanda','Comandas de cocina y barra'],['precuenta','Precuentas del restaurante']].map(function(x){var c=PCFG[x[0]];return '<div class="cfg-r"><b>'+x[1]+'</b><span class="cfg-c"><span>Guardar PDF</span>'+sw(c.pdf,'pcfg',' data-k="'+x[0]+'" data-f="pdf"','Guardar PDF de '+x[1])+'</span><span class="cfg-c"><span>Imprimir</span>'+sw(c.print,'pcfg',' data-k="'+x[0]+'" data-f="print"','Imprimir '+x[1])+'</span><span class="cfg-c"><span>Copias</span><span class="stepper sm"><button type="button" data-act="pcopies" data-k="'+x[0]+'" data-d="-1" aria-label="Una copia menos">−</button><output>'+c.copies+'</output><button type="button" data-act="pcopies" data-k="'+x[0]+'" data-d="1" aria-label="Una copia más">+</button></span></span></div>';}).join('');
+  var jobs=PRINTJOBS.slice(0,30).map(function(j){var s=JST[j.state],P=printer(j.pr);return '<div class="lt-r">'+cell('Hora','<b class="tn">'+j.h+'</b>')+cell('Impresora','<b>'+esc(P?P.name:j.pr)+'</b>','wide')+cell('Documento','<b>'+esc(j.type)+'</b><small>'+esc(j.ref)+'</small>')+cell('Copias','<span class="tn">'+j.copies+'</span>')+cell('Mensaje','<small>'+esc(j.msg)+'</small>')+cell('Estado','<span class="pill st-'+s.c+'">'+ic(s.i)+s.l+'</span>','r')+'</div>';});
+  var errN=PRINTJOBS.filter(function(j){return j.state==='err';}).length;
+  return '<div class="page-head"><div><h1>Impresión</h1><p class="sub">Ticketeras e impresoras de comandas conectadas por la red del hotel</p></div></div>'+
+  '<div class="prns">'+cards+'</div>'+
+  '<section class="card cblk"><div class="blk-h"><h3>Qué se imprime</h3><span class="hint">Se aplica al instante</span></div>'+cfgRows+'</section>'+
+  '<section class="card cblk"><div class="blk-h"><h3>Historial de impresiones</h3>'+(errN?'<span class="pill st-dan">'+ic('alert')+plural(errN,'error','errores')+'</span>':'<span class="hint">Sin errores</span>')+'</div>'+lt('64px minmax(0,1.2fr) minmax(0,1.3fr) 70px minmax(0,1.6fr) 130px',['Hora','Impresora','Documento','Copias','Mensaje','>Estado'],jobs)+'</section>';
+}
+function prnEdit(p){
+  var use=p.use;SEL['prn-use']={value:function(){return use;},opts:function(){return ['Comprobantes','Precuentas','Comanda de cocina','Comanda de barra'].map(function(u){return {v:u,l:u};});},pick:function(v){use=v;$('[data-sel="prn-use"] span',MODAL.el).textContent=v;}};
+  openModal({title:'Editar impresora',body:'<div class="field"><label for="pnN">Nombre</label><input id="pnN" value="'+esc(p.name)+'" autocomplete="off"></div><div class="field"><span class="lb">Qué imprime</span>'+sel('prn-use',use)+'</div><div class="field"><label for="pnIp">Dirección en la red (IP)</label><input id="pnIp" value="'+esc(p.ip)+'" inputmode="decimal" autocomplete="off"></div><p class="ferr" id="pnE" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pnGo">Guardar</button>',
+    onMount:function(w){$('#pnGo',w).onclick=function(){var n=$('#pnN',w).value.trim(),ip=$('#pnIp',w).value.trim();if(!n||!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)){var e=$('#pnE',w);e.textContent=!n?'Escribe un nombre.':'La IP debe tener el formato 192.168.1.50';e.hidden=false;return;}p.name=n;p.ip=ip;p.use=use;closeModal(true);toast('Impresora guardada',{icon:'printer'});render({soft:true});};}});
+}
+
+/* ---------- productos y almacén ---------- */
+var PROVS=['Distribuidora Amazonía E.I.R.L.','Bebidas del Oriente S.A.C.','Mercado Modelo Puerto Maldonado','Comercial Tambopata S.A.C.'];
+var GUIA=31;
+var STOCKMOV=[
+  {d:14,h:'10:20',type:'entrada',prod:'Cerveza artesanal',qty:24,ref:'Guía G-0031 · Bebidas del Oriente S.A.C.',who:'Pedro (almacén)'},
+  {d:14,h:'10:22',type:'entrada',prod:'Chicha morada 1 L',qty:12,ref:'Guía G-0031 · Bebidas del Oriente S.A.C.',who:'Pedro (almacén)'},
+  {d:13,h:'16:05',type:'salida',prod:'Té verde',qty:6,ref:'Merma o vencido',who:'Pedro (almacén)'},
+  {d:12,h:'09:40',type:'entrada',prod:'Agua mineral 625 ml',qty:48,ref:'Guía G-0030 · Distribuidora Amazonía E.I.R.L.',who:'Pedro (almacén)'},
+  {d:12,h:'09:41',type:'entrada',prod:'Gaseosa 1/2 L',qty:36,ref:'Guía G-0030 · Distribuidora Amazonía E.I.R.L.',who:'Pedro (almacén)'}
+];
+function stockAdj(name,dq,ref){var p=PROD(name);if(!p||p.t!=='Producto'||!dq)return;p.stock=Math.max(0,p.stock-dq);STOCKMOV.unshift({d:TODAY,h:nowHM(),type:dq>0?'salida':'entrada',prod:p.n,qty:Math.abs(dq),ref:ref,who:ME()});}
+function stockSt(p){if(p.t!=='Producto')return null;if(p.stock<=0)return 'sin';if(p.stock<p.min)return 'bajo';return 'bien';}
+function expDays(p){if(!p.exp)return null;var d=fromIso(p.exp);return d==null?null:d-TODAY;}
+var SST={bien:{l:'Stock bien',c:'ok',i:'check'},bajo:{l:'Stock bajo',c:'clean',i:'alert'},sin:{l:'Sin stock',c:'dan',i:'ban'}};
+function stockPill(p){var s=stockSt(p);if(!s)return '<span class="hint">No lleva stock</span>';var x=SST[s];return '<span class="pill st-'+x.c+'">'+ic(x.i)+x.l+'</span>';}
+function cats(){var o=[];PRODUCTS.forEach(function(p){if(o.indexOf(p.c)<0)o.push(p.c);});return o;}
+function renderProductos(){
+  var q=norm(state.prQ.trim());
+  var list=PRODUCTS.filter(function(p){return (state.pcat==='all'||p.c===state.pcat)&&(!q||norm(p.n+' '+p.c+' '+p.t).indexOf(q)>-1);});
+  var rows=list.map(function(p){return '<button type="button" class="lt-r" data-act="prod" data-id="'+p.id+'">'+cell('Producto','<b>'+esc(p.n)+'</b><small>'+esc(p.c)+'</small>','wide')+cell('Tipo','<span class="pill st-'+(p.t==='Producto'?'occ':p.t==='Kit'?'conf':'off')+'">'+esc(p.t)+'</span>')+cell('Público','<b class="tn">'+money(p.prices.publico)+'</b>','r')+cell('Personal','<span class="tn">'+money(p.prices.personal)+'</span>','r')+cell('Promoción','<span class="tn">'+money(p.prices.promo)+'</span>','r')+cell('Stock',p.t==='Producto'?'<b class="tn">'+p.stock+'</b><small>mín. '+p.min+'</small>':'<small>—</small>','r')+cell('Restaurante',p.rest?'<span class="pill st-ok">'+ic('check')+'Sí</span>':'<span class="hint">No</span>','r')+'</button>';});
+  return '<div class="page-head"><div><h1>Productos y servicios</h1><p class="sub">Lo que se carga a la cuenta de la habitación y se vende en el restaurante</p></div><div class="head-actions"><button class="btn btn-primary" data-act="prod-new">'+ic('plus')+'Nuevo producto</button></div></div>'+
+  '<div class="chips" role="group" aria-label="Categoría" style="margin-bottom:14px">'+[['all','Todas']].concat(cats().map(function(c){return [c,c];})).map(function(c){return '<button type="button" class="chipb" data-act="pcat" data-v="'+esc(c[0])+'" aria-pressed="'+(state.pcat===c[0])+'">'+esc(c[1])+'</button>';}).join('')+'</div>'+
+  '<div class="toolbar"><div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="prSearch" placeholder="Buscar producto o servicio" value="'+esc(state.prQ)+'" autocomplete="off" aria-label="Buscar productos"></div></div>'+
+  '<div id="prList">'+lt('minmax(0,2fr) 120px 110px 110px 110px 90px 120px',['Producto','Tipo','>Público','>Personal','>Promoción','>Stock','>Restaurante'],rows)+'</div>';
+}
+function prodModal(p){
+  var isNew=!p;p=p||{n:'',c:cats()[0],t:'Producto',p:0,cost:0,stock:0,min:5,rest:false,dest:'Barra',prices:{publico:0,personal:0,promo:0}};
+  var f={c:p.c,t:p.t,rest:!!p.rest,dest:p.dest||'Barra'};
+  SEL['pd-cat']={value:function(){return f.c;},opts:function(){return cats().map(function(c){return {v:c,l:c};});},pick:function(v){f.c=v;$('[data-sel="pd-cat"] span',MODAL.el).textContent=v;}};
+  SEL['pd-dest']={value:function(){return f.dest;},opts:function(){return [{v:'Cocina',l:'Cocina'},{v:'Barra',l:'Barra'}];},pick:function(v){f.dest=v;$('[data-sel="pd-dest"] span',MODAL.el).textContent=v;}};
+  openModal({title:isNew?'Nuevo producto':'Editar '+p.n,width:620,body:
+    '<div class="g2"><div class="field span2"><label for="pdN">Nombre</label><input id="pdN" value="'+esc(p.n)+'" placeholder="Ej.: Jugo de cocona" autocomplete="off"></div>'+
+    '<div class="field"><span class="lb">Categoría</span>'+sel('pd-cat',f.c)+'</div>'+
+    '<div class="field"><span class="lb" id="pdTL">Tipo</span><div class="segm" role="radiogroup" aria-labelledby="pdTL" id="pdT">'+['Producto','Servicio','Kit'].map(function(t){return '<button type="button" role="radio" data-t="'+t+'" aria-checked="'+(f.t===t)+'">'+t+'</button>';}).join('')+'</div></div>'+
+    '<div class="field"><label for="pdP">Precio al público</label><div class="inp-pre"><span>S/</span><input type="number" id="pdP" min="0" step="0.1" value="'+(p.prices.publico||'')+'"></div></div>'+
+    '<div class="field"><label for="pdC">Precio de compra</label><div class="inp-pre"><span>S/</span><input type="number" id="pdC" min="0" step="0.1" value="'+(p.cost||'')+'"></div></div>'+
+    '<div class="field"><label for="pdPe">Precio para personal</label><div class="inp-pre"><span>S/</span><input type="number" id="pdPe" min="0" step="0.1" value="'+(p.prices.personal||'')+'"></div></div>'+
+    '<div class="field"><label for="pdPr">Precio de promoción</label><div class="inp-pre"><span>S/</span><input type="number" id="pdPr" min="0" step="0.1" value="'+(p.prices.promo||'')+'"></div></div>'+
+    '<div class="field pd-stock"'+(f.t==='Producto'?'':' hidden')+'><label for="pdS">'+(isNew?'Stock inicial':'Stock actual')+'</label><input type="number" id="pdS" min="0" step="1" value="'+(p.stock||0)+'"'+(isNew?'':' disabled')+'></div>'+
+    '<div class="field pd-stock"'+(f.t==='Producto'?'':' hidden')+'><label for="pdM">Avisar cuando queden menos de</label><input type="number" id="pdM" min="0" step="1" value="'+(p.min||0)+'"></div>'+
+    '<div class="field"><span class="lb">Se vende en el restaurante</span><span class="sw-row">'+sw(f.rest,'pd-rest','','Se vende en el restaurante')+'<span id="pdRL">'+(f.rest?'Sí, aparece en las mesas':'No')+'</span></span></div>'+
+    '<div class="field"><span class="lb">Impresora de comanda</span>'+sel('pd-dest',f.dest)+'</div></div><p class="ferr" id="pdE" hidden></p>'+(isNew?'':'<p class="hint">Para cambiar el stock usa Almacén → Registrar entrada o salida.</p>'),
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pdGo">'+ic('check')+(isNew?'Crear producto':'Guardar cambios')+'</button>',
+    onMount:function(w){
+      $('#pdT',w).addEventListener('click',function(e){var b=e.target.closest('[data-t]');if(!b)return;f.t=b.dataset.t;$$('#pdT button',w).forEach(function(x){x.setAttribute('aria-checked',x===b);});$$('.pd-stock',w).forEach(function(x){x.hidden=f.t!=='Producto';});});
+      w.addEventListener('click',function(e){var s=e.target.closest('[data-act="pd-rest"]');if(!s)return;e.stopPropagation();f.rest=!f.rest;s.setAttribute('aria-checked',f.rest);$('#pdRL',w).textContent=f.rest?'Sí, aparece en las mesas':'No';},true);
+      $('#pdGo',w).onclick=function(){var n=$('#pdN',w).value.trim().replace(/\s+/g,' '),pp=parseFloat($('#pdP',w).value),e=$('#pdE',w);
+        if(!n){e.textContent='Escribe el nombre del producto.';e.hidden=false;return;}if(!(pp>0)){e.textContent='Escribe el precio al público.';e.hidden=false;return;}
+        if(isNew&&PROD(n)){e.textContent='Ya existe un producto con ese nombre.';e.hidden=false;return;}
+        var o=isNew?{id:PRODUCTS.length+1,ant:15}:p;o.n=n;o.c=f.c;o.t=f.t;o.p=pp;o.cost=parseFloat($('#pdC',w).value)||0;o.rest=f.rest;o.dest=f.dest;
+        o.prices={publico:pp,booking:pp,personal:parseFloat($('#pdPe',w).value)||pp,promo:parseFloat($('#pdPr',w).value)||pp};
+        if(f.t==='Producto'){o.min=parseInt($('#pdM',w).value,10)||0;if(isNew){o.stock=parseInt($('#pdS',w).value,10)||0;if(o.stock>0)STOCKMOV.unshift({d:TODAY,h:nowHM(),type:'entrada',prod:n,qty:o.stock,ref:'Stock inicial',who:ME()});}else if(o.stock==null)o.stock=0;}else{o.stock=null;}
+        if(isNew){var at=-1;PRODUCTS.forEach(function(x,i){if(x.c===o.c)at=i;});if(at<0)PRODUCTS.push(o);else PRODUCTS.splice(at+1,0,o);}
+        closeModal(true);toast(isNew?'Producto creado: '+n:'Cambios guardados',{icon:'package'});render({soft:true});};
+    }});
+}
+function renderAlmacen(){
+  var prods=PRODUCTS.filter(function(p){return p.t==='Producto';});
+  var cnt={all:prods.length,bajo:prods.filter(function(p){return stockSt(p)==='bajo';}).length,sin:prods.filter(function(p){return stockSt(p)==='sin';}).length,vence:prods.filter(function(p){var d=expDays(p);return d!=null&&d<=p.ant;}).length};
+  var F=[['all','Todos','all','package'],['bajo','Stock bajo','clean','alert'],['sin','Sin stock','dan','ban'],['vence','Por vencer','out','clock']];
+  var list=prods.filter(function(p){var s=state.aF;if(s==='all')return true;if(s==='vence'){var d=expDays(p);return d!=null&&d<=p.ant;}return stockSt(p)===s;});
+  var rows=list.map(function(p){var d=expDays(p);var ex=p.exp?(d<0?'<span class="pill st-dan">'+ic('alert')+'Vencido</span>':d<=p.ant?'<span class="pill st-out">'+ic('clock')+'Vence en '+plural(d,'día','días')+'</span>':'<small>'+fmtDate(p.exp)+'</small>'):'<small>—</small>';
+    return '<button type="button" class="lt-r" data-act="alm-in" data-id="'+p.id+'">'+cell('Producto','<b>'+esc(p.n)+'</b><small>'+esc(p.c)+(p.lot?' · lote '+esc(p.lot):'')+'</small>','wide')+cell('Stock','<b class="big tn">'+p.stock+'</b>','r')+cell('Mínimo','<span class="tn">'+p.min+'</span>','r')+cell('Costo','<span class="tn">'+money(p.cost||0)+'</span>','r')+cell('Vencimiento',ex)+cell('Estado',stockPill(p),'r')+'</button>';});
+  var movs=STOCKMOV.slice(0,40).map(function(m){var inn=m.type==='entrada';return '<div class="lt-r">'+cell('Fecha','<b class="tn">'+fmtD(m.d)+'</b><small>'+m.h+'</small>')+cell('Tipo','<span class="pill st-'+(inn?'ok':'out')+'">'+ic(inn?'plus':'minus')+(inn?'Entrada':'Salida')+'</span>')+cell('Producto','<b>'+esc(m.prod)+'</b>','wide')+cell('Cantidad','<b class="tn">'+(inn?'+':'−')+m.qty+'</b>','r')+cell('Referencia','<small>'+esc(m.ref)+'</small>')+cell('Usuario','<small>'+esc(m.who)+'</small>')+'</div>';});
+  return '<div class="page-head"><div><h1>Almacén</h1><p class="sub">Almacén principal · las ventas y consumos descuentan stock solos</p></div><div class="head-actions"><button class="btn btn-out" data-act="alm-out">'+ic('minus')+'Registrar salida</button><button class="btn btn-ok" data-act="alm-in">'+ic('plus')+'Registrar entrada</button></div></div>'+
+  '<div class="ftiles four" role="group" aria-label="Filtrar stock">'+F.map(function(f){return '<button type="button" class="ft st-'+f[2]+'" data-act="a-f" data-v="'+f[0]+'" aria-pressed="'+(state.aF===f[0]&&state.aTab==='stock')+'"><span class="ft-ic">'+ic(f[3])+'</span><span class="ft-n">'+cnt[f[0]]+'</span><span class="ft-l">'+f[1]+'</span></button>';}).join('')+'</div>'+
+  '<div class="ptabs" role="tablist" aria-label="Vista de almacén">'+[['stock','Stock',prods.length],['mov','Movimientos',STOCKMOV.length]].map(function(t){return '<button type="button" role="tab" class="ptab" data-act="a-tab" data-v="'+t[0]+'" aria-selected="'+(state.aTab===t[0])+'">'+t[1]+'<span class="c">'+t[2]+'</span></button>';}).join('')+'</div>'+
+  (state.aTab==='stock'?lt('minmax(0,2fr) 90px 90px 100px minmax(0,1.2fr) 150px',['Producto','>Stock','>Mínimo','>Costo','Vencimiento','>Estado'],rows,'<b>Nada en este filtro</b>¡Bien! No hay productos en esta situación.')
+    :lt('90px 120px minmax(0,1.5fr) 90px minmax(0,1.8fr) minmax(0,1fr)',['Fecha','Tipo','Producto','>Cantidad','Referencia','Usuario'],movs));
+}
+function fmtDate(isoS){var d=fromIso(isoS);if(d==null)return isoS;var x=dt(d);return x.getUTCDate()+' '+MES[x.getUTCMonth()]+' '+x.getUTCFullYear();}
+function almModal(type,pid){
+  var prods=PRODUCTS.filter(function(p){return p.t==='Producto';});var f={pid:pid||prods[0].id,prov:PROVS[0],why:'Consumo interno'};
+  var P=function(){return PRODUCTS.find(function(p){return p.id===f.pid;});};
+  SEL['am-p']={value:function(){return f.pid;},opts:function(){return prods.map(function(p){return {v:p.id,l:p.n,hint:'stock '+p.stock};});},pick:function(v){f.pid=v;var w=MODAL.el;$('[data-sel="am-p"] span',w).textContent=P().n;var h=$('#amH',w);if(h)h.textContent='Hay '+P().stock+' en almacén.';}};
+  SEL['am-prov']={value:function(){return f.prov;},opts:function(){return PROVS.map(function(p){return {v:p,l:p};});},pick:function(v){f.prov=v;$('[data-sel="am-prov"] span',MODAL.el).textContent=v;}};
+  SEL['am-why']={value:function(){return f.why;},opts:function(){return ['Consumo interno','Merma o vencido','Traslado al restaurante','Otro'].map(function(p){return {v:p,l:p};});},pick:function(v){f.why=v;$('[data-sel="am-why"] span',MODAL.el).textContent=v;}};
+  var inn=type==='entrada';
+  openModal({title:inn?'Registrar entrada al almacén':'Registrar salida del almacén',width:560,body:
+    '<div class="g2"><div class="field span2"><span class="lb">Producto</span>'+sel('am-p',P().n)+'</div>'+
+    (inn?'<div class="field span2"><span class="lb">Proveedor</span>'+sel('am-prov',f.prov)+'</div>':'<div class="field span2"><span class="lb">Motivo</span>'+sel('am-why',f.why)+'</div>')+
+    '<div class="field"><label for="amQ">Cantidad</label><input type="number" id="amQ" min="1" step="1" placeholder="0"></div>'+
+    (inn?'<div class="field"><label for="amC">Costo por unidad</label><div class="inp-pre"><span>S/</span><input type="number" id="amC" min="0" step="0.1" value="'+(P().cost||'')+'"></div></div><div class="field"><label for="amL">Lote</label><input id="amL" placeholder="Opcional" autocomplete="off"></div><div class="field"><label for="amV">Vence</label><input type="date" id="amV" min="'+iso(TODAY)+'"></div>':'')+
+    '</div><p class="hint" id="amH">Hay '+P().stock+' en almacén.</p><p class="ferr" id="amE" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn '+(inn?'btn-ok':'btn-out')+'" id="amGo">'+ic(inn?'plus':'minus')+(inn?'Registrar entrada':'Registrar salida')+'</button>',
+    onMount:function(w){$('#amGo',w).onclick=function(){var q=parseInt($('#amQ',w).value,10),p=P(),e=$('#amE',w);
+      if(!(q>0)){e.textContent='Escribe una cantidad mayor a cero.';e.hidden=false;return;}
+      if(!inn&&q>p.stock){e.textContent='Solo hay '+p.stock+' en almacén.';e.hidden=false;return;}
+      if(inn){p.stock+=q;var c=parseFloat($('#amC',w).value);if(c>0)p.cost=c;var l=$('#amL',w).value.trim(),v=$('#amV',w).value;if(l)p.lot=l;if(v)p.exp=v;GUIA++;STOCKMOV.unshift({d:TODAY,h:nowHM(),type:'entrada',prod:p.n,qty:q,ref:'Guía G-00'+GUIA+' · '+f.prov,who:ME()});}
+      else{p.stock-=q;STOCKMOV.unshift({d:TODAY,h:nowHM(),type:'salida',prod:p.n,qty:q,ref:f.why,who:ME()});}
+      closeModal(true);toast((inn?'Entrada':'Salida')+' registrada: '+q+' · '+p.n,{icon:'package'});render({soft:true});};}});
+}
+
+/* ---------- restaurante ---------- */
+var AMB=['Salón','Piscina','Terraza','Recepción'];
+var TABLES=[];
+[['Salón','',10,4],['Piscina','P',4,4],['Terraza','T',6,2],['Recepción','R',2,2]].forEach(function(a){for(var i=1;i<=a[2];i++)TABLES.push({id:(a[1]||'S')+i,n:a[1]+i,amb:a[0],seats:a[3]+(i%3===0?2:0),order:null});});
+function tbl(id){return TABLES.find(function(t){return t.id===id;});}
+function oItem(n,q,sent){var p=PROD(n);return {n:n,p:p.p,q:q,sent:sent};}
+tbl('S3').order={items:[oItem('Lomo saltado',2,2),oItem('Juane',1,1),oItem('Chicha morada 1 L',1,1)],since:'12:40',mozo:'Jorge',state:'abierta'};
+tbl('S5').order={items:[oItem('Tacacho con cecina',2,2),oItem('Cerveza artesanal',3,3)],since:'12:15',mozo:'Jorge',state:'precuenta'};
+tbl('P2').order={items:[oItem('Pisco sour',2,2),oItem('Gaseosa 1/2 L',2,0)],since:'13:05',mozo:'Mario',state:'abierta'};
+tbl('T1').order={items:[oItem('Café pasado',2,2),oItem('Desayuno buffet',2,2)],since:'08:30',mozo:'Jorge',state:'abierta'};
+var EXTRA=[];
+function oTotal(o){return o.items.reduce(function(s,i){return s+i.q*i.p;},0);}
+function oPend(o){return o.items.reduce(function(s,i){return s+Math.max(0,i.q-i.sent);},0);}
+var MST={libre:{l:'Libre',c:'ok',i:'check'},abierta:{l:'Con pedido',c:'occ',i:'utensils'},precuenta:{l:'Precuenta',c:'clean',i:'receipt'}};
+function mesaSt(t){return t.order?t.order.state:'libre';}
+function renderRest(){
+  var occ=TABLES.filter(function(t){return t.order;}).length,pre=TABLES.filter(function(t){return t.order&&t.order.state==='precuenta';}).length;
+  var sold=EXTRA.filter(function(p){return p.d===TODAY&&!p.anulado;}).reduce(function(s,p){return s+p.amount;},0);
+  var list=TABLES.filter(function(t){return t.amb===state.amb;});
+  return '<div class="page-head"><div><h1>Restaurante</h1><p class="sub">Toca una mesa para tomar el pedido, mandar la comanda o cobrar</p></div></div>'+
+  '<div class="kpis">'+kpiBox('occ','utensils','Mesas con pedido',occ+' de '+TABLES.length,'En todos los ambientes')+kpiBox('clean','receipt','En precuenta',String(pre),'Esperando el pago')+kpiBox('ok','dollar','Vendido hoy',money(sold),'Cobrado en el restaurante')+kpiBox('conf','bed','Cargado a habitaciones',money(state.restToRoom),'Hoy, a la cuenta del huésped')+'</div>'+
+  '<div class="amb-bar"><div class="segm" role="radiogroup" aria-label="Ambiente">'+AMB.map(function(a){var n=TABLES.filter(function(t){return t.amb===a&&t.order;}).length;return '<button type="button" role="radio" data-act="r-amb" data-v="'+a+'" aria-checked="'+(state.amb===a)+'">'+a+(n?' <span class="segc">'+n+'</span>':'')+'</button>';}).join('')+'</div>'+
+  '<div class="legend"><span class="st-ok"><i></i>Libre</span><span class="st-occ"><i></i>Con pedido</span><span class="st-clean"><i></i>Precuenta</span></div></div>'+
+  '<div class="mesas">'+list.map(function(t,i){var st=mesaSt(t),m=MST[st],o=t.order;
+    return '<button type="button" class="mesa st-'+m.c+'" data-act="mesa" data-id="'+t.id+'" style="--i:'+i+'"><span class="ms-top"><span class="ms-n">'+esc(t.n)+'</span>'+'<span class="pill solid st-'+m.c+'">'+ic(m.i)+m.l+'</span></span>'+
+    (o?'<span class="ms-tot tn">'+money(oTotal(o))+'</span><span class="ms-sub">'+plural(o.items.reduce(function(s,x){return s+x.q;},0),'producto','productos')+' · desde '+o.since+'</span>'+(oPend(o)?'<span class="badge due">'+ic('clock')+oPend(o)+' por enviar</span>':'<span class="ms-sub">Mozo: '+esc(o.mozo)+'</span>'):'<span class="ms-sub">'+ic('users')+t.seats+' sillas</span><span class="badge free">'+ic('plus')+'Toca para abrir</span>')+'</button>';}).join('')+'</div>';
+}
+function openMesa(id){closePop(true);if(!state.dw)lastFocus=document.activeElement;state.dw={kind:'mesa',id:id};if(!state.rcat)state.rcat=PRODUCTS.find(function(p){return p.rest;}).c;var dw=$('#dw');dw.inert=false;renderDrawer();dw.classList.add('open');setTimeout(function(){var c=$('#dwIn [data-act="dw-close"]');if(c)c.focus({preventScroll:true});},60);}
+function drawerMesa(t){
+  var st=mesaSt(t),m=MST[st],o=t.order;
+  var head='<header class="dw-h st-'+m.c+'"><div><span class="dw-num" id="dwTitle">Mesa '+esc(t.n)+'</span><span class="dw-type">'+t.amb+' · '+t.seats+' sillas'+(o?' · mozo '+esc(o.mozo):'')+'</span><span class="pill solid pill-m st-'+m.c+'">'+ic(m.i)+m.l+'</span></div><div class="dw-hact"><span class="pill solid st-'+m.c+'">'+ic(m.i)+m.l+'</span>'+(o?'<button class="btn-icon" data-act="r-more" aria-label="Más acciones" aria-haspopup="menu" aria-expanded="false">'+ic('more')+'</button>':'')+'<button class="btn-icon" data-act="dw-close" aria-label="Cerrar panel">'+ic('x')+'</button></div></header>';
+  if(!o)return head+'<div class="dw-body">'+heroBox('ok','check','Mesa libre','Abre la mesa cuando se sienten los clientes para empezar a tomar el pedido.')+'</div><footer class="dw-f"><button class="btn btn-ok" data-act="r-open">'+ic('utensils')+'Abrir mesa</button></footer>';
+  var cs=cats().filter(function(c){return PRODUCTS.some(function(p){return p.c===c&&p.rest;});});if(cs.indexOf(state.rcat)<0)state.rcat=cs[0];
+  var fl=state.dw.flash;state.dw.flash=null;
+  var prods=PRODUCTS.filter(function(p){return p.rest&&p.c===state.rcat;});
+  var lines=o.items.length?'<div class="lines">'+o.items.map(function(it,k){var pend=it.q-it.sent;return '<div class="line'+(fl===it.n?' flash':'')+'"><div><b>'+esc(it.n)+'</b><span class="d">'+money(it.p)+' c/u · '+(pend>0?'<span class="tx-due">'+pend+' por enviar</span>':'<span class="tx-ok">en cocina o barra</span>')+'</span></div><span class="qty"><button type="button" data-act="r-dec" data-k="'+k+'" aria-label="Quitar uno de '+esc(it.n)+'">−</button><output>'+it.q+'</output><button type="button" data-act="r-inc" data-k="'+k+'" aria-label="Agregar uno de '+esc(it.n)+'">+</button></span><span class="amt">'+money(it.q*it.p)+'</span></div>';}).join('')+'</div>':'<div class="empty"><b>El pedido está vacío</b>Toca los productos de arriba para agregarlos.</div>';
+  var tot=oTotal(o),pend=oPend(o);
+  return head+'<div class="dw-body">'+
+    '<div><h3 style="margin-bottom:10px">Agregar al pedido</h3><div class="chips" role="group" aria-label="Categoría">'+cs.map(function(c){return '<button type="button" class="chipb" data-act="r-cat" data-v="'+esc(c)+'" aria-pressed="'+(state.rcat===c)+'">'+esc(c)+'</button>';}).join('')+'</div>'+
+    '<div class="pgrid">'+prods.map(function(p){var out=p.t==='Producto'&&p.stock<=0;return '<button type="button" class="pbtn" data-act="r-add" data-n="'+esc(p.n)+'"'+(out?' disabled':'')+'><b>'+esc(p.n)+'</b><span class="tn">'+money(p.p)+'</span>'+(p.t==='Producto'?'<small class="'+(out?'tx-dan':p.stock<p.min?'tx-due':'')+'">'+(out?'Sin stock':'Quedan '+p.stock)+'</small>':'<small>'+esc(p.dest||'')+'</small>')+'</button>';}).join('')+'</div></div>'+
+    '<div><div class="blk-h"><h3>Pedido</h3><span class="hint">Desde las '+o.since+'</span></div>'+lines+'<div class="tot"><div class="due-r has"><span>Total de la mesa</span><b>'+money(tot)+'</b></div></div></div>'+
+  '</div><footer class="dw-f"><button class="btn btn-occ" data-act="r-send"'+(pend?'':' disabled')+'>'+ic('printer')+(pend?'Enviar comanda ('+pend+')':'Comanda enviada')+'</button><button class="btn" data-act="r-pre"'+(o.items.length?'':' disabled')+'>'+ic('receipt')+'Precuenta</button><button class="btn btn-ok" data-act="r-pay"'+(tot>0?'':' disabled')+'>'+ic('dollar')+'Cobrar '+money(tot)+'</button></footer>';
+}
+function curTable(){return state.dw&&state.dw.kind==='mesa'?tbl(state.dw.id):null;}
+function rAdd(n){var t=curTable(),p=PROD(n);if(!t||!t.order||!p)return;if(p.t==='Producto'&&p.stock<=0){toast('Sin stock: '+n,{icon:'alert'});return;}var ex=t.order.items.find(function(i){return i.n===n;});if(ex)ex.q++;else t.order.items.push({n:n,p:p.p,q:1,sent:0});if(t.order.state==='precuenta')t.order.state='abierta';stockAdj(n,1,'Restaurante · Mesa '+t.n);state.dw.flash=n;renderDrawer();render({soft:true});}
+function rChg(k,d){var t=curTable();if(!t||!t.order)return;var it=t.order.items[k];if(!it)return;if(d>0){var p=PROD(it.n);if(p&&p.t==='Producto'&&p.stock<=0){toast('Sin stock: '+it.n,{icon:'alert'});return;}}it.q+=d;if(it.sent>it.q)it.sent=it.q;stockAdj(it.n,d,'Restaurante · Mesa '+t.n);if(it.q<=0)t.order.items.splice(k,1);renderDrawer();render({soft:true});}
+function rSend(){var t=curTable();if(!t||!t.order)return;var byDest={};t.order.items.forEach(function(i){var d=i.q-i.sent;if(d>0){var dest=(PROD(i.n)||{}).dest||'Cocina';byDest[dest]=(byDest[dest]||0)+d;i.sent=i.q;}});
+  Object.keys(byDest).forEach(function(d){addJob(d==='Barra'?'BARRA':'COCINA','Comanda','Mesa '+t.n+' · '+t.amb);});
+  toast('Comanda enviada: '+Object.keys(byDest).map(function(d){return byDest[d]+' a '+d.toLowerCase();}).join(' y '),{icon:'printer'});renderDrawer();render({soft:true});}
+function rPre(){var t=curTable();if(!t||!t.order)return;t.order.state='precuenta';addJob('PRECUENTA','Precuenta','Mesa '+t.n+' · '+t.amb);toast('Precuenta de la mesa '+t.n+' · '+money(oTotal(t.order)),{icon:'receipt'});renderDrawer();render({soft:true});}
+function nextDoc(kind){return kind==='Factura'?'F001-000'+(++FAC):kind==='Nota de venta'?'NV01-000'+(++NV):'B001-00'+(++BOL);}
+function rPay(t){
+  var tot=oTotal(t.order),f={method:'Efectivo',kind:'Boleta'};
+  SEL['rp-m']={value:function(){return f.method;},opts:function(){return activeMethods().map(function(m){return {v:m,l:m};});},pick:function(v){f.method=v;var w=MODAL.el;$('[data-sel="rp-m"] span',w).textContent=v;$('#rpW',w).hidden=!(v==='Efectivo'&&!state.caja);}};
+  openModal({title:'Cobrar · Mesa '+t.n,body:'<div class="pay-due"><span>Total de la mesa</span><b>'+money(tot)+'</b></div>'+
+    '<div class="field"><span class="lb">Método de pago</span>'+sel('rp-m',f.method)+'</div>'+
+    '<div class="field"><span class="lb" id="rpKL">Comprobante</span><div class="segm" role="radiogroup" aria-labelledby="rpKL" id="rpK">'+['Boleta','Factura','Nota de venta'].map(function(k){return '<button type="button" role="radio" data-k="'+k+'" aria-checked="'+(f.kind===k)+'">'+k+'</button>';}).join('')+'</div></div>'+
+    '<div class="g2"><div class="field"><label for="rpDoc" id="rpDocL">DNI del cliente</label><input id="rpDoc" inputmode="numeric" placeholder="Opcional" autocomplete="off"></div><div class="field"><label for="rpName" id="rpNameL">Nombre</label><input id="rpName" placeholder="Clientes varios" autocomplete="off"></div></div>'+
+    '<div class="warn" id="rpW"'+(state.caja?' hidden':'')+'>'+ic('alert')+'<span>La caja está cerrada. Ábrela para recibir efectivo.</span><button type="button" class="btn btn-sm" id="rpCaja">Abrir caja</button></div><p class="ferr" id="rpE" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="rpGo">'+ic('dollar')+'Cobrar '+money(tot)+'</button>',
+    onMount:function(w){
+      $('#rpK',w).addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(!b)return;f.kind=b.dataset.k;$$('#rpK button',w).forEach(function(x){x.setAttribute('aria-checked',x===b);});var fa=f.kind==='Factura';$('#rpDocL',w).textContent=fa?'RUC de la empresa':'DNI del cliente';$('#rpDoc',w).placeholder=fa?'11 dígitos':'Opcional';$('#rpNameL',w).textContent=fa?'Razón social':'Nombre';$('#rpName',w).placeholder=fa?'Nombre de la empresa':'Clientes varios';});
+      $('#rpCaja',w).onclick=function(){openCaja();$('#rpW',w).hidden=true;};
+      $('#rpGo',w).onclick=function(){var doc=$('#rpDoc',w).value.trim(),nm=$('#rpName',w).value.trim(),e=$('#rpE',w),m='';
+        if(f.method==='Efectivo'&&!state.caja)m='Abre la caja para cobrar en efectivo o elige otro método.';
+        else if(f.kind==='Factura'&&(!/^\d{11}$/.test(doc)||!nm))m='Para factura escribe el RUC de 11 dígitos y la razón social.';
+        else if(f.kind!=='Factura'&&doc&&!/^\d{8}$/.test(doc))m='El DNI debe tener 8 dígitos.';
+        if(m){e.textContent=m;e.hidden=false;return;}
+        var p={id:++PID,r:null,place:'Mesa '+t.n+' · '+t.amb,cli:{name:nm||(f.kind==='Factura'?'Empresa':'Clientes varios'),doc:doc||'—',docType:f.kind==='Factura'?'RUC':'DNI'},items:t.order.items.map(function(i){return {n:i.n,p:i.p,q:i.q};}),doc:nextDoc(f.kind),method:f.method,amount:tot,kind:f.kind,d:TODAY,h:nowHM(),sunat:f.kind==='Nota de venta'?'interno':'pendiente',anulado:false};
+        EXTRA.unshift(p);addJob('TICKET','Comprobante',p.doc);
+        if(f.method==='Efectivo')state.mov.push({h:p.h,type:'ingreso',cat:'Venta de restaurante',desc:p.place+' · '+p.doc,amount:tot,who:ME()});
+        emitirSunat(p);
+        t.order=null;closeModal(true);closeDrawer();toast(p.kind+' '+p.doc+' emitida · mesa '+t.n+' liberada');render({soft:true});};
+    }});
+}
+function rToRoom(t){
+  var occ=RES.filter(function(r){return r.state==='ocupado';}).sort(function(a,b){return a.room<b.room?-1:1;});var f={id:occ[0]?occ[0].id:null};
+  if(!occ.length){toast('No hay habitaciones ocupadas',{icon:'alert'});return;}
+  var lab=function(id){var r=byId(id);return roomOf(r)+' · '+r.guest.name;};
+  SEL['rr-r']={value:function(){return f.id;},opts:function(){return occ.map(function(r){return {v:r.id,l:lab(r.id)};});},pick:function(v){f.id=v;$('[data-sel="rr-r"] span',MODAL.el).textContent=lab(v);}};
+  var tot=oTotal(t.order);
+  openModal({title:'Cargar a la habitación',body:'<div class="pay-due"><span>Mesa '+t.n+'</span><b>'+money(tot)+'</b></div><p>El consumo pasa a la cuenta del huésped y se cobra cuando haga el check-out. La mesa queda libre.</p><div class="field"><span class="lb">Habitación</span>'+sel('rr-r',lab(f.id))+'</div>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-occ" id="rrGo">'+ic('bed')+'Cargar '+money(tot)+'</button>',
+    onMount:function(w){$('#rrGo',w).onclick=function(){var r=byId(f.id);t.order.items.forEach(function(i){var ex=r.items.find(function(x){return x.n===i.n&&x.p===i.p;});if(ex)ex.q+=i.q;else r.items.push({n:i.n,p:i.p,q:i.q});});lg(r,TODAY,nowHM(),'Consumo de restaurante · Mesa '+t.n+' · '+money(tot));state.restToRoom+=tot;t.order=null;closeModal(true);closeDrawer();toast('Cargado a la '+roomOf(r).toLowerCase()+' · '+money(tot),{icon:'bed'});render({soft:true});};}});
+}
+function rMove(t){
+  var free=TABLES.filter(function(x){return !x.order;});if(!free.length){toast('No hay mesas libres',{icon:'alert'});return;}var f={id:free[0].id};
+  var lab=function(id){var x=tbl(id);return 'Mesa '+x.n+' · '+x.amb;};
+  SEL['rm-t']={value:function(){return f.id;},opts:function(){return free.map(function(x){return {v:x.id,l:lab(x.id)};});},pick:function(v){f.id=v;$('[data-sel="rm-t"] span',MODAL.el).textContent=lab(v);}};
+  openModal({title:'Pasar el pedido a otra mesa',body:'<div class="field"><span class="lb">Mesa de destino</span>'+sel('rm-t',lab(f.id))+'</div>',foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="rmGo">Pasar pedido</button>',
+    onMount:function(w){$('#rmGo',w).onclick=function(){var d=tbl(f.id);d.order=t.order;t.order=null;state.amb=d.amb;closeModal(true);state.dw.id=d.id;renderDrawer();render({soft:true});toast('Pedido pasado a la mesa '+d.n);};}});
+}
+function rVoid(t){openModal({title:'Anular el pedido de la mesa '+t.n,body:'<p>Se borra el pedido y la mesa queda libre. Los productos que no se enviaron a cocina vuelven al almacén.</p>',foot:'<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="rvGo">'+ic('trash')+'Anular pedido</button>',
+  onMount:function(w){$('#rvGo',w).onclick=function(){t.order.items.forEach(function(i){var d=i.q-i.sent;if(d>0)stockAdj(i.n,-d,'Pedido anulado · Mesa '+t.n);});t.order=null;closeModal(true);renderDrawer();render({soft:true});toast('Pedido de la mesa '+t.n+' anulado',{icon:'trash'});};}});}
+
+/* ---------- whatsapp ---------- */
+var WAS={en_curso:{l:'En conversación',c:'occ',i:'message'},creado:{l:'Por revisar',c:'clean',i:'clock'},confirmado:{l:'Confirmada',c:'ok',i:'check'},rechazado:{l:'Rechazada',c:'dan',i:'x'},timeout:{l:'Sin respuesta',c:'off',i:'clock'}};
+var WA=[
+  {id:1048,name:'Yuliana Ríos Carbajal',doc:'45120987',phone:'921 ··· 418',ci:17,co:19,t:'MQ',persons:2,paid:180,method:'Yape',state:'creado',at:'07:52',msg:'Buenos días, quiero la matrimonial para el sábado y domingo. Ya mandé el adelanto.'},
+  {id:1047,name:'Edson Mamani Quispe',doc:'70011245',phone:'954 ··· 033',ci:16,co:17,t:'D',persons:2,paid:200,method:'Plin',state:'creado',at:'07:31',msg:'Llegamos hoy en la tarde con mi esposa, pagué completo por Plin.'},
+  {id:1046,name:'Fiorella Cáceres Luna',doc:'',phone:'987 ··· 150',ci:20,co:22,t:'T',persons:3,paid:0,method:'',state:'en_curso',at:'07:10',msg:'¿Tienen habitación triple para el 20? Somos 3 adultos.'},
+  {id:1045,name:'Bruno Salas Vera',doc:'',phone:'912 ··· 706',ci:18,co:19,t:'P',persons:1,paid:0,method:'',state:'en_curso',at:'06:58',msg:'¿El desayuno está incluido en el precio?'},
+  {id:1043,name:'Kelly Ramos Ortiz',doc:'41877230',phone:'945 ··· 512',ci:16,co:18,t:'KD',persons:2,paid:0,method:'',state:'rechazado',at:'ayer 21:40',reason:'Sin disponibilidad en esas fechas',msg:'Quiero la habitación decorada para aniversario.'},
+  {id:1042,name:'Ronald Chura',doc:'',phone:'966 ··· 287',ci:15,co:16,t:'P',persons:1,paid:0,method:'',state:'timeout',at:'ayer 18:12',msg:'(El cliente dejó de responder después de pedir precios.)'}
+];
+(function(){var r=RES.find(function(x){return x.origin==='WhatsApp'&&x.state==='confirmado';});if(r)WA.splice(4,0,{id:1044,name:r.guest.name,doc:r.guest.doc,phone:'978 ··· 640',ci:r.ci,co:r.co,t:room(r.room).t,persons:r.persons,paid:paid(r),method:'Yape',state:'confirmado',at:'ayer 19:05',msg:'Listo, gracias. Llego en el vuelo de la tarde.',resId:r.id});})();
+function waTotal(w){return (w.co-w.ci)*TYPES[w.t].rate;}
+function renderWA(){
+  var F=[['all','Todas','all','message']].concat(Object.keys(WAS).map(function(k){return [k,WAS[k].l,WAS[k].c,WAS[k].i];}));
+  var cnt={all:WA.length};Object.keys(WAS).forEach(function(k){cnt[k]=WA.filter(function(w){return w.state===k;}).length;});
+  var list=WA.filter(function(w){return state.waF==='all'||w.state===state.waF;});
+  return '<div class="page-head"><div><h1>WhatsApp</h1><p class="sub">Pedidos de reserva que llegan por WhatsApp. Revisa el pago y asigna la habitación.</p></div></div>'+
+  '<div class="ftiles six" role="group" aria-label="Filtrar por estado">'+F.map(function(f){return '<button type="button" class="ft st-'+f[2]+'" data-act="wa-f" data-v="'+f[0]+'" aria-pressed="'+(state.waF===f[0])+'"><span class="ft-ic">'+ic(f[3])+'</span><span class="ft-n">'+cnt[f[0]]+'</span><span class="ft-l">'+f[1]+'</span></button>';}).join('')+'</div>'+
+  (list.length?'<div class="wagrid">'+list.map(waCard).join('')+'</div>':'<div class="empty"><b>No hay pedidos en este estado</b>Cuando llegue uno nuevo aparecerá aquí.</div>');
+}
+function waCard(w,i){
+  var s=WAS[w.state],tot=waTotal(w),n=w.co-w.ci;
+  var act=w.state==='creado'?'<button class="btn btn-dang-o" data-act="wa-no" data-id="'+w.id+'">'+ic('x')+'Rechazar</button><button class="btn btn-ok" data-act="wa-ok" data-id="'+w.id+'">'+ic('check')+'Confirmar y asignar</button>'
+    :w.state==='en_curso'?'<span class="hint grow">Esperando que el cliente envíe sus datos y el pago</span><button class="btn btn-dang-o" data-act="wa-no" data-id="'+w.id+'">'+ic('x')+'Rechazar</button>'
+    :w.state==='confirmado'&&w.resId?'<button class="btn" data-act="res" data-id="'+w.resId+'">'+ic('bed')+'Ver reserva</button>'
+    :w.state==='rechazado'?'<span class="hint">Motivo: '+esc(w.reason||'—')+'</span>':'<span class="hint">El pedido se cerró solo después de 24 horas sin respuesta</span>';
+  return '<article class="card wac st-'+s.c+'" style="--i:'+i+'"><div class="wac-h"><span class="av">'+ini(w.name)+'</span><div class="grow"><b>'+esc(w.name)+'</b><small>'+esc(w.phone)+' · escribió '+(/ayer/.test(w.at)?w.at:'a las '+w.at)+'</small></div><span class="pill solid st-'+s.c+'">'+ic(s.i)+s.l+'</span></div>'+
+  '<p class="wac-msg">'+esc(w.msg)+'</p>'+
+  '<dl class="stay"><div><dt>Pide</dt><dd>'+TYPES[w.t].n+'<small>'+plural(w.persons,'persona','personas')+'</small></dd></div><div><dt>Fechas</dt><dd>'+fmtD(w.ci)+' → '+fmtD(w.co)+'<small>'+plural(n,'noche','noches')+'</small></dd></div><div><dt>Total</dt><dd>'+money(tot)+'<small>'+(w.paid?'Pagó '+money(w.paid):'Sin pago')+'</small></dd></div></dl>'+
+  (w.paid?'<div class="payimg"><span class="pimg" aria-hidden="true"><i></i><i></i><i></i></span><div><b>Foto del comprobante de pago</b><small>'+esc(w.method)+' · '+money(w.paid)+(w.paid>=tot?' · pagó todo':' · adelanto')+'</small></div></div>':'')+
+  '<div class="wac-f">'+act+'</div></article>';
+}
+function waOk(w){
+  var opts=function(){var out=[];[w.t].concat(TYPE_ORDER.filter(function(t){return t!==w.t;})).forEach(function(t){var l=ROOMS.filter(function(r){return r.t===t&&available(r.n,w.ci,w.co);});if(!l.length)return;out.push({head:TYPES[t].n+(t===w.t?' · lo que pidió':'')});l.forEach(function(r){out.push({v:r.n,l:rname(r.n)+' · '+TYPES[t].n,hint:money0(TYPES[t].rate)});});});return out;};
+  var first=opts().find(function(o){return o.v;});if(!first){toast('No hay habitaciones libres en esas fechas',{icon:'alert'});return;}
+  var f={room:first.v};
+  SEL['wa-r']={value:function(){return f.room;},opts:opts,pick:function(v){f.room=v;$('[data-sel="wa-r"] span',MODAL.el).textContent=rname(v)+' · '+TYPES[room(v).t].n;$('#waT',MODAL.el).textContent=money((w.co-w.ci)*TYPES[room(v).t].rate);}};
+  openModal({title:'Confirmar pedido de '+short(w.name),body:'<p>Se crea la reserva confirmada con origen WhatsApp'+(w.paid?' y se emite la boleta del pago de '+money(w.paid):'')+'.</p>'+
+    '<dl class="stay"><div><dt>Fechas</dt><dd>'+fmtD(w.ci)+' → '+fmtD(w.co)+'</dd></div><div><dt>Personas</dt><dd>'+w.persons+'</dd></div><div><dt>Total</dt><dd id="waT">'+money(waTotal(w))+'</dd></div></dl>'+
+    '<div class="field"><span class="lb">Habitación</span>'+sel('wa-r',rname(f.room)+' · '+TYPES[room(f.room).t].n)+'</div>'+
+    '<div class="field"><label for="waD">DNI del cliente</label><input id="waD" inputmode="numeric" value="'+esc(w.doc)+'" autocomplete="off"></div><p class="ferr" id="waE" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="waGo">'+ic('check')+'Confirmar reserva</button>',
+    onMount:function(m){$('#waGo',m).onclick=function(){var doc=$('#waD',m).value.trim();if(!/^\d{8}$/.test(doc)){var e=$('#waE',m);e.textContent='El DNI debe tener 8 dígitos.';e.hidden=false;return;}
+      var rm=room(f.room),r={id:++nid,group:nid,room:f.room,guest:{name:w.name,doc:doc,docType:'DNI',nat:'Perú'},company:null,origin:'WhatsApp',ext:'WA-'+w.id,motivo:'Vacaciones',ref:'Ninguna',ci:w.ci,co:w.co,rate:TYPES[rm.t].rate,tarifa:'Regular',persons:Math.min(w.persons,TYPES[rm.t].cap),state:'confirmado',items:[],pays:[],notes:[{text:'Pedido de WhatsApp: '+w.msg,who:ME(),d:TODAY,h:nowHM()}],extra:[],log:[]};
+      lg(r,TODAY,nowHM(),'Reserva confirmada desde WhatsApp (pedido WA-'+w.id+')');RES.push(r);
+      if(w.paid){var p=addPay(r,w.paid,w.method,'Boleta',TODAY,nowHM());addJob('TICKET','Comprobante',p.doc);emitirSunat(p);}
+      w.state='confirmado';w.resId=r.id;w.doc=doc;closeModal(true);toast('Reserva #'+r.id+' confirmada en la '+rname(r.room));render({soft:true});updateNav();};}});
+}
+function waNo(w){var f={why:'Sin disponibilidad en esas fechas'};
+  SEL['wa-why']={value:function(){return f.why;},opts:function(){return ['Sin disponibilidad en esas fechas','El pago no es válido','El cliente canceló','Otro motivo'].map(function(x){return {v:x,l:x};});},pick:function(v){f.why=v;$('[data-sel="wa-why"] span',MODAL.el).textContent=v;}};
+  openModal({title:'Rechazar pedido de '+short(w.name),body:'<p>El pedido pasa a rechazados. Avísale al cliente por WhatsApp.</p><div class="field"><span class="lb">Motivo</span>'+sel('wa-why',f.why)+'</div>',foot:'<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="wnGo">'+ic('x')+'Rechazar pedido</button>',
+    onMount:function(m){$('#wnGo',m).onclick=function(){w.state='rechazado';w.reason=f.why;closeModal(true);toast('Pedido de '+short(w.name)+' rechazado',{icon:'x'});render({soft:true});updateNav();};}});}
+
+/* ---------- clientes ---------- */
+var NOGRATO={},CLI_EXTRA=[];
+(function(){var r=RES.find(function(x){return x.state==='finalizada'&&x.co<=9&&x.guest.nat==='Perú';});if(r){NOGRATO[r.guest.doc]={motivo:'Dejó la habitación con daños y no pagó los consumos',d:r.co,who:'Ana (administración)'};r.extra=r.extra||[];}})();
+function cliData(){
+  var m={},list=[];
+  RES.forEach(function(r){var g=r.guest,k=g.doc;if(!m[k]){m[k]={g:g,stays:[],nights:0,spent:0,last:0,active:null};list.push(m[k]);}var c=m[k];c.stays.push(r);if(r.state!=='anulada'){c.nights+=nights(r);c.spent+=paid(r);}if(r.state!=='anulada'&&r.ci<=TODAY)c.last=Math.max(c.last,Math.min(r.co,TODAY));if(r.state==='ocupado')c.active=r;});
+  CLI_EXTRA.forEach(function(g){if(!m[g.doc]){m[g.doc]={g:g,stays:[],nights:0,spent:0,last:0,active:null};list.push(m[g.doc]);}});
+  return list;
+}
+function cliPill(c){if(NOGRATO[c.g.doc])return '<span class="pill solid st-dan">'+ic('ban')+'No grato</span>';if(c.active)return '<span class="pill st-occ">'+ic('bed')+'En casa · '+rname(c.active.room)+'</span>';if(c.stays.length>=2)return '<span class="pill st-conf">'+ic('check')+'Frecuente</span>';return '';}
+function renderClientes(){
+  var all=cliData(),q=norm(state.cQ.trim());
+  var list=all.filter(function(c){if(state.cTab==='no'&&!NOGRATO[c.g.doc])return false;if(state.cTab==='casa'&&!c.active)return false;return !q||norm(c.g.name+' '+c.g.doc).indexOf(q)>-1;}).sort(function(a,b){return b.last-a.last||a.g.name.localeCompare(b.g.name);});
+  var shown=list.slice(0,60);
+  var rows=shown.map(function(c){return '<button type="button" class="lt-r" data-act="cli" data-doc="'+esc(c.g.doc)+'">'+cell('Cliente','<span class="cli-c"><span class="av sm">'+ini(c.g.name)+'</span><span><b>'+esc(c.g.name)+'</b><small>'+esc(c.g.docType)+' '+esc(c.g.doc)+'</small></span></span>','wide')+cell('Nacionalidad',esc(c.g.nat))+cell('Estadías','<b class="tn">'+c.stays.length+'</b><small>'+plural(c.nights,'noche','noches')+'</small>','r')+cell('Última visita',c.last?'<span class="tn">'+fmtD(c.last)+'</span>':'<small>Sin visitas</small>')+cell('Pagado','<b class="tn">'+money(c.spent)+'</b>','r')+cell('Estado',cliPill(c)||'<small>—</small>','r')+'</button>';});
+  var nNo=all.filter(function(c){return NOGRATO[c.g.doc];}).length,nCasa=all.filter(function(c){return c.active;}).length;
+  return '<div class="page-head"><div><h1>Clientes</h1><p class="sub">Ficha de cada huésped con sus estadías y pagos</p></div><div class="head-actions"><button class="btn btn-primary" data-act="cli-new">'+ic('plus')+'Nuevo cliente</button></div></div>'+
+  '<div class="ptabs" role="tablist" aria-label="Clientes">'+[['all','Todos',all.length],['casa','En casa',nCasa],['no','No gratos',nNo]].map(function(t){return '<button type="button" role="tab" class="ptab" data-act="c-tab" data-v="'+t[0]+'" aria-selected="'+(state.cTab===t[0])+'">'+t[1]+'<span class="c">'+t[2]+'</span></button>';}).join('')+'</div>'+
+  '<div class="toolbar"><div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="cSearch" placeholder="Buscar por nombre o número de documento" value="'+esc(state.cQ)+'" autocomplete="off" aria-label="Buscar clientes"></div></div>'+
+  '<div id="cList">'+lt('minmax(0,2.2fr) minmax(0,1fr) 100px 120px 120px 190px',['Cliente','Nacionalidad','>Estadías','Última visita','>Pagado','>Estado'],rows)+(list.length>60?'<p class="hint" style="margin-top:10px">Mostrando 60 de '+list.length+'. Usa el buscador para encontrar a alguien.</p>':'')+'</div>';
+}
+function openCli(doc){closePop(true);if(!state.dw)lastFocus=document.activeElement;state.dw={kind:'cli',doc:doc};var dw=$('#dw');dw.inert=false;renderDrawer();dw.classList.add('open');setTimeout(function(){var c=$('#dwIn [data-act="dw-close"]');if(c)c.focus({preventScroll:true});},60);}
+function drawerCli(doc){
+  var c=cliData().find(function(x){return x.g.doc===doc;});if(!c)return '';var ng=NOGRATO[doc],g=c.g;
+  var stays=c.stays.slice().sort(function(a,b){return b.ci-a.ci;});
+  return '<header class="dw-h st-'+(ng?'dan':c.active?'occ':'off')+'"><div><span class="dw-num" id="dwTitle">'+esc(g.name)+'</span><span class="dw-type">'+esc(g.docType)+' '+esc(g.doc)+' · '+esc(g.nat)+'</span></div><div class="dw-hact"><button class="btn-icon" data-act="dw-close" aria-label="Cerrar panel">'+ic('x')+'</button></div></header>'+
+  '<div class="dw-body">'+(ng?heroBox('dan','ban','Cliente no grato','Motivo: '+esc(ng.motivo)+'. Lo registró '+esc(ng.who)+' el '+fmtD(ng.d)+'.'):'')+
+  '<dl class="stay"><div><dt>Estadías</dt><dd class="tn">'+c.stays.length+'</dd></div><div><dt>Noches</dt><dd class="tn">'+c.nights+'</dd></div><div><dt>Total pagado</dt><dd>'+money(c.spent)+'</dd></div></dl>'+
+  '<div><h3 style="margin-bottom:10px">Estadías</h3>'+(stays.length?'<div class="rows">'+stays.map(function(r){return '<button type="button" class="row" data-act="res" data-id="'+r.id+'"><span class="av sm">'+ic('bed')+'</span><span class="grow"><b>'+roomOf(r)+' · '+TYPES[room(r.room).t].n+'</b><small>'+fmtD(r.ci)+' → '+fmtD(r.co)+' · '+plural(nights(r),'noche','noches')+' · '+esc(r.origin)+'</small></span>'+pill(resSt(r))+'</button>';}).join('')+'</div>':'<div class="empty">Todavía no tiene estadías.</div>')+'</div></div>'+
+  '<footer class="dw-f">'+(ng?'<button class="btn" data-act="cli-ok">'+ic('check')+'Quitar de no gratos</button>':'<button class="btn btn-dang-o" data-act="cli-no">'+ic('ban')+'Marcar como no grato</button>')+'<button class="btn btn-primary" data-act="cli-res">'+ic('plus')+'Nueva reserva</button></footer>';
+}
+function cliNo(doc){openModal({title:'Marcar como cliente no grato',body:'<p>El sistema avisará cuando alguien intente hacerle una reserva.</p><div class="field"><label for="ngM">Motivo</label><input id="ngM" placeholder="Ej.: dañó la habitación y no pagó" autocomplete="off"></div><p class="ferr" id="ngE" hidden>Escribe el motivo.</p>',foot:'<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="ngGo">'+ic('ban')+'Marcar como no grato</button>',
+  onMount:function(w){$('#ngGo',w).onclick=function(){var m=$('#ngM',w).value.trim();if(!m){$('#ngE',w).hidden=false;return;}NOGRATO[doc]={motivo:m,d:TODAY,who:ME()};closeModal(true);toast('Cliente marcado como no grato',{icon:'ban'});refresh();};}});}
+
+/* ---------- reservas ---------- */
+var RPER=[['hoy','Llegan hoy'],['semana','Esta semana'],['mes','Octubre'],['todas','Todas']];
+function renderReservas(){
+  var q=norm(state.rQ.trim());
+  var stL={all:'Todos los estados',reservado:'Pre-reserva',confirmado:'Confirmada',ocupado:'En casa',finalizada:'Finalizada',anulada:'Anulada'};
+  SEL['rs-st']={value:function(){return state.rSt;},opts:function(){return Object.keys(stL).map(function(k){return {v:k,l:stL[k]};});},pick:function(v){state.rSt=v;render({soft:true});}};
+  SEL['rs-or']={value:function(){return state.rOr;},opts:function(){return [{v:'all',l:'Todos los orígenes'}].concat(ORIGINS.map(function(o){return {v:o.n,l:o.n};}));},pick:function(v){state.rOr=v;render({soft:true});}};
+  var list=RES.filter(function(r){
+    if(state.rPer==='hoy'&&r.ci!==TODAY)return false;
+    if(state.rPer==='semana'&&!(r.ci<=TODAY+6&&r.co>=TODAY))return false;
+    if(state.rPer==='mes'&&!(r.ci<=31&&r.co>=1))return false;
+    if(state.rSt!=='all'&&r.state!==state.rSt)return false;
+    if(state.rOr!=='all'&&r.origin!==state.rOr)return false;
+    if(q&&norm(r.id+' '+r.guest.name+' '+r.guest.doc+' '+r.room+' '+(r.company?r.company.name:'')+' '+r.ext).indexOf(q)<0)return false;
+    return true;}).sort(function(a,b){return state.rPer==='mes'||state.rPer==='todas'?(b.ci-a.ci||b.id-a.id):(a.ci-b.ci||a.id-b.id);});
+  var shown=list.slice(0,80);
+  var rows=shown.map(function(r){var d=due(r),st=resSt(r);return '<button type="button" class="lt-r" data-act="res" data-id="'+r.id+'">'+cell('Reserva','<b class="tn">#'+r.id+'</b><small>'+esc(r.origin)+'</small>')+cell('Habitación','<b>'+rname(r.room)+'</b><small>'+TYPES[room(r.room).t].n+'</small>')+cell('Huésped','<b>'+esc(r.guest.name)+'</b><small>'+esc(r.company?r.company.name:r.guest.docType+' '+r.guest.doc)+'</small>','wide')+cell('Fechas','<b class="tn">'+fmtD(r.ci)+' → '+fmtD(r.co)+'</b><small>'+plural(nights(r),'noche','noches')+'</small>')+cell('Total','<b class="tn">'+money(total(r))+'</b>','r')+cell('Saldo',d>0&&r.state!=='anulada'?'<span class="badge due">'+money(d)+'</span>':'<span class="hint">—</span>','r')+cell('Estado',pill(st),'r')+'</button>';});
+  var sumT=list.filter(function(r){return r.state!=='anulada';}).reduce(function(s,r){return s+total(r);},0);
+  return '<div class="page-head"><div><h1>Reservas</h1><p class="sub">'+plural(list.length,'reserva','reservas')+' · '+money(sumT)+' en total</p></div><div class="head-actions"><button class="btn btn-primary" data-act="new-res">'+ic('plus')+'Nueva reserva</button></div></div>'+
+  '<div class="vtool"><div class="segm" role="radiogroup" aria-label="Período">'+RPER.map(function(x){return '<button type="button" role="radio" data-act="rs-per" data-v="'+x[0]+'" aria-checked="'+(state.rPer===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+sel('rs-st',stL[state.rSt])+sel('rs-or',state.rOr==='all'?'Todos los orígenes':state.rOr)+
+  '<div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="rSearch" placeholder="Buscar por huésped, DNI, n.º de reserva o habitación" value="'+esc(state.rQ)+'" autocomplete="off" aria-label="Buscar reservas"></div></div>'+
+  '<div id="rList">'+lt('90px 120px minmax(0,2fr) 150px 110px 120px 150px',['Reserva','Habitación','Huésped','Fechas','>Total','>Saldo','>Estado'],rows,'<b>No hay reservas con estos filtros</b>Cambia el período o el estado.')+(list.length>80?'<p class="hint" style="margin-top:10px">Mostrando 80 de '+list.length+'. Usa los filtros para acotar.</p>':'')+'</div>';
+}
+
+/* ---------- inicio ---------- */
+function renderInicio(){
+  var sts=ROOMS.map(function(r){return roomSt(r);});
+  var sellable=ROOMS.filter(function(r){return !r.off&&r.t!=='AU';}).length;
+  var occN=ROOMS.filter(function(r,i){return r.t!=='AU'&&(sts[i]==='ocupado'||sts[i]==='salida');}).length,pct=Math.round(occN/sellable*100);
+  var pays=allPays().filter(function(p){return !p.anulado&&p.d>=1&&p.d<=31;});
+  var month=pays.reduce(function(s,p){return s+p.amount;},0),anul=allPays().filter(function(p){return p.anulado;});
+  var dueSum=0;RES.forEach(function(r){if(r.state==='ocupado')dueSum+=due(r);});
+  var byDay=[];for(var d=1;d<=TODAY;d++){var v=pays.filter(function(p){return p.d===d;}).reduce(function(s,p){return s+p.amount;},0);byDay.push({v:v,hl:d===TODAY,xl:(d===1||d%5===0||d===TODAY)?String(d):'',tip:cap(fmtDL(d))+': '+money(v)});}
+  var totR=ROOMS.filter(function(rm){return rm.t!=='AU';}).length;var occDay=[];for(var e=1;e<=31;e++){var n=ROOMS.filter(function(rm){return rm.t!=='AU'&&RES.some(function(r){return r.room===rm.n&&r.state!=='anulada'&&r.ci<=e&&e<r.co;});}).length;var pc=Math.min(100,Math.round(n/totR*100));occDay.push({v:pc,hl:e===TODAY,mu:e>TODAY,xl:(e===1||e%5===0)?String(e):'',tip:cap(fmtDL(e))+': '+pc+'% ('+n+' habitaciones)'+(e>TODAY?' · reservado':'')});}
+  var org={};RES.forEach(function(r){if(r.state==='anulada'||r.ci>31)return;org[r.origin]=(org[r.origin]||0)+1;});
+  var orgRows=Object.keys(org).map(function(k){var o=ORIGINS.find(function(x){return x.n===k;})||{c:0};return {l:k,v:org[k],sub:o.c?'comisión '+o.c+'%':''};}).sort(function(a,b){return b.v-a.v;});
+  var rn={};RES.forEach(function(r){if(r.state==='anulada'||r.room==='AUD')return;rn[r.room]=(rn[r.room]||0)+Math.max(0,Math.min(r.co,32)-Math.max(r.ci,1));});
+  var topRows=Object.keys(rn).map(function(k){return {l:k+' · '+TYPES[room(k).t].n,v:rn[k]};}).sort(function(a,b){return b.v-a.v;}).slice(0,8);
+  var arr=RES.filter(function(r){return (r.state==='reservado'||r.state==='confirmado')&&r.ci===TODAY;}),outs=RES.filter(function(r){return r.state==='ocupado'&&r.co<=TODAY;});
+  var rl=function(list,empty){return list.length?'<div class="rows">'+list.map(function(r){return '<button type="button" class="row" data-act="res" data-id="'+r.id+'"><span class="av sm">'+ini(r.guest.name)+'</span><span class="grow"><b>'+esc(r.guest.name)+'</b><small>'+roomOf(r)+' · '+TYPES[room(r.room).t].n+(due(r)>0?' · debe '+money(due(r)):'')+'</small></span>'+pill(resSt(r))+'</button>';}).join('')+'</div>':'<div class="empty">'+empty+'</div>';};
+  return '<div class="page-head"><div><h1>Buenos días, '+esc(ME())+'</h1><p class="sub">'+cap(fmtDL(TODAY))+' de 2026 · resumen del hotel</p></div><div class="head-actions"><a class="btn" href="#panel">'+ic('bed')+'Panel de habitaciones</a><button class="btn btn-primary" data-act="new-res">'+ic('plus')+'Nueva reserva</button></div></div>'+
+  '<div class="kpis five">'+kpiBox('occ','bed','Ocupación de hoy',pct+'%',occN+' de '+sellable+' habitaciones')+kpiBox('conf','login','Llegan hoy',String(arr.length),'Check-in desde las '+CFG.ci)+kpiBox('out','logout','Salen hoy',String(outs.length),'Hasta las '+CFG.co)+kpiBox('ok','dollar','Ventas de octubre',money(month),plural(pays.length,'comprobante','comprobantes'))+kpiBox('due','alert','Por cobrar en casa',money(dueSum),plural(anul.length,'anulación en el mes','anulaciones en el mes'))+'</div>'+
+  '<div class="dgrid">'+
+    '<section class="card cblk"><div class="blk-h"><h3>Ventas por día · octubre</h3><span class="hint">Hoy resaltado</span></div>'+vbars(byDay,function(v){return v>=1000?'S/ '+(v/1000).toFixed(v%1000?1:0)+'k':'S/ '+Math.round(v);})+'</section>'+
+    '<section class="card cblk"><div class="blk-h"><h3>Ocupación por día · octubre</h3><span class="legend mini"><span class="st-occ"><i></i>Real</span><span class="st-off"><i class="lt"></i>Reservada</span></span></div>'+vbars(occDay,function(v){return Math.round(v)+'%';},null,100)+'</section>'+
+    '<section class="card cblk"><div class="blk-h"><h3>Llegan hoy</h3><a class="link-s" href="#reservas" data-act="go-res-hoy">Ver todas</a></div>'+rl(arr,'No hay llegadas para hoy.')+'</section>'+
+    '<section class="card cblk"><div class="blk-h"><h3>Salen hoy</h3><span class="hint">Hasta las '+CFG.co+'</span></div>'+rl(outs,'No hay salidas para hoy.')+'</section>'+
+    '<section class="card cblk"><div class="blk-h"><h3>Reservas por origen · octubre</h3></div>'+hbars(orgRows,function(v){return plural(v,'reserva','reservas');})+'</section>'+
+    '<section class="card cblk"><div class="blk-h"><h3>Habitaciones más pedidas · octubre</h3></div>'+hbars(topRows,function(v){return plural(v,'noche','noches');})+'</section>'+
+  '</div>';
+}
+
+/* ---------- reportes ---------- */
+function repData(k){
+  var oct=function(r){return r.state!=='anulada'&&r.ci<=31&&r.co>=1;};
+  if(k==='mincetur'){var m={};RES.forEach(function(r){if(!oct(r)||r.ci>TODAY)return;var key=r.guest.nat==='Perú'?'Perú (residentes)':r.guest.nat;var x=m[key]=m[key]||{a:0,p:0};if(r.ci>=1)x.a+=1+r.extra.length;x.p+=Math.max(0,Math.min(r.co,TODAY+1)-Math.max(r.ci,1))*r.persons;});return {h:['Procedencia','Arribos','Pernoctaciones'],rows:Object.keys(m).sort(function(a,b){return m[b].p-m[a].p;}).map(function(k2){return [k2,m[k2].a,m[k2].p];}),num:[1,2]};}
+  if(k==='origen'){var o={};RES.forEach(function(r){if(!oct(r))return;var x=o[r.origin]=o[r.origin]||{n:0,ni:0,t:0};x.n++;x.ni+=nights(r);x.t+=nights(r)*r.rate;});return {h:['Origen','Reservas','Noches','Hospedaje','Comisión'],rows:Object.keys(o).sort(function(a,b){return o[b].t-o[a].t;}).map(function(k2){var c=(ORIGINS.find(function(x){return x.n===k2;})||{c:0}).c;return [k2,o[k2].n,o[k2].ni,money(o[k2].t),c?money(o[k2].t*c/100):'—'];}),num:[1,2,3,4]};}
+  if(k==='huespedes'){var rows=[];RES.filter(function(r){return r.state!=='anulada'&&r.ci<=TODAY&&r.co>=TODAY-6;}).sort(function(a,b){return b.ci-a.ci;}).forEach(function(r){rows.push([r.guest.name,r.guest.docType+' '+r.guest.doc,r.guest.nat,rname(r.room),fmtD(r.ci),fmtD(r.co)]);r.extra.forEach(function(g){rows.push([g.name,g.docType+' '+g.doc,g.nat,rname(r.room),fmtD(r.ci),fmtD(r.co)]);});});return {h:['Huésped','Documento','Nacionalidad','Habitación','Llegada','Salida'],rows:rows,num:[]};}
+  if(k==='caja')return {h:['Turno','Horario','Apertura','Entradas','Salidas','Contado','Diferencia'],rows:TURNOS.map(function(t){var df=Math.round((t.cont-(t.a+t.inc-t.out))*100)/100;return ['Día '+t.day+' · '+t.who,t.from+' → '+t.to,money(t.a),money(t.inc),money(t.out),money(t.cont),df===0?'Cuadra':(df>0?'+':'−')+money(Math.abs(df))];}),num:[2,3,4,5,6]};
+  if(k==='categoria'){var c={'Hospedaje':{q:0,t:0}};RES.forEach(function(r){if(!oct(r))return;c.Hospedaje.q+=nights(r);c.Hospedaje.t+=nights(r)*r.rate;r.items.forEach(function(i){var p=PROD(i.n),cc=p?p.c:'Otros';var x=c[cc]=c[cc]||{q:0,t:0};x.q+=i.q;x.t+=i.q*i.p;});});EXTRA.forEach(function(p){if(p.anulado)return;p.items.forEach(function(i){var pr=PROD(i.n),cc=(pr?pr.c:'Otros')+' (restaurante)';var x=c[cc]=c[cc]||{q:0,t:0};x.q+=i.q;x.t+=i.q*i.p;});});return {h:['Categoría','Cantidad','Importe'],rows:Object.keys(c).sort(function(a,b){return c[b].t-c[a].t;}).map(function(k2){return [k2,c[k2].q,money(c[k2].t)];}),num:[1,2]};}
+  if(k==='metodo'){var mm={};allPays().forEach(function(p){if(p.anulado||p.d<1||p.d>31)return;var x=mm[p.method]=mm[p.method]||{n:0,t:0};x.n++;x.t+=p.amount;});return {h:['Método de pago','Comprobantes','Importe'],rows:Object.keys(mm).sort(function(a,b){return mm[b].t-mm[a].t;}).map(function(k2){return [k2,mm[k2].n,money(mm[k2].t)];}),num:[1,2]};}
+  if(k==='stock')return {h:['Producto','Stock','Mínimo','Estado'],rows:PRODUCTS.filter(function(p){return p.t==='Producto';}).map(function(p){return [p.n,p.stock,p.min,SST[stockSt(p)].l];}),num:[1,2]};
+}
+var REPS=[['mincetur','Reporte mensual MINCETUR','Arribos y pernoctaciones de octubre por procedencia, como lo pide MINCETUR.','chart'],['origen','Reservas por origen','Reservas, noches, ingresos y comisión de cada canal en octubre.','list'],['huespedes','Huéspedes de la semana','Todos los huéspedes de los últimos 7 días con su documento.','users'],['caja','Caja por turno','Apertura, movimientos y conteo de cada turno.','wallet'],['categoria','Ventas por categoría','Hospedaje, bebidas, platos y servicios vendidos en octubre.','receipt'],['metodo','Ventas por método de pago','Cuánto entró por efectivo, Yape, Plin, tarjetas y transferencias.','card'],['stock','Stock de almacén','Stock actual de cada producto y si está bajo.','package']];
+function renderReportes(){
+  return '<div class="page-head"><div><h1>Reportes</h1><p class="sub">Toca un reporte para verlo. Puedes copiarlo y pegarlo en Excel.</p></div></div><div class="reps">'+REPS.map(function(x){var open=state.repOpen===x[0];var body='';
+    if(open){var d=repData(x[0]);body='<div class="rep-body"><div class="rep-scroll"><table class="rtable"><thead><tr>'+d.h.map(function(h,i){return '<th'+(d.num.indexOf(i)>-1?' class="r"':'')+'>'+esc(h)+'</th>';}).join('')+'</tr></thead><tbody>'+(d.rows.length?d.rows.map(function(r){return '<tr>'+r.map(function(c,i){return '<td'+(d.num.indexOf(i)>-1?' class="r"':'')+'>'+esc(c)+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+d.h.length+'">Sin datos en este período.</td></tr>')+'</tbody></table></div><div class="rep-f"><span class="hint">'+plural(d.rows.length,'fila','filas')+'</span><button class="btn btn-sm" data-act="rep-copy" data-k="'+x[0]+'">'+ic('list')+'Copiar para Excel</button></div></div>';}
+    return '<section class="card rep'+(open?' open':'')+'"><button type="button" class="rep-h" data-act="rep" data-k="'+x[0]+'" aria-expanded="'+open+'"><span class="kpi-ic st-occ">'+ic(x[3])+'</span><span class="grow"><b>'+x[1]+'</b><small>'+x[2]+'</small></span>'+ic('chevron-down','rep-chev')+'</button>'+body+'</section>';}).join('')+'</div>';
+}
+
+/* ---------- ajustes ---------- */
+var EMP=[{name:'Luis',cargo:'Recepcionista',turno:'Mañana',on:true},{name:'Rosa',cargo:'Recepcionista',turno:'Noche',on:true},{name:'Ana',cargo:'Administrador',turno:'Mañana',on:true},{name:'Jorge',cargo:'Mozo',turno:'Tarde',on:true},{name:'Mario',cargo:'Cajero restaurante',turno:'Tarde',on:true},{name:'Carmen',cargo:'Housekeeping',turno:'Mañana',on:true},{name:'Pedro',cargo:'Almacén',turno:'Mañana',on:true}];
+var CARGOS=['Administrador','Supervisor','Recepcionista','Housekeeping','Mozo','Cajero restaurante','Almacén','Tablero'];
+var PAYON={};METHODS.forEach(function(m){PAYON[m]=true;});
+function activeMethods(){return METHODS.filter(function(m){return PAYON[m]!==false;});}
+var SETS=[['empresa','Empresa','building'],['sunat','Facturación SUNAT','receipt'],['horarios','Horarios y recargos','clock'],['tarifas','Habitaciones y tarifas','bed'],['temporadas','Tarifas por temporada','calendar'],['origenes','Orígenes y comisiones','list'],['pagos','Formas de pago','card'],['personal','Personal','users'],['permisos','Permisos por cargo','login'],['movcaja','Motivos de caja','wallet']];
+function inp(id,label,val,o){o=o||{};return '<div class="field'+(o.span?' span2':'')+'"><label for="'+id+'">'+label+'</label>'+(o.pre?'<div class="inp-pre"><span>'+o.pre+'</span>':'')+'<input id="'+id+'" data-cfg="'+(o.k||'')+'" type="'+(o.type||'text')+'" value="'+esc(val)+'"'+(o.ph?' placeholder="'+esc(o.ph)+'"':'')+(o.attr||'')+' autocomplete="off">'+(o.pre?'</div>':'')+(o.hint?'<span class="hint">'+o.hint+'</span>':'')+'</div>';}
+function renderAjustes(){
+  var k=state.set,body='';
+  if(k==='empresa')body='<div class="g2">'+inp('cfName','Nombre comercial',CFG.name,{k:'name'})+inp('cfLegal','Razón social',CFG.legal,{k:'legal',ph:'Como figura en SUNAT'})+inp('cfRuc','RUC',CFG.ruc,{k:'ruc',ph:'11 dígitos',attr:' inputmode="numeric" maxlength="11"'})+inp('cfAddr','Dirección',CFG.addr,{k:'addr'})+inp('cfPhone','Teléfono',CFG.phone,{k:'phone',ph:'Opcional'})+inp('cfMail','Correo',CFG.mail,{k:'mail',ph:'Opcional',type:'email'})+'</div><p class="hint">El nombre y la dirección salen en la cabecera de cada comprobante.</p>';
+  if(k==='sunat')body=sunatBody();
+  if(k==='seguridad')body=seguridadBody();
+  if(k==='horarios')body='<div class="g2">'+inp('cfCi','Hora de check-in',CFG.ci,{k:'ci',type:'time'})+inp('cfCo','Hora de check-out',CFG.co,{k:'co',type:'time'})+inp('cfMax','Salida máxima sin recargo',CFG.maxco,{k:'maxco',type:'time'})+inp('cfRet','Minutos de limpieza para retoque',CFG.retoque,{k:'retoque',type:'number',attr:' min="0" step="5"'})+inp('cfEarly','Early check-in desde',CFG.early,{k:'early',type:'time'})+inp('cfEP','Recargo por early check-in',CFG.earlyPct,{k:'earlyPct',type:'number',pre:'%',attr:' min="0" max="100"'})+inp('cfLate','Late check-out hasta',CFG.late,{k:'late',type:'time'})+inp('cfLP','Recargo por late check-out',CFG.latePct,{k:'latePct',type:'number',pre:'%',attr:' min="0" max="100"'})+inp('cfAv','Avisar la salida con',CFG.aviso,{k:'aviso',type:'number',pre:'min',attr:' min="0" step="5"',hint:'Minutos antes del check-out.'})+'</div>';
+  if(k==='tarifas')body=tarifasBody();
+  if(k==='origenes')body=lt('minmax(0,1.6fr) 170px',['Origen','>Comisión'],ORIGINS.map(function(o,i){return '<div class="lt-r">'+cell('Origen','<b>'+esc(o.n)+'</b>','wide')+cell('Comisión','<span class="inp-pre"><span>%</span><input type="number" data-com="'+i+'" value="'+o.c+'" min="0" max="50" step="1" aria-label="Comisión de '+esc(o.n)+'"></span>','r')+'</div>';}))+'<div class="add-r"><input id="newOrg" placeholder="Nuevo origen, ej.: Expedia" autocomplete="off" aria-label="Nuevo origen"><button class="btn" data-act="org-add">'+ic('plus')+'Agregar</button></div>';
+  if(k==='pagos')body='<div class="rgrid-s wide">'+METHODS.map(function(m){return '<label class="rsw"><span><b>'+esc(m)+'</b><small>'+(PAYON[m]!==false?'Aparece al cobrar':'Oculto')+'</small></span>'+sw(PAYON[m]!==false,'pay-sw',' data-m="'+esc(m)+'"',esc(m)+' activo')+'</label>';}).join('')+'</div>';
+  if(k==='personal')body='<p class="hint" style="margin-top:0">El equipo del hotel. No entra con usuario: la PC de recepción abre directo. Esta lista sirve para asignar la limpieza, los turnos de caja y los mozos.</p>'+lt('minmax(0,1.4fr) minmax(0,1.2fr) 100px 90px',['Nombre','Cargo','Turno','>Activo'],EMP.map(function(e,i){return '<div class="lt-r">'+cell('Nombre','<span class="cli-c"><span class="av sm">'+ini(e.name)+'</span><b>'+esc(e.name)+'</b></span>','wide')+cell('Cargo',esc(e.cargo))+cell('Turno',esc(e.turno))+cell('Activo',sw(e.on,'emp-sw',' data-i="'+i+'"','Empleado activo'),'r')+'</div>';}))+'<div class="add-r"><button class="btn" data-act="emp-add">'+ic('plus')+'Agregar empleado</button></div>';
+  if(k==='movcaja')body=['ingreso','salida'].map(function(t){return '<h3>'+(t==='ingreso'?'Motivos de ingreso':'Motivos de salida')+'</h3><div class="tags">'+MOVCATS[t].map(function(c,i){return '<span class="tagx st-'+(t==='ingreso'?'ok':'out')+'">'+esc(c)+'<button type="button" data-act="mc-del" data-t="'+t+'" data-i="'+i+'" aria-label="Quitar '+esc(c)+'">'+ic('x')+'</button></span>';}).join('')+'</div><div class="add-r"><input id="mc-'+t+'" placeholder="Nuevo motivo" autocomplete="off" aria-label="Nuevo motivo de '+t+'"><button class="btn" data-act="mc-add" data-t="'+t+'">'+ic('plus')+'Agregar</button></div>';}).join('');
+  if(k==='permisos')body=permsBody();
+  if(k==='temporadas')body=seasonsBody();
+  var cur=SETS.find(function(x){return x[0]===k;});
+  var saveable=['empresa','sunat','horarios','tarifas','origenes'].indexOf(k)>-1;
+  return '<div class="page-head"><div><h1>Ajustes</h1><p class="sub">Toda la configuración del hotel en un solo lugar</p></div></div><div class="setw"><nav class="set-nav" aria-label="Secciones de ajustes">'+SETS.map(function(x){return '<button type="button" class="ni'+(x[0]===k?' on':'')+'" data-act="set" data-v="'+x[0]+'"'+(x[0]===k?' aria-current="page"':'')+'>'+ic(x[2])+'<span>'+x[1]+'</span></button>';}).join('')+'</nav>'+
+  '<section class="card set-b"><div class="blk-h"><h2 class="set-t">'+cur[1]+'</h2>'+(saveable?'<button class="btn btn-ok" data-act="cfg-save">'+ic('check')+'Guardar cambios</button>':'<span class="hint">Los cambios se guardan al instante</span>')+'</div>'+body+'</section></div>';
+}
+function saveCfg(){
+  var v=$('#view');
+  $$('[data-cfg]',v).forEach(function(i){var k=i.dataset.cfg;if(!k)return;var val=i.type==='number'?parseFloat(i.value):i.value.trim();if(i.type==='number'&&isNaN(val))return;CFG[k]=val;});
+  if(state.set==='empresa'&&CFG.ruc&&!/^\d{11}$/.test(CFG.ruc)){toast('El RUC debe tener 11 dígitos',{icon:'alert'});return;}
+  $$('[data-rate]',v).forEach(function(i){var r=parseFloat(i.value);if(r>0)TYPES[i.dataset.rate].rate=r;});
+  $$('[data-com]',v).forEach(function(i){var c=parseFloat(i.value);if(c>=0)ORIGINS[+i.dataset.com].c=c;});
+  toast('Cambios guardados',{icon:'check'});render({soft:true});
+}
+function empAdd(){var f={cargo:'Recepcionista',turno:'Mañana'};
+  SEL['em-c']={value:function(){return f.cargo;},opts:function(){return CARGOS.map(function(c){return {v:c,l:c};});},pick:function(v){f.cargo=v;$('[data-sel="em-c"] span',MODAL.el).textContent=v;}};
+  SEL['em-t']={value:function(){return f.turno;},opts:function(){return ['Mañana','Tarde','Noche'].map(function(c){return {v:c,l:c};});},pick:function(v){f.turno=v;$('[data-sel="em-t"] span',MODAL.el).textContent=v;}};
+  openModal({title:'Agregar empleado',body:'<div class="field"><label for="emN">Nombre</label><input id="emN" autocomplete="off"></div><div class="g2"><div class="field"><span class="lb">Cargo</span>'+sel('em-c',f.cargo)+'</div><div class="field"><span class="lb">Turno</span>'+sel('em-t',f.turno)+'</div></div><p class="ferr" id="emE" hidden>Escribe el nombre.</p>',foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="emGo">Agregar</button>',
+    onMount:function(w){$('#emGo',w).onclick=function(){var n=$('#emN',w).value.trim();if(!n){$('#emE',w).hidden=false;return;}EMP.push({name:n,cargo:f.cargo,turno:f.turno,on:true});closeModal(true);toast('Empleado agregado: '+n,{icon:'users'});render({soft:true});};}});}
+
+/* ================= v6: usuarios, limpieza, cierre del día, temporadas ================= */
+
+/* ---------- usuarios y permisos ---------- */
+var DAYNO=210;
+var PERM_MODS=[['inicio','Inicio'],['panel','Panel de habitaciones'],['timeline','Timeline'],['reservas','Reservas'],['restaurante','Restaurante'],['whatsapp','WhatsApp'],['limpieza','Limpieza'],['ventas','Ventas'],['caja','Caja'],['cierre','Cierre del día'],['productos','Productos'],['almacen','Almacén'],['clientes','Clientes'],['reportes','Reportes'],['impresion','Impresión'],['ajustes','Ajustes']];
+var ALLK=PERM_MODS.map(function(m){return m[0];});
+var PERM={
+  'Administrador':ALLK.slice(),
+  'Supervisor':ALLK.filter(function(k){return k!=='ajustes';}),
+  'Recepcionista':['inicio','panel','timeline','reservas','restaurante','whatsapp','limpieza','ventas','caja','cierre','clientes','impresion'],
+  'Housekeeping':['limpieza'],
+  'Mozo':['restaurante'],
+  'Cajero restaurante':['restaurante','ventas','caja','productos'],
+  'Almacén':['productos','almacen'],
+  'Tablero':['inicio','panel','timeline']
+};
+EMP.forEach(function(e){e.pin='1234';});
+EMP.push({name:'Julia',cargo:'Housekeeping',turno:'Tarde',on:true,pin:'1234'});
+function ME(){return (typeof state!=='undefined'&&state&&state.user)?state.user.name:'Luis';}
+function can(k){if(!state.user)return true;if(k==='nueva')k='panel';return (PERM[state.user.cargo]||[]).indexOf(k)>-1;}
+function firstView(){return ALLK.find(can)||'inicio';}
+function applyPerms(){
+  $$('.ni[data-to]').forEach(function(a){a.hidden=!can(a.dataset.to);});
+  $$('.nav .grp').forEach(function(g){g.hidden=!g.querySelector('.ni[data-to]:not([hidden])');});
+  var cb=$('#cajaBtn');if(cb)cb.hidden=!can('caja');
+  var st=$('.search-trig');if(st)st.hidden=!can('panel');
+  var u=state.user;if(!u)return;
+  var me=$('.me');if(me)me.innerHTML='<span class="av">'+ini(u.name)+'</span><span><b>'+esc(u.name)+'</b><small>'+esc(u.cargo)+' · turno '+esc(u.turno.toLowerCase())+'</small></span>'+ic('chevron-down');
+}
+function renderNoPerm(){
+  var L=LABEL[state.view]||['',state.view];
+  return '<div class="noperm card"><span class="np-ic">'+ic('ban')+'</span><h2>No tienes acceso a '+esc(L[1])+'</h2><p>Tu cargo es <b>'+esc(state.user.cargo)+'</b>. Si necesitas entrar aquí, pídele al administrador que te dé permiso en Ajustes.</p><a class="btn btn-primary btn-lg" href="#'+firstView()+'">'+ic('home')+'Ir a mi pantalla</a></div>';
+}
+/* pantalla de ingreso */
+var LOCK={step:'who',u:null,pin:''};
+function lockHTML(){
+  if(LOCK.step==='who'){
+    var list=EMP.filter(function(e){return e.on;});
+    return '<div class="lock-brand"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-hidden="true"> <circle cx="50" cy="50" r="50" fill="#DB8E1F"/> <g fill="#FFFFFF"> <path d="M41 86 C42 72 43.5 58 46.8 41 L49.6 41.6 C46.8 58.4 45.4 72.4 44.8 86 Z"/> <path d="M48 40 C40 31 30 30 22 35 C31 33 39 35 46 42 Z"/> <path d="M48 40 C44 28 36 22 27 22 C35 26 41 31 45.5 41 Z"/> <path d="M48 40 C50 29 57 22 66 21 C58 26 53 32 50 41 Z"/> <path d="M48 40 C57 33 67 33 75 39 C66 37 58 38 50.5 43 Z"/> <path d="M48 40 C52 45 54 52 53 59 C51 52 49 47 46.5 43 Z"/> <path d="M48 40 C42 44 37 50 35 57 C39 51 43 46 48.5 42.5 Z"/> <path d="M63 86 C63.5 77 64.5 69 66.6 60 L68.8 60.4 C67 69.4 66.2 77.4 66 86 Z"/> <path d="M67.6 59.4 C63 54 57 53.5 52 56.5 C57.5 55.5 62 56.5 66.4 61 Z"/> <path d="M67.6 59.4 C66 52 70 46 76 44 C72 48 70 53 68.8 60.6 Z"/> <path d="M67.6 59.4 C73 55 79 55.5 83 59.5 C78 58 73 58.5 69 61.8 Z"/> <path d="M67.6 59.4 C70.5 63 71.6 67.5 70.8 72 C69.6 67.6 68.4 64.6 66.6 62 Z"/> <path d="M24 86.5 C38 83.5 62 83.5 76 86.5 L76 88.5 C62 86 38 86 24 88.5 Z"/> </g> </svg><div><b>Hotel Selva Inn</b><small>'+cap(fmtDL(TODAY))+'</small></div></div>'+
+    '<h2 class="lock-t">¿Quién eres?</h2><p class="lock-s">Toca tu nombre para entrar</p>'+
+    '<div class="lock-users">'+list.map(function(e){return '<button type="button" class="lu" data-lu="'+EMP.indexOf(e)+'"><span class="av lg c'+(EMP.indexOf(e)%6)+'">'+ini(e.name)+'</span><b>'+esc(e.name)+'</b><small>'+esc(e.cargo)+'</small></button>';}).join('')+'</div>';
+  }
+  var u=EMP[LOCK.u];
+  return '<button type="button" class="lock-back" data-lk="back">'+ic('chevron-left')+'Cambiar de usuario</button>'+
+  '<div class="lock-who"><span class="av lg c'+(LOCK.u%6)+'">'+ini(u.name)+'</span><div><b>'+esc(u.name)+'</b><small>'+esc(u.cargo)+'</small></div></div>'+
+  '<p class="lock-s" id="lkMsg" aria-live="polite">Escribe tu PIN de 4 números</p>'+
+  '<div class="pin-dots'+(LOCK.err?' shake':'')+'" aria-hidden="true">'+[0,1,2,3].map(function(i){return '<i class="'+(i<LOCK.pin.length?'on':'')+'"></i>';}).join('')+'</div>'+
+  '<div class="pinpad" role="group" aria-label="Teclado del PIN">'+['1','2','3','4','5','6','7','8','9','del','0','ok'].map(function(k){
+    if(k==='del')return '<button type="button" class="pk fn" data-pk="del" aria-label="Borrar">'+ic('undo')+'</button>';
+    if(k==='ok')return '<button type="button" class="pk fn ok" data-pk="ok" aria-label="Entrar">'+ic('check')+'</button>';
+    return '<button type="button" class="pk" data-pk="'+k+'">'+k+'</button>';}).join('')+'</div>'+
+  '<p class="lock-hint">Demo: el PIN de todos es 1234</p>';
+}
+function showLock(){
+  closeDrawer&&state.dw&&closeDrawer();closeModal(true);closePop(true);
+  LOCK={step:'who',u:null,pin:''};
+  var el=$('#lock');if(!el){el=document.createElement('div');el.id='lock';el.className='lock';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Ingresar a Hotel Selva Inn');document.body.appendChild(el);
+    el.addEventListener('click',function(e){
+      var b=e.target.closest('[data-lu]');if(b){LOCK.step='pin';LOCK.u=+b.dataset.lu;LOCK.pin='';drawLock();return;}
+      if(e.target.closest('[data-lk="back"]')){LOCK.step='who';LOCK.pin='';drawLock();return;}
+      var k=e.target.closest('[data-pk]');if(k)pinKey(k.dataset.pk);
+    });}
+  el.hidden=false;$('.app').inert=true;drawLock();
+}
+function drawLock(){var el=$('#lock');el.innerHTML='<div class="lock-card">'+lockHTML()+'</div>';LOCK.err=false;var f=el.querySelector('.lu,.pk');if(f)f.focus({preventScroll:true});}
+function pinKey(k){
+  if(LOCK.step!=='pin')return;
+  if(k==='del'){LOCK.pin=LOCK.pin.slice(0,-1);drawLock();return;}
+  if(k==='ok'){tryPin();return;}
+  if(LOCK.pin.length<4){LOCK.pin+=k;drawLock();if(LOCK.pin.length===4)setTimeout(tryPin,120);}
+}
+function tryPin(){
+  var u=EMP[LOCK.u];if(!u)return;
+  if(LOCK.pin!==u.pin){LOCK.pin='';LOCK.err=true;var el=$('#lock');el.innerHTML='<div class="lock-card">'+lockHTML()+'</div>';var m=$('#lkMsg');if(m){m.textContent='PIN incorrecto. Inténtalo otra vez.';m.classList.add('bad');}return;}
+  state.user=u;$('#lock').hidden=true;$('.app').inert=false;applyPerms();
+  if(u.cargo==='Housekeeping')state.hkWho=u.name;
+  toast('Hola, '+u.name,{icon:'user'});
+  var want=location.hash.slice(1)||'panel';
+  if(!can(want)||state.loginFirst){state.loginFirst=false;go(firstView());}else render();
+}
+document.addEventListener('keydown',function(e){
+  var el=$('#lock');if(!el||el.hidden)return;
+  if(e.key!=='Tab')e.stopPropagation();
+  if(/^[0-9]$/.test(e.key)){e.preventDefault();pinKey(e.key);}
+  else if(e.key==='Backspace'){e.preventDefault();pinKey('del');}
+  else if(e.key==='Enter'&&LOCK.step==='pin'){e.preventDefault();pinKey('ok');}
+  else if(e.key==='Escape'&&LOCK.step==='pin'){LOCK.step='who';LOCK.pin='';drawLock();}
+},true);
+function changePin(i){
+  var e=EMP[i];
+  openModal({title:'Cambiar PIN de '+e.name,width:420,body:'<div class="field"><label for="pnA">PIN nuevo (4 números)</label><input id="pnA" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"></div><div class="field"><label for="pnB">Repite el PIN</label><input id="pnB" type="password" inputmode="numeric" maxlength="4" autocomplete="new-password"></div><p class="ferr" id="pnE" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="pnGo">Guardar PIN</button>',
+    onMount:function(w){$('#pnGo',w).onclick=function(){var a=$('#pnA',w).value,b=$('#pnB',w).value,er=$('#pnE',w);if(!/^\d{4}$/.test(a)){er.textContent='El PIN debe tener exactamente 4 números.';er.hidden=false;return;}if(a!==b){er.textContent='Los dos PIN no coinciden.';er.hidden=false;return;}e.pin=a;closeModal(true);toast('PIN de '+e.name+' actualizado',{icon:'check'});};}});
+}
+
+/* ---------- limpieza ---------- */
+var HK={'310':{st:'limpiando',who:'Carmen',since:'11:20',kind:'Salida'},'206':{st:'sucia',who:'',since:'11:05',kind:'Salida'}};
+var HKDONE=[{n:'104',who:'Carmen',h:'09:40',kind:'Salida'},{n:'202',who:'Julia',h:'10:15',kind:'Salida'}];
+var REPASO={};
+function hkStaff(){return EMP.filter(function(e){return e.on&&e.cargo==='Housekeeping';});}
+function hkSync(){
+  ROOMS.forEach(function(rm){if(rm.cleaning&&!HK[rm.n])HK[rm.n]={st:'sucia',who:'',since:CLEAN_SINCE[rm.n]||nowHM(),kind:rm.off?'Bloqueo':'Salida'};if(!rm.cleaning&&HK[rm.n])delete HK[rm.n];});
+  RES.forEach(function(r){if(r.state==='ocupado'&&r.co>TODAY&&!REPASO[r.room])REPASO[r.room]={st:'pendiente',who:''};});
+  Object.keys(REPASO).forEach(function(n){var a=activeRes(n);if(!a||a.co<=TODAY)delete REPASO[n];});
+}
+(function(){hkSync();var i=0;Object.keys(REPASO).forEach(function(n){i++;if(i%3===0)REPASO[n]={st:'hecho',who:i%2?'Carmen':'Julia',h:'09:'+(10+i)};if(i===4)REPASO[n]={st:'nomolestar',who:''};});})();
+function hkFinish(n,who){var h=HK[n];HKDONE.unshift({n:n,who:who||(h&&h.who)||ME(),h:nowHM(),kind:h?h.kind:'Salida'});delete HK[n];var rm=room(n);rm.cleaning=false;}
+function hkPending(){hkSync();return Object.keys(HK).filter(function(n){return HK[n].st!=='limpiando';}).length;}
+var HKCOL=[['sucia','Por limpiar','out','sparkles'],['limpiando','Limpiando','clean','clock'],['revisar','Por revisar','conf','search']];
+function hkCard(n){
+  var h=HK[n],rm=room(n),T=TYPES[rm.t],arr=arrivalRes(n),isHk=state.user&&state.user.cargo==='Housekeeping';
+  var who=h.who?'<span class="hk-who"><span class="av sm">'+ini(h.who)+'</span>'+esc(h.who)+'</span>':'<span class="hk-who none">Sin asignar</span>';
+  var main='';
+  if(h.st==='sucia')main='<button class="btn btn-out btn-block" data-act="hk-start" data-room="'+n+'">'+ic('sparkles')+'Empezar limpieza</button>';
+  if(h.st==='limpiando')main='<button class="btn btn-primary btn-block" data-act="hk-done" data-room="'+n+'">'+ic('check')+'Terminé de limpiar</button>';
+  if(h.st==='revisar')main=isHk?'<p class="hk-wait">'+ic('clock')+'Esperando que recepción la revise</p>':'<div class="hk-two"><button class="btn" data-act="hk-redo" data-room="'+n+'">'+ic('undo')+'Falta algo</button><button class="btn btn-ok" data-act="hk-ok" data-room="'+n+'">'+ic('check')+'Aprobar</button></div>';
+  return '<article class="hkc'+(arr?' prio':'')+'"><div class="hkc-top"><b class="hk-n">'+rname(n)+'</b><span class="hk-t">'+T.n+'</span>'+(arr?'<span class="pill st-conf">'+ic('login')+'Llega hoy</span>':'<span class="pill st-off">'+esc(h.kind)+'</span>')+'</div>'+
+  '<div class="hkc-meta">'+ic('clock')+'<span>'+(h.st==='sucia'?'Desocupada a las ':h.st==='limpiando'?'Limpiando desde las ':'Terminada a las ')+h.since+'</span></div>'+
+  '<div class="hkc-meta">'+who+(h.st!=='revisar'?'<button type="button" class="link-s" data-act="hk-assign" data-room="'+n+'" aria-haspopup="menu">'+(h.who?'Cambiar':'Asignar')+'</button>':'')+'</div>'+main+'</article>';
+}
+function renderLimpieza(){
+  hkSync();
+  var flt=state.hkWho||'all',staff=hkStaff();
+  var keys=Object.keys(HK).filter(function(n){var h=HK[n];return flt==='all'||(flt==='none'?!h.who:h.who===flt);});
+  var prio=function(a,b){var pa=arrivalRes(a)?0:1,pb=arrivalRes(b)?0:1;return pa-pb||(HK[a].since<HK[b].since?-1:1);};
+  var cnt=function(st){return Object.keys(HK).filter(function(n){return HK[n].st===st;}).length;};
+  var leaving=RES.filter(function(r){return r.state==='ocupado'&&r.co<=TODAY;});
+  var rep=Object.keys(REPASO).sort();var repPend=rep.filter(function(n){return REPASO[n].st==='pendiente';}).length;
+  var chips=[['all','Todas']].concat(staff.map(function(e){return [e.name,e.name];})).concat([['none','Sin asignar']]);
+  var cols=HKCOL.map(function(c){var list=keys.filter(function(n){return HK[n].st===c[0];}).sort(prio);
+    var ghosts=c[0]==='sucia'&&flt==='all'?leaving.map(function(r){return '<article class="hkc ghost"><div class="hkc-top"><b class="hk-n">'+rname(r.room)+'</b><span class="hk-t">'+TYPES[room(r.room).t].n+'</span><span class="pill st-out">'+ic('logout')+'Sale hoy</span></div><div class="hkc-meta">'+ic('user')+'<span>Todavía con huéspedes · salida hasta las '+CFG.co+'</span></div></article>';}).join(''):'';
+    return '<section class="hk-col st-'+c[2]+'"><header><span class="hk-dot"></span><h3>'+c[1]+'</h3><span class="hk-cnt">'+list.length+'</span></header><div class="hk-list">'+(list.length||ghosts?list.map(hkCard).join('')+ghosts:'<div class="empty sm">Nada por aquí</div>')+'</div></section>';}).join('');
+  var isHk=state.user&&state.user.cargo==='Housekeeping';
+  return '<div class="page-head"><div><h1>Limpieza</h1><p class="sub">'+cap(fmtDL(TODAY))+' · las habitaciones que llegan hoy van primero</p></div>'+
+  '<div class="chips" role="group" aria-label="Ver por camarera">'+chips.map(function(c){return '<button type="button" class="chipb" data-act="hk-who" data-v="'+esc(c[0])+'" aria-pressed="'+(flt===c[0])+'">'+esc(c[1])+'</button>';}).join('')+'</div></div>'+
+  '<div class="kpis">'+kpiBox('out','sparkles','Por limpiar',String(cnt('sucia')),plural(leaving.length,'salida más hoy','salidas más hoy'))+kpiBox('clean','clock','Limpiando ahora',String(cnt('limpiando')),staff.length+' camareras en turno')+kpiBox('conf','search','Por revisar',String(cnt('revisar')),isHk?'Las revisa recepción':'Tócalas para aprobarlas')+kpiBox('ok','check','Listas hoy',String(HKDONE.length),'Ya se pueden vender')+'</div>'+
+  '<div class="hk-board">'+cols+'</div>'+
+  '<section class="card cblk"><div class="blk-h"><h3>Repaso de habitaciones ocupadas</h3><span class="hint">'+(repPend?plural(repPend,'pendiente','pendientes'):'Todo al día')+'</span></div>'+
+  (rep.length?'<div class="rep-grid">'+rep.map(function(n){var x=REPASO[n],a=activeRes(n);var st=x.st==='hecho'?'ok':x.st==='nomolestar'?'res':'occ';
+    return '<div class="rp-t2 st-'+st+'"><div class="rp-h2"><b>'+rname(n)+'</b><span>'+(a?esc(short(a.guest.name)):'')+'</span></div><span class="rp-s">'+(x.st==='hecho'?ic('check')+'Hecho'+(x.who?' · '+esc(x.who):''):x.st==='nomolestar'?ic('ban')+'No molestar':ic('clock')+'Pendiente')+'</span>'+
+    '<div class="rp-b"><button type="button" class="btn btn-sm'+(x.st==='hecho'?' on':'')+'" data-act="rep-st" data-room="'+n+'" data-v="hecho" aria-pressed="'+(x.st==='hecho')+'">'+ic('check')+'Hecho</button><button type="button" class="btn btn-sm'+(x.st==='nomolestar'?' on':'')+'" data-act="rep-st" data-room="'+n+'" data-v="nomolestar" aria-pressed="'+(x.st==='nomolestar')+'">'+ic('ban')+'No molestar</button></div></div>';}).join('')+'</div>':'<div class="empty">No hay habitaciones ocupadas que repasar.</div>')+'</section>'+
+  '<section class="card cblk"><div class="blk-h"><h3>Listas hoy</h3><span class="hint">'+plural(HKDONE.length,'habitación','habitaciones')+'</span></div>'+
+  (HKDONE.length?'<div class="rows">'+HKDONE.map(function(d){return '<div class="row"><span class="kpi-ic st-ok sm">'+ic('check')+'</span><span class="grow"><b>'+rname(d.n)+' · '+TYPES[room(d.n).t].n+'</b><small>'+esc(d.kind)+' · lista a las '+d.h+'</small></span><span class="hk-who"><span class="av sm">'+ini(d.who)+'</span>'+esc(d.who)+'</span></div>';}).join('')+'</div>':'<div class="empty">Todavía no hay habitaciones listas hoy.</div>')+'</section>';
+}
+function hkAssign(btn,n,then){
+  var items=hkStaff().map(function(e){return {label:e.name,icon:'user',hint:e.turno,run:function(){HK[n].who=e.name;if(then)then();else{toast('La '+rname(n)+' quedó asignada a '+e.name,{icon:'user'});refresh();}}};});
+  if(HK[n].who&&!then)items.push('-',{label:'Quitar asignación',icon:'x',run:function(){HK[n].who='';refresh();}});
+  menu(btn,items,{width:240});
+}
+
+/* ---------- cierre del día ---------- */
+var CIERRES=[{day:209,d:15,who:'Rosa',h:'23:52',ing:2140,occ:71,arr:6,out:5},{day:208,d:14,who:'Rosa',h:'23:47',ing:1865,occ:66,arr:4,out:7},{day:207,d:13,who:'Luis',h:'23:58',ing:2410,occ:74,arr:7,out:4}];
+function dayNums(){
+  var pays=allPays().filter(function(p){return !p.anulado&&p.d===TODAY;});
+  var by={};pays.forEach(function(p){by[p.method]=(by[p.method]||0)+p.amount;});
+  var occ=ROOMS.filter(function(rm){return rm.t!=='AU'&&RES.some(function(r){return r.room===rm.n&&(r.state==='ocupado')&&r.co>TODAY;});}).length;
+  var tot=ROOMS.filter(function(rm){return rm.t!=='AU';}).length;
+  return {pays:pays,by:by,ing:pays.reduce(function(s,p){return s+p.amount;},0),occ:occ,pct:Math.round(occ/tot*100),
+    ins:RES.filter(function(r){return r.state==='ocupado'&&r.ci===TODAY;}).length,outs:RES.filter(function(r){return r.state==='finalizada'&&r.co===TODAY;}).length};
+}
+function czItems(){
+  return {arr:RES.filter(function(r){return (r.state==='reservado'||r.state==='confirmado')&&r.ci<=TODAY;}),
+    out:RES.filter(function(r){return r.state==='ocupado'&&r.co<=TODAY;}),
+    debt:RES.filter(function(r){return r.state==='ocupado'&&r.co>TODAY&&due(r)>0;})};
+}
+function czStep(n,ok,title,sub,body,warn){
+  return '<section class="card cz '+(ok?'done':warn?'info':'todo')+'"><header class="cz-h"><span class="cz-n">'+(ok?ic('check'):n)+'</span><div class="grow"><h3>'+title+'</h3><p>'+sub+'</p></div>'+(ok?'<span class="pill st-ok">'+ic('check')+'Listo</span>':warn?'<span class="pill st-clean">Revisar</span>':'<span class="pill st-out">Falta</span>')+'</header>'+(body?'<div class="cz-b">'+body+'</div>':'')+'</section>';
+}
+function czRow(r,acts){return '<div class="row"><span class="av sm">'+ini(r.guest.name)+'</span><span class="grow"><b>'+esc(r.guest.name)+'</b><small>'+roomOf(r)+' · '+fmtD(r.ci)+' → '+fmtD(r.co)+(due(r)>0?' · debe '+money(due(r)):'')+'</small></span><span class="cz-acts">'+acts+'</span></div>';}
+function renderCierre(){
+  hkSync();var I=czItems(),N=dayNums(),hkN=Object.keys(HK).length;
+  var s1=czStep(1,!I.arr.length,'Llegadas de hoy',I.arr.length?plural(I.arr.length,'reserva no hizo check-in','reservas no hicieron check-in')+'. Regístralas, márcalas como “no llegó” o pásalas a mañana.':'Todas las llegadas tienen check-in.',
+    I.arr.length?'<div class="rows">'+I.arr.map(function(r){return czRow(r,'<button class="btn btn-sm" data-act="cz-noshow" data-id="'+r.id+'">'+ic('x')+'No llegó</button><button class="btn btn-sm" data-act="cz-move" data-id="'+r.id+'">'+ic('calendar')+'A mañana</button><button class="btn btn-sm btn-occ" data-act="cz-in" data-id="'+r.id+'">'+ic('login')+'Check-in</button>');}).join('')+'</div>':'');
+  var s2=czStep(2,!I.out.length,'Salidas de hoy',I.out.length?plural(I.out.length,'habitación debía salir','habitaciones debían salir')+' hoy. Haz el check-out o extiende la estadía.':'Todas las salidas están cerradas.',
+    I.out.length?'<div class="rows">'+I.out.map(function(r){return czRow(r,'<button class="btn btn-sm" data-act="cz-ext" data-id="'+r.id+'">'+ic('plus')+'1 noche más</button><button class="btn btn-sm btn-out" data-act="res" data-id="'+r.id+'">'+ic('logout')+'Check-out</button>');}).join('')+'</div>':'');
+  var s3=czStep(3,!I.debt.length,'Saldos de huéspedes en casa',I.debt.length?'Estos huéspedes se quedan pero tienen consumos o noches sin pagar. No impide cerrar el día.':'Nadie tiene saldo pendiente.',
+    I.debt.length?'<div class="rows">'+I.debt.map(function(r){return czRow(r,'<button class="btn btn-sm" data-act="res" data-id="'+r.id+'">'+ic('dollar')+'Cobrar</button>');}).join('')+'</div>':'',true);
+  var s4=czStep(4,!hkN,'Limpieza',hkN?plural(hkN,'habitación sigue sin estar lista','habitaciones siguen sin estar listas')+'. Housekeeping puede terminarlas mañana temprano.':'Todas las habitaciones están limpias.',hkN&&can('limpieza')?'<a class="btn btn-sm" href="#limpieza">'+ic('sparkles')+'Ver limpieza</a>':'',true);
+  var s5=czStep(5,!state.caja,'Caja',state.caja?'La caja sigue abierta desde las '+state.cajaSince+'. Cuenta el dinero y ciérrala antes de cerrar el día.':'La caja está cerrada y cuadrada.',state.caja?'<button class="btn btn-sm btn-primary" data-act="cz-caja">'+ic('wallet')+'Cerrar caja y contar</button>':'');
+  var block=[];if(I.arr.length)block.push('llegadas');if(I.out.length)block.push('salidas');if(state.caja)block.push('caja');
+  var methods=Object.keys(N.by).sort(function(a,b){return N.by[b]-N.by[a];});
+  var side='<aside class="cz-side"><section class="card cblk"><h3>Resumen del día</h3>'+
+    '<div class="cz-big"><span>Ingresos de hoy</span><b class="tn">'+money(N.ing)+'</b><small>'+plural(N.pays.length,'comprobante','comprobantes')+'</small></div>'+
+    (methods.length?'<div class="cz-m">'+methods.map(function(m){return '<div><span>'+esc(m)+'</span><b class="tn">'+money(N.by[m])+'</b></div>';}).join('')+'</div>':'')+
+    '<dl class="stay cz-dl"><div><dt>Ocupación esta noche</dt><dd>'+N.pct+'%<small>'+plural(N.occ,'habitación','habitaciones')+'</small></dd></div><div><dt>Check-in hoy</dt><dd class="tn">'+N.ins+'</dd></div><div><dt>Check-out hoy</dt><dd class="tn">'+N.outs+'</dd></div><div><dt>Día de trabajo</dt><dd class="tn">'+DAYNO+'</dd></div></dl>'+
+    '<button class="btn btn-ok btn-lg btn-block" data-act="cz-close"'+(block.length?' disabled':'')+'>'+ic('check')+'Cerrar el día</button>'+
+    '<p class="hint cz-why">'+(block.length?'Para cerrar falta resolver: '+block.join(', ')+'.':'Al cerrar, el sistema pasa al '+fmtDL(TODAY+1)+' y empieza el día '+(DAYNO+1)+'.')+'</p></section>'+
+    '<section class="card cblk"><h3>Días cerrados</h3><div class="rows">'+CIERRES.slice(0,6).map(function(c){return '<div class="row"><span class="kpi-ic st-ok sm">'+ic('check')+'</span><span class="grow"><b>Día '+c.day+' · '+fmtD(c.d)+'</b><small>Cerró '+esc(c.who)+' a las '+c.h+' · ocupación '+c.occ+'%</small></span><b class="tn">'+money(c.ing)+'</b></div>';}).join('')+'</div></section></aside>';
+  return '<div class="page-head"><div><h1>Cierre del día</h1><p class="sub">Día de trabajo '+DAYNO+' · '+cap(fmtDL(TODAY))+' · revisa cada punto antes de pasar al día siguiente</p></div></div>'+
+  '<div class="cz-grid"><div class="cz-steps">'+s1+s2+s3+s4+s5+'</div>'+side+'</div>';
+}
+function closeDay(){
+  var N=dayNums();
+  openModal({title:'Cerrar el día '+DAYNO,width:460,body:'<p>Se guardará el resumen del '+fmtDL(TODAY)+' y el sistema pasará al <b>'+fmtDL(TODAY+1)+'</b>.</p><dl class="stay" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><dt>Ingresos</dt><dd>'+money(N.ing)+'</dd></div><div><dt>Ocupación</dt><dd>'+N.pct+'%</dd></div></dl><p class="hint">Esto no se puede deshacer.</p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="czGo">'+ic('check')+'Sí, cerrar el día</button>',
+    onMount:function(w){$('#czGo',w).onclick=function(){
+      CIERRES.unshift({day:DAYNO,d:TODAY,who:ME(),h:nowHM(),ing:N.ing,occ:N.pct,arr:N.ins,out:N.outs});
+      TODAY++;DAYNO++;NOW_H=7;HKDONE=[];REPASO={};hkSync();
+      var t=$('.tag.day b');if(t)t.textContent=DAYNO;
+      closeModal(true);toast('Día cerrado. Hoy es '+fmtDL(TODAY)+' · día '+DAYNO,{icon:'check'});go('inicio');};}});
+}
+
+/* ---------- tarifas por temporada ---------- */
+var SEASONS=[{n:'Fiestas Patrias',from:'2026-07-24',to:'2026-07-31',pct:20},{n:'Feriado largo · Todos los Santos',from:'2026-10-30',to:'2026-11-02',pct:15},{n:'Temporada baja',from:'2026-11-09',to:'2026-12-13',pct:-10},{n:'Navidad y Año Nuevo',from:'2026-12-23',to:'2027-01-02',pct:25}];
+var WEEKEND={on:false,pct:10};
+function seasonOf(d){return SEASONS.find(function(s){return fromIso(s.from)<=d&&d<=fromIso(s.to);});}
+function nightPct(d){var s=seasonOf(d),p=s?s.pct:0;if(WEEKEND.on){var w=dt(d).getUTCDay();if(w===5||w===6)p+=WEEKEND.pct;}return p;}
+function avgRate(base,ci,co){var n=Math.max(1,co-ci),t=0;for(var d=ci;d<ci+n;d++)t+=base*(1+nightPct(d)/100);return Math.round(t/n);}
+function seasonLabel(ci,co){
+  var n=Math.max(1,co-ci),m={},wk=0;for(var d=ci;d<ci+n;d++){var s=seasonOf(d);if(s)m[s.n]=(m[s.n]||0)+1;if(WEEKEND.on){var w=dt(d).getUTCDay();if(w===5||w===6)wk++;}}
+  var parts=Object.keys(m).map(function(k){var s=SEASONS.find(function(x){return x.n===k;});return k+' '+(s.pct>0?'+':'')+s.pct+'%'+(m[k]<n?' · '+m[k]+' de '+n+' noches':'');});
+  if(wk)parts.push('Fin de semana +'+WEEKEND.pct+'% · '+plural(wk,'noche','noches'));
+  return parts.length?parts.join(' · '):'Regular';
+}
+function ssnSt(s){return s.pct<0?'ok':s.pct>=20?'dan':'out';}
+function seasonsBody(){
+  var now=function(s){var a=fromIso(s.from),b=fromIso(s.to);return b<TODAY?['Pasada','off']:a<=TODAY?['Activa ahora','ok']:['Próxima','conf'];};
+  var rows=SEASONS.map(function(s,i){var e=now(s);return '<div class="lt-r">'+cell('Temporada','<span class="ss-n"><i class="ss-dot st-'+ssnSt(s)+'"></i><b>'+esc(s.n)+'</b></span>','wide')+cell('Fechas',fmtD(fromIso(s.from))+' → '+fmtD(fromIso(s.to)))+cell('Ajuste','<b class="tn ss-p st-'+ssnSt(s)+'">'+(s.pct>0?'+':'')+s.pct+'%</b>','r')+cell('Estado','<span class="pill st-'+e[1]+'">'+e[0]+'</span>')+cell('','<button class="btn-icon sm" data-act="ss-del" data-i="'+i+'" aria-label="Quitar '+esc(s.n)+'">'+ic('trash')+'</button>','r')+'</div>';});
+  var cal='',start=TODAY,dows=['lun','mar','mié','jue','vie','sáb','dom'];
+  var off=(dt(start).getUTCDay()+6)%7;
+  for(var k=0;k<off;k++)cal+='<span class="sc-d emp"></span>';
+  for(var d=start;d<start+49;d++){var p=nightPct(d),s=seasonOf(d);cal+='<span class="sc-d'+(p?' st-'+(p<0?'ok':p>=20?'dan':'out'):'')+(d===TODAY?' today':'')+'" title="'+esc(fmtDL(d)+(s?' · '+s.n:'')+(p?' · '+(p>0?'+':'')+p+'%':' · tarifa regular'))+'"><b>'+dt(d).getUTCDate()+'</b>'+(dt(d).getUTCDate()===1?'<small>'+MES[dt(d).getUTCMonth()]+'</small>':p?'<small>'+(p>0?'+':'')+p+'%</small>':'')+'</span>';}
+  return '<p class="hint">El precio de cada noche se ajusta solo según la temporada. En la nueva reserva ves el precio ya calculado, y lo puedes cambiar si negocias con el cliente.</p>'+
+  lt('minmax(0,1.6fr) minmax(0,1.1fr) 90px 130px 56px',['Temporada','Fechas','>Ajuste','Estado',''],rows,'<b>No hay temporadas</b>Agrega una para subir o bajar precios en ciertas fechas.')+
+  '<div class="add-r"><button class="btn" data-act="ss-add">'+ic('plus')+'Agregar temporada</button></div>'+
+  '<label class="rsw wk-sw"><span><b>Recargo de fin de semana</b><small>Viernes y sábado por la noche · +'+WEEKEND.pct+'%</small></span>'+sw(WEEKEND.on,'wk-sw','','Recargo de fin de semana')+'</label>'+
+  '<h3 style="margin-top:6px">Próximas 7 semanas</h3><div class="scal"><div class="scal-h">'+dows.map(function(x){return '<span>'+x+'</span>';}).join('')+'</div><div class="scal-g">'+cal+'</div></div>'+
+  '<div class="legend mini"><span class="st-out"><i></i>Sube hasta 19%</span><span class="st-dan"><i></i>Sube 20% o más</span><span class="st-ok"><i></i>Baja</span></div>';
+}
+function seasonAdd(){
+  openModal({title:'Agregar temporada',width:480,body:'<div class="field"><label for="ssN">Nombre</label><input id="ssN" placeholder="Ej.: Semana Santa" autocomplete="off"></div><div class="g2"><div class="field"><label for="ssA">Desde</label><input type="date" id="ssA" value="'+iso(TODAY+7)+'"></div><div class="field"><label for="ssB">Hasta</label><input type="date" id="ssB" value="'+iso(TODAY+10)+'"></div></div><div class="field"><label for="ssP">Ajuste del precio</label><div class="inp-pre"><span>%</span><input type="number" id="ssP" value="15" step="1" min="-50" max="100"></div><span class="hint">Usa un número negativo para bajar el precio, por ejemplo −10.</span></div><p class="ferr" id="ssE" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="ssGo">Agregar</button>',
+    onMount:function(w){$('#ssGo',w).onclick=function(){var n=$('#ssN',w).value.trim(),a=$('#ssA',w).value,b=$('#ssB',w).value,p=parseFloat($('#ssP',w).value),er=$('#ssE',w);
+      if(!n){er.textContent='Escribe un nombre.';er.hidden=false;return;}if(!a||!b||fromIso(b)<fromIso(a)){er.textContent='La fecha final debe ser igual o después de la inicial.';er.hidden=false;return;}if(isNaN(p)||p===0){er.textContent='Escribe un ajuste distinto de 0.';er.hidden=false;return;}
+      SEASONS.push({n:n,from:a,to:b,pct:p});SEASONS.sort(function(x,y){return x.from<y.from?-1:1;});closeModal(true);toast('Temporada agregada: '+n,{icon:'calendar'});render({soft:true});};}});
+}
+
+/* ---------- permisos en ajustes ---------- */
+function permsBody(){
+  var c=state.permC||'Recepcionista',p=PERM[c]||[],locked=c==='Administrador';
+  return '<p class="hint">Elige un cargo y marca a qué partes del sistema puede entrar. Los cambios se aplican al instante.</p>'+
+  '<div class="chips" role="group" aria-label="Cargo">'+CARGOS.map(function(x){return '<button type="button" class="chipb" data-act="perm-c" data-v="'+esc(x)+'" aria-pressed="'+(x===c)+'">'+esc(x)+'<small class="cnt">'+(PERM[x]||[]).length+'</small></button>';}).join('')+'</div>'+
+  (locked?'<div class="warn">'+ic('alert')+'<span>El administrador siempre puede entrar a todo, para que nunca se quede nadie sin acceso a Ajustes.</span></div>':'')+
+  '<div class="rgrid-s wide">'+PERM_MODS.map(function(m){var on=p.indexOf(m[0])>-1;return '<label class="rsw"><span><b>'+m[1]+'</b><small>'+(on?'Puede entrar':'Sin acceso')+'</small></span>'+(locked?'<button type="button" class="sw" role="switch" aria-checked="true" disabled aria-label="'+m[1]+'"><i></i></button>':sw(on,'perm-sw',' data-k="'+m[0]+'"',m[1]))+'</label>';}).join('')+'</div>';
+}
+
+var VIEWS={limpieza:renderLimpieza,cierre:renderCierre,inicio:renderInicio,panel:renderPanel,timeline:renderTimeline,nueva:renderNew,reservas:renderReservas,restaurante:renderRest,whatsapp:renderWA,ventas:renderVentas,caja:renderCaja,productos:renderProductos,almacen:renderAlmacen,clientes:renderClientes,reportes:renderReportes,impresion:renderImpresion,ajustes:renderAjustes};
+
+/* ---------- barra superior ---------- */
+function setCaja(open){state.caja=open;if(open)state.cajaSince=nowHM();var b=$('#cajaBtn');b.classList.toggle('on',open);b.querySelector('span').textContent=open?'Caja abierta':'Caja cerrada';if(state.view==='panel'||state.view==='caja'||state.view==='cierre')render({soft:true});}
+function openCaja(monto){state.cajaOpenAmt=monto||0;state.mov=[];setCaja(true);toast('Caja abierta'+(monto?' con '+money(monto):'')+' · '+state.cajaSince,{icon:'wallet'});}
+function cajaPop(btn){
+  if(!state.caja){
+    openPop(btn,'<div class="pop-form"><div class="pop-txt" style="padding:0"><b>La caja está cerrada</b>Ábrela para recibir pagos en efectivo durante tu turno.</div><div class="field"><label for="cajaM">Monto de apertura</label><div class="inp-pre"><span>S/</span><input type="number" id="cajaM" min="0" step="0.5" placeholder="0.00"></div></div><button class="btn btn-primary btn-block" id="cajaGo">'+ic('wallet')+'Abrir caja</button></div>',{align:'end',onMount:function(el){var g=function(){var v=parseFloat($('#cajaM',el).value)||0;closePop();openCaja(v);};$('#cajaGo',el).onclick=g;$('#cajaM',el).addEventListener('keydown',function(e){if(e.key==='Enter')g();});}});
+  }else{
+    menu(btn,[{head:'Abierta desde las '+state.cajaSince+' · '+ME()},{label:'Ver movimientos de caja',icon:'list',run:function(){go('caja');}},{label:'Cerrar caja y contar el dinero',icon:'wallet',run:function(){closeCajaModal();}}],{align:'end'});
+  }
+}
+function tcPop(btn){
+  openPop(btn,'<div class="pop-form"><div class="field"><label for="tcIn">1 US$ equivale a</label><div class="inp-pre"><span>S/</span><input type="number" id="tcIn" min="0" step="0.001" value="'+(state.tc||'')+'" placeholder="Tipo de cambio del día"></div></div><button class="btn btn-primary btn-block" id="tcGo">Guardar tipo de cambio</button></div>',{align:'end',onMount:function(el){var g=function(){var v=parseFloat($('#tcIn',el).value);if(!(v>0))return;state.tc=v;$('#tcVal').textContent=v.toFixed(3);closePop();toast('Tipo de cambio: S/ '+v.toFixed(3)+' por dólar',{icon:'dollar'});};$('#tcGo',el).onclick=g;$('#tcIn',el).addEventListener('keydown',function(e){if(e.key==='Enter')g();});}});
+}
+function effTheme(){return document.documentElement.getAttribute('data-ui')==='dark'?'dark':'light';}
+function themeIcon(){var d=effTheme()==='dark';$('#themeBtn').innerHTML=ic(d?'sun':'moon');$('#themeBtn').setAttribute('aria-label',d?'Usar tema claro':'Usar tema oscuro');}
+function toggleTheme(){var n=effTheme()==='dark'?'light':'dark';if(n==='dark')document.documentElement.setAttribute('data-ui','dark');else document.documentElement.removeAttribute('data-ui');try{localStorage.setItem('nh-ui',n);}catch(e){}themeIcon();toast(n==='dark'?'Tema oscuro activado':'Tema claro activado',{icon:n==='dark'?'moon':'sun'});}
+try{if(localStorage.getItem('nh-ui')==='dark')document.documentElement.setAttribute('data-ui','dark');}catch(e){}
+themeIcon();
+if(/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent))$('#kbdK').textContent='⌘K';
+function isMobile(){return innerWidth<=900;}
+function openSide(){$('#side').classList.add('open');$('#sideScrim').classList.add('open');$('#side').inert=false;var a=$('#side .ni.on')||$('#side .ni');if(a)a.focus();}
+function closeSide(){$('#side').classList.remove('open');$('#sideScrim').classList.remove('open');$('#side').inert=isMobile();}
+window.addEventListener('resize',function(){fitTimeline();if(!isMobile()){$('#side').inert=false;$('#side').classList.remove('open');$('#sideScrim').classList.remove('open');}else if(!$('#side').classList.contains('open'))$('#side').inert=true;placeSeg();placeInd();});
+$('#side').inert=isMobile();try{if(localStorage.getItem('nh-rail')==='1')$('.app').classList.add('rail');}catch(e){}
+$('#side').addEventListener('click',function(e){if(e.target.closest('.ni')&&isMobile())closeSide();});
+
+/* ---------- buscador Ctrl+K ---------- */
+var PAL=null;
+function palItems(q){
+  var nq=norm(q.trim()),toks=nq.split(/\s+/).filter(Boolean);
+  var match=function(s){var n=norm(s);return toks.every(function(t){return n.indexOf(t)>-1;});};
+  var acts=[{g:'Acciones',i:'plus',l:'Nueva reserva',s:'Abre el formulario',run:function(){state.form=newForm();go('nueva');}},{g:'Acciones',i:'bed',l:'Ir al panel de habitaciones',run:function(){go('panel');}},{g:'Acciones',i:'calendar',l:'Ir al timeline',run:function(){go('timeline');}},{g:'Acciones',i:'wallet',l:'Ir a caja',run:function(){go('caja');}},{g:'Acciones',i:'receipt',l:'Ir a ventas',run:function(){go('ventas');}},{g:'Acciones',i:'utensils',l:'Ir al restaurante',run:function(){go('restaurante');}},{g:'Acciones',i:'message',l:'Ver pedidos de WhatsApp',run:function(){go('whatsapp');}},{g:'Acciones',i:'package',l:'Ir al almacén',run:function(){go('almacen');}},{g:'Acciones',i:'settings',l:'Abrir ajustes',run:function(){go('ajustes');}},{g:'Acciones',i:'wallet',l:state.caja?'Cerrar caja':'Abrir caja',run:function(){if(state.caja)closeCajaModal();else go('caja');}},{g:'Acciones',i:effTheme()==='dark'?'sun':'moon',l:effTheme()==='dark'?'Usar tema claro':'Usar tema oscuro',run:toggleTheme}];
+  var guests=RES.filter(function(r){return r.state==='ocupado'||((r.state==='reservado'||r.state==='confirmado')&&r.ci>=TODAY);}).map(function(r){return {g:'Huéspedes',i:'user',l:r.guest.name,s:(r.room==='AUD'?'Auditorio':'Hab. '+r.room)+' · '+r.guest.docType+' '+r.guest.doc+' · '+ST[resSt(r)].l,run:function(){openDrawer(r.room,r.id);}};});
+  var rooms=ROOMS.map(function(rm){var st=roomSt(rm),a=activeRes(rm.n)||arrivalRes(rm.n);return {g:'Habitaciones',i:'bed',l:(rm.n==='AUD'?'Auditorio':'Habitación '+rm.n)+' · '+TYPES[rm.t].n,s:ST[st].l+(a?' · '+short(a.guest.name):''),run:function(){openDrawer(rm.n);}};});
+  if(!toks.length){var arr=guests.filter(function(x){return /Llega hoy|Pre-reserva/.test(x.s);}).map(function(x){return Object.assign({},x,{g:'Llegan hoy'});});return acts.concat(arr.slice(0,5));}
+  var out=[];[acts,guests,rooms].forEach(function(list){out=out.concat(list.filter(function(x){return match(x.l+' '+(x.s||''));}).slice(0,7));});return out;
+}
+function openPalette(){
+  if(PAL)return;closePop(true);
+  var w=document.createElement('div');w.className='pal-wrap';
+  w.innerHTML='<div class="m-scrim" data-pclose></div><div class="pal" role="dialog" aria-modal="true" aria-label="Buscar"><div class="pal-in">'+ic('search')+'<input id="palQ" placeholder="Busca un huésped, una habitación o una acción" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="palList"><kbd>Esc</kbd></div><div class="pal-list" id="palList" role="listbox"></div><div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> moverse</span><span><kbd>Enter</kbd> abrir</span><span><kbd>Esc</kbd> cerrar</span></div></div>';
+  document.body.appendChild(w);PAL={el:w,items:[],act:0,ret:document.activeElement};
+  requestAnimationFrame(function(){w.classList.add('open');});
+  var inp=$('#palQ',w);
+  var draw=function(){var its=PAL.items=palItems(inp.value);PAL.act=Math.min(PAL.act,Math.max(0,its.length-1));var g='',h='';its.forEach(function(x,i){if(x.g!==g){g=x.g;h+='<div class="pal-g">'+esc(g)+'</div>';}h+='<button type="button" class="pi'+(i===PAL.act?' act':'')+'" role="option" id="pi-'+i+'" aria-selected="'+(i===PAL.act)+'" data-pi="'+i+'">'+ic(x.i)+'<span><b>'+esc(x.l)+'</b>'+(x.s?'<small>'+esc(x.s)+'</small>':'')+'</span>'+ic('enter','go')+'</button>';});$('#palList',w).innerHTML=h||'<div class="pal-none">Sin resultados para «'+esc(inp.value)+'»</div>';inp.setAttribute('aria-activedescendant',its.length?'pi-'+PAL.act:'');};
+  var setAct=function(i){PAL.act=i;$$('.pi',w).forEach(function(b,j){b.classList.toggle('act',j===i);b.setAttribute('aria-selected',j===i);});var a=$('#pi-'+i,w);if(a)a.scrollIntoView({block:'nearest'});inp.setAttribute('aria-activedescendant','pi-'+i);};
+  var runI=function(i){var x=PAL.items[i];if(!x)return;closePalette(true);x.run();};
+  inp.addEventListener('input',function(){PAL.act=0;draw();});
+  inp.addEventListener('keydown',function(e){var n=PAL.items.length;if(e.key==='ArrowDown'){e.preventDefault();if(n)setAct((PAL.act+1)%n);}else if(e.key==='ArrowUp'){e.preventDefault();if(n)setAct((PAL.act-1+n)%n);}else if(e.key==='Enter'){e.preventDefault();runI(PAL.act);}});
+  w.addEventListener('click',function(e){if(e.target.closest('[data-pclose]')){closePalette();return;}var b=e.target.closest('.pi');if(b)runI(+b.dataset.pi);});
+  w.addEventListener('mousemove',function(e){var b=e.target.closest('.pi');if(b&&+b.dataset.pi!==PAL.act)setAct(+b.dataset.pi);});
+  draw();setTimeout(function(){inp.focus();},20);
+}
+function closePalette(noRet){if(!PAL)return;var p=PAL;PAL=null;if(!noRet&&p.ret&&p.ret.focus)p.ret.focus({preventScroll:true});if(reduce){p.el.remove();return;}p.el.classList.remove('open');setTimeout(function(){p.el.remove();},220);}
+
+/* ---------- eventos ---------- */
+var ACT={
+  'mesa':function(a){openMesa(a.dataset.id);},
+  'r-amb':function(a){state.amb=a.dataset.v;render({soft:true});},
+  'r-open':function(){var t=curTable();if(!t)return;t.order={items:[],since:nowHM(),mozo:'Jorge',state:'abierta'};toast('Mesa '+t.n+' abierta',{icon:'utensils'});renderDrawer();render({soft:true});},
+  'r-cat':function(a){state.rcat=a.dataset.v;renderDrawer();},
+  'r-add':function(a){rAdd(a.dataset.n);},
+  'r-inc':function(a){rChg(+a.dataset.k,1);},
+  'r-dec':function(a){rChg(+a.dataset.k,-1);},
+  'r-send':function(){rSend();},
+  'r-pre':function(){rPre();},
+  'r-pay':function(){var t=curTable();if(t&&t.order)rPay(t);},
+  'r-more':function(a){var t=curTable();if(!t||!t.order)return;menu(a,[{label:'Cargar a una habitación',icon:'bed',run:function(){rToRoom(t);}},{label:'Pasar a otra mesa',icon:'arrow',run:function(){rMove(t);}},'-',{label:'Anular pedido',icon:'trash',danger:true,run:function(){rVoid(t);}}],{align:'end'});},
+  'wa-f':function(a){state.waF=a.dataset.v;render({soft:true});},
+  'wa-ok':function(a){var w=WA.find(function(x){return x.id===+a.dataset.id;});if(w)waOk(w);},
+  'wa-no':function(a){var w=WA.find(function(x){return x.id===+a.dataset.id;});if(w)waNo(w);},
+  'prod':function(a){prodModal(PRODUCTS.find(function(p){return p.id===+a.dataset.id;}));},
+  'prod-new':function(){prodModal(null);},
+  'pcat':function(a){state.pcat=a.dataset.v;render({soft:true});},
+  'a-f':function(a){state.aF=a.dataset.v;state.aTab='stock';render({soft:true});},
+  'a-tab':function(a){state.aTab=a.dataset.v;render({soft:true});},
+  'alm-in':function(a){almModal('entrada',a.dataset.id?+a.dataset.id:null);},
+  'alm-out':function(){almModal('salida');},
+  'cli':function(a){openCli(a.dataset.doc);},
+  'c-tab':function(a){state.cTab=a.dataset.v;render({soft:true});},
+  'cli-new':function(){newCliModal();},
+  'cli-no':function(){cliNo(state.dw.doc);},
+  'cli-ok':function(){delete NOGRATO[state.dw.doc];toast('Ya no está marcado como no grato',{icon:'check'});refresh();},
+  'cli-res':function(){var c=cliData().find(function(x){return x.g.doc===state.dw.doc;});state.form=newForm();state.form.client=c.g;closeDrawer();go('nueva');if(NOGRATO[c.g.doc])toast('Atención: este cliente está marcado como no grato',{icon:'alert'});},
+  'rs-per':function(a){state.rPer=a.dataset.v;render({soft:true});},
+  'go-res-hoy':function(){state.rPer='hoy';state.rSt='all';go('reservas');},
+  'rep':function(a){state.repOpen=state.repOpen===a.dataset.k?'':a.dataset.k;render({soft:true});},
+  'rep-copy':function(a){var d=repData(a.dataset.k);copyText([d.h].concat(d.rows).map(function(r){return r.join('\t');}).join('\n'));},
+  'prn-test':function(a){var P=printer(a.dataset.id);addJob(P.id,'Prueba','Página de prueba');toast('Enviando página de prueba a '+P.name,{icon:'printer'});render({soft:true});},
+  'prn-edit':function(a){prnEdit(printer(a.dataset.id));},
+  'prn-toggle':function(a){var P=printer(a.dataset.id);P.on=!P.on;toast(P.name+(P.on?' conectada':' desconectada'),{icon:P.on?'check':'alert'});render({soft:true});},
+  'pcfg':function(a){var c=PCFG[a.dataset.k];c[a.dataset.f]=!c[a.dataset.f];render({soft:true});},
+  'pcopies':function(a){var c=PCFG[a.dataset.k];c.copies=Math.max(1,Math.min(5,c.copies+(+a.dataset.d)));render({soft:true});},
+  'set':function(a){state.set=a.dataset.v;render({soft:true});var b=$('.set-b');if(b&&innerWidth<900)b.scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'});},
+  'cfg-save':function(){saveCfg();},
+  'cfg-env':function(a){CFG.env=a.dataset.v;toast('Ambiente: '+CFG.env,{icon:'receipt'});render({soft:true});},
+  'room-sw':function(a){var rm=room(a.dataset.room);if(!rm.off&&activeRes(rm.n)){toast('La '+rname(rm.n)+' tiene huéspedes. Haz el check-out antes de inhabilitarla.',{icon:'alert'});return;}rm.off=!rm.off;if(!rm.off)rm.cleaning=false;toast('La '+rname(rm.n)+(rm.off?' ya no está a la venta':' vuelve a estar a la venta'),{icon:rm.off?'ban':'check'});render({soft:true});},
+  'pay-sw':function(a){var m=a.dataset.m;if(PAYON[m]!==false&&activeMethods().length<=1){toast('Debe quedar al menos una forma de pago',{icon:'alert'});return;}PAYON[m]=PAYON[m]===false;render({soft:true});},
+  'emp-sw':function(a){var e=EMP[+a.dataset.i];e.on=!e.on;render({soft:true});},
+  'emp-add':function(){empAdd();},
+  'org-add':function(){var i=$('#newOrg'),n=i?i.value.trim():'';if(!n){toast('Escribe el nombre del origen',{icon:'alert'});return;}if(ORIGINS.some(function(o){return norm(o.n)===norm(n);})){toast('Ese origen ya existe',{icon:'alert'});return;}ORIGINS.push({n:n,c:0});toast('Origen agregado: '+n);render({soft:true});},
+  'mc-del':function(a){var l=MOVCATS[a.dataset.t];if(l.length<=1){toast('Debe quedar al menos un motivo',{icon:'alert'});return;}l.splice(+a.dataset.i,1);render({soft:true});},
+  'mc-add':function(a){var i=$('#mc-'+a.dataset.t),n=i?i.value.trim():'';if(!n)return;MOVCATS[a.dataset.t].push(n);toast('Motivo agregado: '+n);render({soft:true});},
+  'doc':function(a){openDoc(+a.dataset.pid);},
+  'doc-send':function(){var p=findPay(state.dw.pid);if(!p)return;p.sunat='aceptado';lg(p.r,TODAY,nowHM(),'Comprobante '+p.doc+' aceptado por SUNAT');toast('SUNAT aceptó la '+p.kind.toLowerCase()+' '+p.doc);refresh();},
+  'doc-void':function(){var p=findPay(state.dw.pid);if(p)voidDoc(p);},
+  'v-per':function(a){state.vPer=a.dataset.v;render({soft:true});},
+  'v-tab':function(a){state.vTab=a.dataset.v;render({soft:true});},
+  'v-sunf':function(a){state.vTab='comp';state.vSun=a.dataset.v;render({soft:true});},
+  'mov':function(a){movModal(a.dataset.t);},
+  'caja-close':function(){closeCajaModal();},
+  'caja-open-page':function(){var i=$('#cajaAmt');var v=i?parseFloat(i.value):0;openCaja(v>0?v:0);},
+  'new-res':function(a){state.form=newForm(a.dataset.room||null);if(state.dw)closeDrawer();go('nueva');},
+  'room':function(a){openDrawer(a.dataset.room);},
+  'res':function(a){var r=byId(+a.dataset.id);if(r)openDrawer(r.room,r.id);},
+  'dw-close':function(){closeDrawer();},
+  'dw-tab':function(a){switchTab(a.dataset.tab);},
+  'dw-more':function(a){moreMenu(a);},
+  'hk-start':function(a){var n=a.dataset.room,h=HK[n];var go2=function(){h.st='limpiando';h.since=nowHM();toast(h.who+' empezó la '+rname(n),{icon:'sparkles'});refresh();};if(!h.who){if(state.user&&state.user.cargo==='Housekeeping'){h.who=ME();go2();}else hkAssign(a,n,go2);return;}go2();},
+  'hk-done':function(a){var n=a.dataset.room;HK[n].st='revisar';HK[n].since=nowHM();toast('La '+rname(n)+' pasó a revisión',{icon:'search'});refresh();},
+  'hk-ok':function(a){var n=a.dataset.room;hkFinish(n);toast('La '+rname(n)+' está lista para vender',{icon:'check'});refresh();},
+  'hk-redo':function(a){var n=a.dataset.room;HK[n].st='limpiando';HK[n].since=nowHM();toast('La '+rname(n)+' volvió a limpieza',{icon:'undo'});refresh();},
+  'hk-assign':function(a){hkAssign(a,a.dataset.room);},
+  'hk-who':function(a){state.hkWho=a.dataset.v;render({soft:true});},
+  'rep-st':function(a){var n=a.dataset.room,v=a.dataset.v,x=REPASO[n];REPASO[n]=x&&x.st===v?{st:'pendiente',who:''}:{st:v,who:ME(),h:nowHM()};render({soft:true});},
+  'cz-noshow':function(a){var r=byId(+a.dataset.id);r.state='anulada';lg(r,TODAY,nowHM(),'No show: el huésped no llegó');toast(short(r.guest.name)+' marcado como no llegó',{icon:'x'});refresh();},
+  'cz-move':function(a){var r=byId(+a.dataset.id),nci=TODAY+1,nco=Math.max(r.co,nci+1);if(!available(r.room,nci,nco,r)){toast('La '+rname(r.room)+' no está libre desde mañana',{icon:'alert'});return;}r.ci=nci;r.co=nco;lg(r,TODAY,nowHM(),'Llegada movida al '+fmtD(nci));toast('Llegada de '+short(r.guest.name)+' movida al '+fmtD(nci),{icon:'calendar'});refresh();},
+  'cz-in':function(a){checkin(byId(+a.dataset.id));},
+  'cz-ext':function(a){var r=byId(+a.dataset.id);if(!available(r.room,r.co,r.co+1,r)){toast('La '+rname(r.room)+' ya está reservada para esa noche',{icon:'alert'});return;}r.co++;lg(r,TODAY,nowHM(),'Estadía extendida hasta el '+fmtD(r.co));toast(short(r.guest.name)+' se queda hasta el '+fmtD(r.co),{icon:'calendar'});refresh();},
+  'cz-caja':function(){closeCajaModal();},
+  'cz-close':function(){closeDay();},
+  'ss-add':function(){seasonAdd();},
+  'ss-del':function(a){var x=SEASONS.splice(+a.dataset.i,1)[0];toast('Temporada quitada: '+x.n,{icon:'trash'});render({soft:true});},
+  'wk-sw':function(){WEEKEND.on=!WEEKEND.on;render({soft:true});},
+  'perm-c':function(a){state.permC=a.dataset.v;render({soft:true});},
+  'perm-sw':function(a){var c=state.permC||'Recepcionista',p=PERM[c],k=a.dataset.k,i=p.indexOf(k);if(i>-1)p.splice(i,1);else p.push(k);applyPerms();render({soft:true});},
+  'pin-ch':function(a){changePin(+a.dataset.i);},
+  'checkin':function(){checkin(curRes());},
+  'checkout':function(){tryCheckout(curRes());},
+  'pay':function(){openPay(curRes());},
+  'add-item':function(a){addItemPop(a,curRes());},
+  'item-inc':function(a){chgItem(curRes(),+a.dataset.k,1);},
+  'item-dec':function(a){chgItem(curRes(),+a.dataset.k,-1);},
+  'add-guest':function(){guestModal(curRes());},
+  'mark-clean':function(){var rm=room(state.dw.room);hkFinish(rm.n);toast('La '+rname(rm.n)+' está lista para vender');refresh();},
+  'toggle-off':function(){var rm=room(state.dw.room);rm.off=!rm.off;if(!rm.off)rm.cleaning=false;toast(rm.off?'La '+rname(rm.n)+' quedó fuera de servicio':'La '+rname(rm.n)+' vuelve a estar a la venta',{icon:rm.off?'ban':'check'});refresh();},
+  'filter':function(a){state.filter=a.dataset.f;$$('.ft[data-f]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.f===state.filter);});renderRoomsWrap();if(a.classList.contains('kpi')){var ft=$('.ftiles');if(ft)ft.scrollIntoView({block:'start',behavior:reduce?'auto':'smooth'});}},
+  'tl-type':function(a){state.tlType=a.dataset.t;render({soft:true});},
+  'tl-today':function(){scrollToday(true);},
+  'tl-prev':function(){tlWeek(-1);},
+  'tl-next':function(){tlWeek(1);},
+  'palette':function(){openPalette();},
+  'theme':function(){toggleTheme();},
+  'caja':function(a){if(POP&&POP.anchor===a){closePop();return;}cajaPop(a);},
+  'tc':function(a){if(POP&&POP.anchor===a){closePop();return;}tcPop(a);},
+  'side-open':function(){if(isMobile()){openSide();return;}var r=$('.app').classList.toggle('rail');try{localStorage.setItem('nh-rail',r?'1':'0');}catch(e){}setTimeout(function(){fitTimeline();placeSeg();},320);},
+  'side-close':function(){closeSide();},
+  'grp':function(a){var g=a.closest('.grp');var c=g.classList.toggle('closed');a.setAttribute('aria-expanded',!c);},
+  'me':function(a){menu(a,[{head:ME()+' · '+(state.user?state.user.cargo:'Recepción')},{label:effTheme()==='dark'?'Usar tema claro':'Usar tema oscuro',icon:effTheme()==='dark'?'sun':'moon',run:toggleTheme},{label:'Atajos: Ctrl K para buscar, / para filtrar el panel',icon:'search',disabled:true},'-',{label:'Cambiar de usuario',icon:'users',run:function(){showLock();}},{label:'Cerrar sesión',icon:'logout',run:function(){state.user=null;showLock();}}],{width:260});},
+  'form-save':function(){saveForm();},
+  'form-client-clear':function(){state.form.client=null;reNew('cli');setTimeout(function(){var i=$('#cliQ');if(i)i.focus();},10);},
+  'form-status':function(a){state.form.status=a.dataset.v;$$('#nrSt button').forEach(function(b){b.setAttribute('aria-checked',b===a);});$('#nrSum').innerHTML=secSum();},
+  'f-room':function(a){var f=state.form,rn=a.dataset.room,i=f.sel.indexOf(rn);if(i>-1)f.sel.splice(i,1);else f.sel.push(rn);delete f.err.rooms;reNew('rooms');},
+  'f-nights':function(a){var f=state.form;f.co=Math.max(f.ci+1,f.co+(+a.dataset.d));delete f.err.date;validateSel();reNew('rooms');},
+  'f-pax':function(a){var f=state.form;f.persons=Math.max(1,Math.min(8,f.persons+(+a.dataset.d)));reNew('rooms');},
+  'f-tar':function(a){var f=state.form;f.tarifa=a.dataset.v;f.prices={};reNew('rooms');},
+};
+document.addEventListener('click',function(e){
+  var s=e.target.closest('[data-sel]');if(s){e.preventDefault();openSelect(s);return;}
+  var a=e.target.closest('[data-act]');if(!a){var tc=e.target.closest('.tl-cells[data-room]');if(tc)tlCellClick(tc,e);return;}var fn=ACT[a.dataset.act];if(fn){if(a.tagName==='A')e.preventDefault();fn(a,e);}
+});
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.id==='pSearch'){state.q=t.value;renderRoomsWrap();return;}
+  if(t.id==='prSearch'){state.prQ=t.value;keepRender(t.id);return;}
+  if(t.id==='cSearch'){state.cQ=t.value;keepRender(t.id);return;}
+  if(t.id==='rSearch'){state.rQ=t.value;keepRender(t.id);return;}
+  if(t.id==='vSearch'){state.vQ=t.value;var vl=$('#vList');if(vl)vl.innerHTML=vlistHTML(ventasList());return;}
+  if(t.id==='cliQ'){cliSearch(t);return;}
+  if(t.dataset&&t.dataset.ff&&state.form){state.form[t.dataset.ff]=t.value;return;}
+  if(t.dataset&&t.dataset.rp&&state.form){state.form.prices[t.dataset.rp]=Math.max(0,parseFloat(t.value)||0);sumNums();}
+});
+document.addEventListener('change',function(e){
+  var t=e.target;if(!(t.dataset&&t.dataset.fd)||!state.form)return;
+  var f=state.form,d=fromIso(t.value);if(d==null)return;
+  if(t.dataset.fd==='ci'){var n=Math.max(1,f.co-f.ci);f.ci=Math.max(TODAY,d);f.co=f.ci+n;}else f.co=d;
+  delete f.err.date;if(f.co<=f.ci)f.err.date='La salida debe ser después de la llegada.';
+  validateSel();reNew('rooms');
+});
+document.addEventListener('focusin',function(e){if(e.target.id==='cliQ')cliSearch(e.target);});
+document.addEventListener('keydown',function(e){
+  if(e.target.id==='cliQ'){if(e.key==='Enter'){e.preventDefault();if(POP&&POP.el._first)pickClient(POP.el._first);else newClient(e.target.value.trim());return;}if(e.key==='ArrowDown'&&POP){e.preventDefault();var m=POP.el.querySelector('.mi');if(m)m.focus();return;}}
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){e.preventDefault();if(PAL)closePalette();else openPalette();return;}
+  if(e.key==='Escape'){
+    if(POP){var an=POP.anchor;closePop();if(an&&an.focus)an.focus({preventScroll:true});e.preventDefault();return;}
+    if(MODAL){closeModal();return;}
+    if(PAL){closePalette();return;}
+    if(state.dw){closeDrawer();return;}
+    if($('#side').classList.contains('open')){closeSide();return;}
+  }
+  var typing=/^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+  if(e.key==='/'&&!typing&&!MODAL&&!PAL&&state.view==='panel'){var s=$('#pSearch');if(s){e.preventDefault();s.focus();}}
+  if(e.target.classList&&e.target.classList.contains('tab')&&(e.key==='ArrowRight'||e.key==='ArrowLeft')){var tabs=$$('#dwIn .tab'),i=tabs.indexOf(e.target),n=tabs[(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length];switchTab(n.dataset.tab);n.focus();}
+  if(e.key==='Tab'&&state.dw&&!MODAL&&!PAL&&!POP){var dr=$('.drawer'),fs=$$('button:not([disabled]),input,a[href],[tabindex="0"]',dr).filter(function(x){return x.offsetParent!==null;});if(!fs.length)return;if(e.shiftKey&&document.activeElement===fs[0]){e.preventDefault();fs[fs.length-1].focus();}else if(!e.shiftKey&&document.activeElement===fs[fs.length-1]){e.preventDefault();fs[0].focus();}}
+});
+document.addEventListener('submit',function(e){
+  if(e.target.matches('[data-form="note"]')){e.preventDefault();var r=curRes(),i=$('#noteIn'),v=i.value.trim();if(!r||!v)return;r.notes.push({text:v,who:ME(),d:TODAY,h:nowHM()});lg(r,TODAY,nowHM(),'Nota agregada');renderTab(false);toast('Nota guardada');setTimeout(function(){var n=$('#noteIn');if(n)n.focus();},10);}
+});
+
+/* ================= v7: facturación electrónica con Nooki (api.nooki.pe) ================= */
+/* Prototipo: la conexión con Nooki está simulada. En la versión real, el servidor
+   local del sistema guarda la llave de API y llama a api.nooki.pe con el módulo
+   nooki.mjs; SUNAT responde por webhooks a la nube y se sincroniza a la PC. */
+CFG.amazonia=false;CFG.adel='cobro';CFG.autoPrint=true;
+var NOOKI={online:true,lastOk:'',api:'api.nooki.pe',portal:'portal.nooki.pe'};
+function seriesHotel(){return [['Boleta','B001'],['Factura','F001'],['Nota de crédito de boleta','BC01'],['Nota de crédito de factura','FC01'],['Nota de venta (interna, no va a SUNAT)','NV01']];}
+function pad5(n){return ('0000'+n).slice(-5);}
+/* Ojo: estas funciones también se usan al cargar los datos de ejemplo, antes de
+   que corra este bloque. Por eso no dependen de variables definidas aquí. */
+function nextDoc(kind,ref){
+  if(kind==='Nota de crédito'){var f=ref&&ref.kind==='Factura';if(f){NCF=(NCF||0)+1;return 'FC01-'+pad5(NCF);}NCB=(NCB||0)+1;return 'BC01-'+pad5(NCB);}
+  return kind==='Factura'?'F001-'+pad5(++FAC):kind==='Nota de venta'?'NV01-'+pad5(++NV):'B001-'+pad5(++BOL);
+}
+var NCB,NCF;
+function igvF(){return CFG.amazonia?1:1+CFG.igv/100;}
+function igvTxt(){return CFG.amazonia?'Exonerado de IGV (Ley de la Amazonía)':'IGV '+CFG.igv+'%';}
+function rucValido(r){if(!/^(10|15|16|17|20)\d{9}$/.test(r))return false;var w=[5,4,3,2,7,6,5,4,3,2],s=0;for(var i=0;i<10;i++)s+=w[i]*+r[i];var d=11-s%11;d=d===10?0:d===11?1:d;return d===+r[10];}
+function hashDe(p){var s=p.doc+'|'+p.amount+'|'+p.d+'|'+p.h,h=2166136261,o='';for(var k=0;k<28;k++){for(var i=0;i<s.length;i++){h^=s.charCodeAt(i)+k;h=Math.imul(h,16777619)>>>0;}o+='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'[h%64];}return o.slice(0,27)+'=';}
+function qrSvg(seed){var n=21,c='',h=0;for(var i=0;i<seed.length;i++)h=(h*31+seed.charCodeAt(i))>>>0;
+  var fin=function(x,y){return (x<7&&y<7)||(x>n-8&&y<7)||(x<7&&y>n-8);};
+  for(var y=0;y<n;y++)for(var x=0;x<n;x++){var on;if(fin(x,y)){var a=x>n-8?x-(n-7):x,b=y>n-8?y-(n-7):y;on=a===0||a===6||b===0||b===6||(a>1&&a<5&&b>1&&b<5);}else{h=(h*1103515245+12345)>>>0;on=(h>>16)&1;}if(on)c+='<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';}
+  return '<svg class="qr" viewBox="-1 -1 23 23" aria-hidden="true"><rect x="-1" y="-1" width="23" height="23" fill="#fff"/><g fill="#111">'+c+'</g></svg>';}
+
+/* Envío a SUNAT a través de Nooki. Sin internet, el comprobante queda guardado y sale solo cuando vuelve. */
+function emitirSunat(p){
+  if(p.kind==='Nota de venta'){p.sunat='interno';return;}
+  p.sunat='pendiente';p.hash=p.hash||hashDe(p);
+  if(!NOOKI.online){p.offline=true;return;}
+  p.offline=false;
+  setTimeout(function(){if(p.sunat==='pendiente'&&NOOKI.online){p.sunat='aceptado';NOOKI.lastOk=nowHM();toast('SUNAT aceptó la '+p.kind.toLowerCase()+' '+p.doc);refresh();}},2800);
+}
+function pendientesSinInternet(){return allPays().filter(function(p){return p.sunat==='pendiente'&&p.offline;});}
+function enviarPendientes(){
+  var ps=pendientesSinInternet();if(!ps.length)return;
+  toast('Volvió internet · enviando '+plural(ps.length,'comprobante','comprobantes')+' a SUNAT',{icon:'arrow'});
+  ps.forEach(function(p,i){p.offline=false;setTimeout(function(){if(p.sunat==='pendiente'&&NOOKI.online){p.sunat='aceptado';NOOKI.lastOk=nowHM();refresh();}},900+i*450);});
+  refresh();
+}
+function sunPill(p,solid){var s=SUN[p.sunat];if(p.sunat==='pendiente'&&p.offline)s={l:'Sin internet',c:'clean',i:'clock'};return '<span class="pill st-'+s.c+(solid?' solid':'')+'">'+ic(s.i)+s.l+'</span>';}
+function moneyS(n){return n<0?'− '+money(-n):money(n);}
+function ncsDe(p){return (p.ncs||[]).map(findPay).filter(function(x){return x&&!x.anulado;});}
+function saldoNc(p){return Math.round((p.amount-ncsDe(p).reduce(function(s,x){return s-x.amount;},0))*100)/100;}
+function cliDe(p){if(!p.r)return {name:p.cli.name,doc:p.cli.doc,docType:p.cli.docType};var f=isFact(p);return f?{name:p.r.company.name,doc:p.r.company.ruc,docType:'RUC'}:{name:p.r.guest.name,doc:p.r.guest.doc,docType:p.r.guest.docType};}
+
+function vrow(p,i){
+  var sub=p.anulado&&p.anul?'Motivo: '+p.anul.motivo:p.kind==='Nota de crédito'?'Modifica '+p.refDoc:(p.ncs&&ncsDe(p).length?docOf(p)+' · con nota de crédito':docOf(p));
+  return '<button type="button" class="vrow" data-act="doc" data-pid="'+p.id+'" style="--i:'+Math.min(i,24)+'"><span class="vc-d">'+p.h+'</span><span class="vc-doc"><b class="mono">'+esc(p.doc)+'</b><small>'+esc(p.kind)+'</small></span><span class="vc-cli"><b>'+esc(clientOf(p))+'</b><small>'+esc(sub)+'</small></span><span class="vc-room">'+esc(placeOf(p))+'</span><span class="vc-m">'+ic(mIcon(p.method))+'<span>'+esc(p.method)+'</span></span><span class="vc-a'+(p.anulado?' void':'')+(p.amount<0?' neg':'')+'">'+moneyS(p.amount)+'</span><span class="vc-s">'+sunPill(p)+'</span></button>';
+}
+function nookiChip(){return '<span class="nk-chip st-'+(NOOKI.online?(CFG.env==='Producción'?'ok':'clean'):'dan')+'">'+ic(NOOKI.online?'check':'alert')+'<span>Facturación Nooki · '+(NOOKI.online?CFG.env:'sin internet')+'</span></span>';}
+function renderVentas(){
+  var per=allPays().filter(function(p){return inPer(p.d);});
+  var valid=per.filter(function(p){return !p.anulado;});
+  var tot=valid.reduce(function(s,p){return s+p.amount;},0);
+  var pend=per.filter(function(p){return p.sunat==='pendiente';}).length,rech=per.filter(function(p){return p.sunat==='rechazado';}).length,anulN=per.filter(function(p){return p.anulado;}).length;
+  var kL={all:'Todos los comprobantes',Boleta:'Boletas',Factura:'Facturas','Nota de crédito':'Notas de crédito','Nota de venta':'Notas de venta'};
+  var sL={all:'Todos los estados SUNAT',aceptado:'Aceptados',pendiente:'Por enviar',rechazado:'Rechazados',interno:'Control interno'};
+  SEL['v-kind']={value:function(){return state.vKind;},opts:function(){return Object.keys(kL).map(function(k){return {v:k,l:kL[k]};});},pick:function(v){state.vKind=v;render({soft:true});}};
+  SEL['v-sun']={value:function(){return state.vSun;},opts:function(){return Object.keys(sL).map(function(k){return {v:k,l:sL[k]};});},pick:function(v){state.vSun=v;render({soft:true});}};
+  var perL=PER.find(function(x){return x[0]===state.vPer;})[1].toLowerCase();
+  var off=pendientesSinInternet().length,banner='';
+  if(!NOOKI.online)banner='<div class="warn nk-banner" role="status">'+ic('alert')+'<span><b>Sin conexión a internet.</b> Puedes seguir cobrando: '+(off?plural(off,'comprobante espera','comprobantes esperan'):'los comprobantes nuevos esperan')+' y se envían a SUNAT solos cuando vuelva la conexión.</span></div>';
+  return '<div class="page-head"><div><h1>Ventas</h1><p class="sub">Boletas, facturas, notas de crédito y notas de venta de recepción y restaurante · '+igvTxt()+'</p></div><div class="head-actions">'+nookiChip()+'</div></div>'+banner+
+  '<div class="kpis">'+
+    kpiBox('ok','dollar','Total vendido · '+perL,money(tot),plural(valid.length,'comprobante válido','comprobantes válidos'))+
+    kpiBox('occ','receipt','Comprobantes',String(per.length),anulN?plural(anulN,'anulado','anulados'):'Ninguno anulado')+
+    kpiBox('clean','clock','Por enviar a SUNAT',String(pend),pend?(off?'Esperan internet; toca para verlos':'Se envían solos; toca para verlos'):'Todo enviado',pend?' data-act="v-sunf" data-v="pendiente"':'')+
+    kpiBox('dan','alert','Rechazados por SUNAT',String(rech),rech?'Ábrelos y vuelve a emitir':'Sin rechazos',rech?' data-act="v-sunf" data-v="rechazado"':'')+
+  '</div>'+
+  '<div class="ptabs" role="tablist" aria-label="Vista de ventas">'+[['comp','Comprobantes',per.length-anulN],['anul','Anulaciones',anulN]].map(function(t){return '<button type="button" role="tab" class="ptab" data-act="v-tab" data-v="'+t[0]+'" aria-selected="'+(state.vTab===t[0])+'">'+t[1]+'<span class="c">'+t[2]+'</span></button>';}).join('')+'</div>'+
+  '<div class="vtool"><div class="segm" role="radiogroup" aria-label="Período">'+PER.map(function(x){return '<button type="button" role="radio" data-act="v-per" data-v="'+x[0]+'" aria-checked="'+(state.vPer===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+  (state.vTab==='comp'?sel('v-kind',kL[state.vKind])+sel('v-sun',sL[state.vSun]):'')+
+  '<div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="vSearch" placeholder="Buscar por cliente, número o habitación" value="'+esc(state.vQ)+'" autocomplete="off" aria-label="Buscar comprobantes"></div></div>'+
+  '<div id="vList">'+vlistHTML(ventasList())+'</div>';
+}
+
+/* ---------- cobro ---------- */
+function openPay(r,then){
+  if(!r)return;var d=due(r);
+  var adel=(r.state==='reservado'||r.state==='confirmado')&&CFG.adel==='checkout';
+  var f={method:'Efectivo',kind:adel?'Nota de venta':r.company?'Factura':'Boleta',ruc:r.company?r.company.ruc:'',name:r.company?r.company.name:''};
+  SEL['pay-m']={value:function(){return f.method;},opts:function(){return activeMethods().map(function(m){return {v:m,l:m};});},pick:function(v){f.method=v;var w=MODAL&&MODAL.el;if(!w)return;$('[data-sel="pay-m"] span',w).textContent=v;$('#cajaW',w).hidden=!(v==='Efectivo'&&!state.caja);}};
+  var bol=r.guest?r.guest.docType+' '+r.guest.doc+' · '+r.guest.name:'';
+  openModal({title:'Cobrar · '+(r.room==='AUD'?'Auditorio':'Habitación '+r.room),
+    body:'<div class="pay-due"><span>Saldo de la cuenta</span><b>'+money(d)+'</b></div>'+
+      '<div class="field"><label for="payAmt">Monto a cobrar</label><div class="inp-pre"><span>S/</span><input type="number" id="payAmt" min="0" step="0.01" value="'+(d?d.toFixed(2):'')+'"></div></div>'+
+      '<div class="field"><span class="lb" id="payML">Método de pago</span>'+sel('pay-m',f.method)+'</div>'+
+      '<div class="field"><span class="lb" id="payKL">Comprobante</span><div class="segm" role="radiogroup" aria-labelledby="payKL" id="payKind">'+['Boleta','Factura','Nota de venta'].map(function(k){return '<button type="button" role="radio" aria-checked="'+(f.kind===k)+'" data-k="'+k+'">'+k+'</button>';}).join('')+'</div>'+
+        '<span class="hint" id="payKH">'+(adel?'Es un adelanto: según Ajustes, se registra con nota de venta y la boleta o factura sale en el check-out.':'')+'</span></div>'+
+      '<div class="g2" id="rucF"'+(f.kind==='Factura'?'':' hidden')+'><div class="field"><label for="payRuc">RUC de la empresa</label><input id="payRuc" inputmode="numeric" maxlength="11" value="'+esc(f.ruc)+'" placeholder="11 dígitos" autocomplete="off"></div>'+
+        '<div class="field"><label for="payName">Razón social</label><input id="payName" value="'+esc(f.name)+'" placeholder="Se completa con el RUC" autocomplete="off"></div><span class="hint span2" id="rucH"></span></div>'+
+      '<p class="hint" id="bolH"'+(f.kind==='Boleta'?'':' hidden')+'>'+ic('user')+' A nombre de '+esc(bol)+'</p>'+
+      '<div class="warn" id="cajaW"'+(!state.caja?'':' hidden')+'>'+ic('alert')+'<span>La caja está cerrada. Ábrela para recibir efectivo.</span><button type="button" class="btn btn-sm" id="cajaInline">Abrir caja</button></div>'+
+      (!NOOKI.online?'<div class="warn">'+ic('alert')+'<span>Sin internet: el comprobante se emite e imprime igual y se envía a SUNAT cuando vuelva la conexión.</span></div>':'')+
+      '<p class="ferr" id="payErr" hidden></p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="payGo">'+ic('dollar')+'Cobrar</button>',
+    onMount:function(w){
+      var ruc=$('#payRuc',w),nm=$('#payName',w),rh=$('#rucH',w);
+      var buscar=function(){var v=ruc.value.trim();rh.textContent='';rh.className='hint span2';if(v.length<11)return;
+        if(!rucValido(v)){rh.textContent='Este RUC no pasa la validación de SUNAT. Revisa los 11 números.';rh.className='hint span2 err-t';return;}
+        var c=COMPANIES.find(function(x){return x.ruc===v;});if(c){nm.value=c.name;rh.textContent='Empresa encontrada en tus clientes.';}else if(!nm.value)rh.textContent='En la versión real la razón social se completa sola con el padrón de SUNAT.';};
+      ruc.addEventListener('input',function(){ruc.value=ruc.value.replace(/\D/g,'');var c=COMPANIES.find(function(x){return x.ruc===ruc.value;});if(c)nm.value=c.name;buscar();});buscar();
+      $('#payKind',w).addEventListener('click',function(e){var b=e.target.closest('[data-k]');if(!b)return;f.kind=b.dataset.k;$$('#payKind button',w).forEach(function(x){x.setAttribute('aria-checked',x===b);});$('#rucF',w).hidden=f.kind!=='Factura';$('#bolH',w).hidden=f.kind!=='Boleta';});
+      $('#cajaInline',w).onclick=function(){openCaja();$('#cajaW',w).hidden=true;};
+      var amt=$('#payAmt',w),btn=$('#payGo',w);
+      var lab=function(){var v=parseFloat(amt.value);btn.innerHTML=ic('dollar')+'Cobrar'+(v>0?' '+money(v):'');};lab();amt.addEventListener('input',lab);
+      var go2=function(){var v=Math.round(parseFloat(amt.value)*100)/100,er=$('#payErr',w),m='';
+        if(!(v>0))m='Escribe un monto mayor a cero.';else if(v>d+0.001&&d>0)m='El monto supera el saldo de '+money(d)+'.';else if(f.method==='Efectivo'&&!state.caja)m='Abre la caja para cobrar en efectivo o elige otro método.';
+        else if(f.kind==='Factura'&&!/^\d{11}$/.test(ruc.value.trim()))m='El RUC debe tener 11 dígitos.';else if(f.kind==='Factura'&&!nm.value.trim())m='Escribe la razón social de la empresa.';
+        else if(f.kind==='Boleta'&&v>700&&(!r.guest||!r.guest.doc))m='Las boletas de más de S/ 700 necesitan el DNI del huésped.';
+        if(m){er.textContent=m;er.hidden=false;return;}
+        if(f.kind==='Factura'){var rv=ruc.value.trim(),n2=nm.value.trim();var c=COMPANIES.find(function(x){return x.ruc===rv;});if(!c){c={name:n2,ruc:rv};COMPANIES.push(c);}else c.name=n2;r.company=c;}
+        var p=addPay(r,v,f.method,f.kind,TODAY,nowHM());if(CFG.autoPrint)addJob('TICKET','Comprobante',p.doc);if(f.method==='Efectivo'&&state.caja)state.mov.push({h:p.h,type:'ingreso',cat:'Cobro de hospedaje',desc:roomOf(r)+' · '+p.doc,amount:v,who:ME()});
+        emitirSunat(p);closeModal(true);toast(p.kind+' '+p.doc+' emitida · '+money(v)+(p.offline?' · se enviará cuando vuelva internet':''));
+        if(then==='checkout'&&due(r)<=0){doCheckout(r);return;}refresh();};
+      btn.onclick=go2;amt.addEventListener('keydown',function(e){if(e.key==='Enter')go2();});
+    }});
+}
+
+/* ---------- comprobante (panel lateral) ---------- */
+function docActs(p){
+  if(p.kind==='Nota de venta')return '<div class="doc-acts"><button class="btn btn-sm" data-act="doc-print">'+ic('printer')+'Imprimir</button></div>';
+  var ok=p.sunat==='aceptado'||p.sunat==='anulado',canNc=(p.kind==='Boleta'||p.kind==='Factura')&&p.sunat==='aceptado'&&!p.anulado&&saldoNc(p)>0.004;
+  return '<div class="doc-acts">'+
+    '<button class="btn btn-sm" data-act="doc-print">'+ic('printer')+'Imprimir ticket</button>'+
+    '<button class="btn btn-sm" data-act="doc-file" data-v="PDF">'+ic('receipt')+'PDF</button>'+
+    '<button class="btn btn-sm" data-act="doc-wa">'+ic('message')+'WhatsApp</button>'+
+    '<button class="btn btn-sm" data-act="doc-file" data-v="XML">XML</button>'+
+    '<button class="btn btn-sm" data-act="doc-file" data-v="CDR"'+(ok?'':' disabled title="SUNAT aún no responde"')+'>CDR</button>'+
+    (canNc?'<button class="btn btn-sm" data-act="doc-nc">'+ic('undo')+'Nota de crédito</button>':'')+
+  '</div>';
+}
+function drawerDoc(p){
+  var r=p.r,s=SUN[p.sunat],F=igvF(),nc=p.kind==='Nota de crédito',abs=Math.abs(p.amount),base=abs/F,igv=abs-base,fact=isFact(p);
+  var kindUp=p.kind==='Nota de venta'?'NOTA DE VENTA':p.kind.toUpperCase()+' ELECTRÓNICA';
+  var lines;
+  if(nc)lines='<div class="pp-l"><span>'+esc('Motivo '+p.motivo.c+' · '+p.motivo.l)+'</span><b>'+fm(abs)+'</b></div>';
+  else if(r){var part=p.amount<total(r)-0.001;lines='<div class="pp-l"><span>'+esc('Hospedaje · '+roomOf(r)+' '+TYPES[room(r.room).t].n+' · '+fmtD(r.ci)+' → '+fmtD(r.co)+(part?' (pago a cuenta)':''))+'</span><b>'+fm(p.amount)+'</b></div>';}
+  else lines=p.items.map(function(i){return '<div class="pp-l"><span>'+i.q+' × '+esc(i.n)+'</span><b>'+fm(i.q*i.p)+'</b></div>';}).join('');
+  var cl=cliDe(p);
+  var sun;
+  if(p.sunat==='aceptado')sun=heroBox('ok','check','Aceptado por SUNAT','Nooki guardó la constancia (CDR) con código 0 junto al XML firmado y el PDF.');
+  else if(p.sunat==='pendiente'&&p.offline)sun=heroBox('clean','clock','Esperando internet','Se emitió y se puede imprimir. Se enviará a SUNAT solo apenas vuelva la conexión.');
+  else if(p.sunat==='pendiente')sun=heroBox('clean','clock','Enviando a SUNAT','Nooki lo envía y vuelve a intentar solo si SUNAT no responde.','<button class="btn btn-sm btn-ok" data-act="doc-send" style="margin-top:12px">'+ic('arrow')+'Enviar ahora</button>');
+  else if(p.sunat==='rechazado')sun=heroBox('dan','alert','Rechazado por SUNAT',esc(p.obs||'')+' Ese número ya no sirve. Corrige el dato y emite uno nuevo.',p.anulado?'':'<button class="btn btn-sm btn-ok" data-act="doc-reemit" style="margin-top:12px">'+ic('undo')+'Emitir de nuevo</button>');
+  else if(p.sunat==='interno')sun=heroBox('off','receipt','Control interno','Las notas de venta no se envían a SUNAT. Sirven para llevar la cuenta dentro del hotel.');
+  else sun=heroBox('off','x','Anulado el '+fmtD(p.anul.d)+' a las '+p.anul.h,'Motivo: '+esc(p.anul.motivo)+'. '+esc(p.anul.via)+'.');
+  var kids=ncsDe(p),rel='';
+  if(nc){var o=findPay(p.ref);rel='<div><h3 style="margin-bottom:10px">Comprobante que modifica</h3><div class="rows">'+(o?'<button type="button" class="row" data-act="doc" data-pid="'+o.id+'"><span class="av sm">'+ic('receipt')+'</span><span class="grow"><b class="mono">'+esc(o.doc)+'</b><small>'+esc(o.kind)+' · '+money(o.amount)+' · '+esc(clientOf(o))+'</small></span>'+sunPill(o)+'</button>':'')+'</div></div>';}
+  else if(kids.length)rel='<div><h3 style="margin-bottom:10px">Notas de crédito</h3><div class="rows">'+kids.map(function(k){return '<button type="button" class="row" data-act="doc" data-pid="'+k.id+'"><span class="av sm">'+ic('undo')+'</span><span class="grow"><b class="mono">'+esc(k.doc)+'</b><small>'+esc(k.motivo.l)+' · '+money(-k.amount)+'</small></span>'+sunPill(k)+'</button>';}).join('')+'</div></div>';
+  var origin=r?'<div><h3 style="margin-bottom:10px">Reserva</h3><div class="rows"><button type="button" class="row" data-act="res" data-id="'+r.id+'"><span class="av sm">'+ini(r.guest.name)+'</span><span class="grow"><b>'+esc(r.guest.name)+'</b><small>'+roomOf(r)+' · Reserva #'+r.id+' · '+fmtD(r.ci)+' → '+fmtD(r.co)+'</small></span>'+pill(resSt(r))+'</button></div></div>'
+    :(nc?'':'<div><h3 style="margin-bottom:10px">Origen</h3><div class="rows"><div class="row"><span class="av sm">'+ic('utensils')+'</span><span class="grow"><b>'+esc(p.place)+'</b><small>Venta del restaurante</small></span></div></div></div>');
+  var hash=p.kind==='Nota de venta'?'':(p.hash||(p.hash=hashDe(p)));
+  var opL=CFG.amazonia?'Op. exonerada':'Op. gravada';
+  return '<header class="dw-h st-'+s.c+'"><div><span class="dw-num" id="dwTitle">'+esc(p.doc)+'</span><span class="dw-type">'+esc(p.kind)+' · '+cap(fmtDL(p.d))+' · '+p.h+'</span>'+sunPill(p,true).replace('class="pill','class="pill pill-m')+'</div><div class="dw-hact">'+sunPill(p,true)+'<button class="btn-icon" data-act="dw-close" aria-label="Cerrar panel">'+ic('x')+'</button></div></header>'+
+  '<div class="dw-body">'+sun+docActs(p)+
+  '<div class="paper" role="img" aria-label="'+esc(p.kind+' '+p.doc+' por '+money(abs)+' a nombre de '+clientOf(p))+'">'+
+    '<div class="pp-h"><div><b>'+esc(CFG.name.toUpperCase())+'</b><span>'+esc(CFG.addr)+'</span></div><div class="pp-box">'+(CFG.ruc?'RUC '+esc(CFG.ruc):'RUC del hotel')+'<br><b>'+kindUp+'</b><br><span class="mono">'+esc(p.doc)+'</span></div></div>'+
+    '<dl class="pp-dl"><dt>Cliente</dt><dd>'+esc(cl.name)+'</dd><dt>'+esc(cl.docType)+'</dt><dd class="mono">'+esc(cl.doc)+'</dd><dt>Emisión</dt><dd>'+fmtD(p.d)+' 2026 · '+p.h+'</dd>'+(nc?'<dt>Modifica</dt><dd class="mono">'+esc(p.refDoc)+'</dd>':'<dt>Forma de pago</dt><dd>Contado · '+esc(p.method)+'</dd>')+'</dl>'+
+    lines+
+    '<div class="pp-t"><div><span>'+opL+'</span><span>'+fm(base)+'</span></div><div><span>'+(CFG.amazonia?'IGV':'IGV '+CFG.igv+'%')+'</span><span>'+fm(igv)+'</span></div><div class="t"><span>'+(nc?'Total a devolver':'Total')+'</span><span>'+money(abs)+'</span></div></div>'+
+    (CFG.amazonia&&p.kind!=='Nota de venta'?'<p class="pp-leg">Servicios prestados en la Amazonía · Región Selva para ser consumidos en la misma.</p>':'')+
+    (hash?'<div class="pp-qr">'+qrSvg(hash)+'<div><span>Representación impresa de la '+esc(p.kind.toLowerCase())+' electrónica.</span><span class="mono">Hash: '+esc(hash)+'</span><span>Consulta su validez en SUNAT. QR de ejemplo.</span></div></div>':'')+
+    (p.anulado?'<div class="pp-void" aria-hidden="true">ANULADO</div>':'')+
+  '</div>'+rel+origin+
+  '</div><footer class="dw-f">'+(p.anulado?'<span class="nt">Este comprobante ya no suma en las ventas</span>':'<span class="nt">'+ic('check')+(nc?(p.method==='Sin devolución'?'Queda a favor del cliente':'Devuelto con '+esc(p.method)):p.method==='Efectivo'?'Cobrado en efectivo':'Cobrado con '+esc(p.method))+'</span><button class="btn btn-dang-o" data-act="doc-void">'+ic('trash')+'Anular</button>')+(r?'<button class="btn" data-act="res" data-id="'+r.id+'">'+ic('bed')+'Ver reserva</button>':'')+'</footer>';
+}
+function voidDoc(p){
+  if(ncsDe(p).length){toast('Tiene una nota de crédito vigente: anúlala primero',{icon:'alert'});return;}
+  var bajaF=p.kind==='Factura'||(p.kind==='Nota de crédito'&&/^F/.test(p.doc)),bajaB=p.kind==='Boleta'||(p.kind==='Nota de crédito'&&/^B/.test(p.doc));
+  var via=bajaF?'Enviado a SUNAT como comunicación de baja':bajaB?'Informado a SUNAT en el resumen diario':'Anulación interna';
+  var txt=bajaF?'Nooki envía a SUNAT una comunicación de baja. Solo se puede dentro de los 7 días de emitido; después corresponde una nota de crédito.':bajaB?'Nooki lo informa a SUNAT en el resumen diario de anulaciones.':'Es un comprobante interno: solo se anula en el sistema.';
+  if(p.sunat==='pendiente'){toast('Espera a que SUNAT responda antes de anular',{icon:'alert'});return;}
+  if(p.kind!=='Nota de venta'&&p.sunat!=='aceptado'&&p.sunat!=='rechazado'){toast('Solo se anulan comprobantes aceptados por SUNAT',{icon:'alert'});return;}
+  if((bajaF||bajaB)&&TODAY-p.d>7){toast('Pasaron más de 7 días: emite una nota de crédito',{icon:'alert'});return;}
+  openModal({title:'Anular '+p.kind.toLowerCase()+' '+p.doc,body:'<div class="pay-due"><span>'+esc(clientOf(p))+'</span><b>'+moneyS(p.amount)+'</b></div><p>'+txt+(p.r?' La reserva vuelve a tener este monto como saldo pendiente.':'')+'</p><div class="field"><label for="vdM">Motivo</label><input id="vdM" placeholder="Ej.: el cliente pidió factura" autocomplete="off"></div><p class="ferr" id="vdE" hidden>Escribe el motivo de la anulación.</p>',
+    foot:'<button class="btn" data-close>Volver</button><button class="btn btn-danger" id="vdGo">'+ic('trash')+'Anular comprobante</button>',
+    onMount:function(w){var go2=function(){var m=$('#vdM',w).value.trim();if(!m){$('#vdE',w).hidden=false;$('#vdM',w).classList.add('err-b');return;}
+      p.anulado=true;p.sunat='anulado';p.anul={d:TODAY,h:nowHM(),motivo:m,via:via};if(p.r)lg(p.r,TODAY,nowHM(),'Comprobante '+p.doc+' anulado · '+m);
+      if(p.method==='Efectivo'&&state.caja&&p.amount>0)state.mov.push({h:nowHM(),type:'salida',cat:'Devolución por anulación',desc:p.doc+' · '+placeOf(p),amount:p.amount,who:ME()});
+      closeModal(true);toast(p.kind+' '+p.doc+' anulada',{icon:'trash'});refresh();};
+      $('#vdGo',w).onclick=go2;$('#vdM',w).addEventListener('keydown',function(e){if(e.key==='Enter')go2();});}});
+}
+var MOT_NC=[['01','Anulación de la operación',1],['06','Devolución total',1],['07','Devolución por ítem',0],['09','Disminución en el valor',0],['04','Descuento global',0]];
+function ncModal(p){
+  var max=saldoNc(p),f={mot:'01',dev:'Efectivo'};
+  var devs=['Efectivo','Yape','Plin','Transferencia BCP','Sin devolución'];
+  SEL['nc-m']={value:function(){return f.mot;},opts:function(){return MOT_NC.map(function(m){return {v:m[0],l:m[0]+' · '+m[1]};});},pick:function(v){f.mot=v;var w=MODAL.el,m=MOT_NC.find(function(x){return x[0]===v;});$('[data-sel="nc-m"] span',w).textContent=v+' · '+m[1];var a=$('#ncAmt',w);if(m[2]){a.value=max.toFixed(2);a.readOnly=true;}else a.readOnly=false;}};
+  SEL['nc-d']={value:function(){return f.dev;},opts:function(){return devs.map(function(m){return {v:m,l:m==='Sin devolución'?'Sin devolución (queda a favor)':m};});},pick:function(v){f.dev=v;$('[data-sel="nc-d"] span',MODAL.el).textContent=v;}};
+  openModal({title:'Nota de crédito · '+p.doc,
+    body:'<div class="pay-due"><span>'+esc(clientOf(p))+' · saldo que se puede acreditar</span><b>'+money(max)+'</b></div>'+
+      '<div class="field"><span class="lb">Motivo (catálogo SUNAT)</span>'+sel('nc-m','01 · Anulación de la operación')+'</div>'+
+      '<div class="field"><label for="ncAmt">Monto</label><div class="inp-pre"><span>S/</span><input type="number" id="ncAmt" min="0" step="0.01" value="'+max.toFixed(2)+'" readonly></div><span class="hint">En anulación y devolución total va el saldo completo.</span></div>'+
+      '<div class="field"><span class="lb">Devolución al cliente</span>'+sel('nc-d',f.dev)+'</div>'+
+      '<p class="hint">La nota de crédito no cambia la cuenta de la reserva. Si devuelves efectivo, sale de la caja.</p><p class="ferr" id="ncE" hidden></p>',
+    foot:'<button class="btn" data-close>Volver</button><button class="btn btn-ok" id="ncGo">'+ic('undo')+'Emitir nota de crédito</button>',
+    onMount:function(w){$('#ncGo',w).onclick=function(){var a=Math.round(parseFloat($('#ncAmt',w).value)*100)/100,e=$('#ncE',w),m='';
+      if(!(a>0))m='Escribe un monto mayor a cero.';else if(a>max+0.001)m='El monto supera el saldo de '+money(max)+'.';else if(f.dev==='Efectivo'&&!state.caja)m='Abre la caja para devolver efectivo o elige otra forma.';
+      if(m){e.textContent=m;e.hidden=false;return;}
+      var mot=MOT_NC.find(function(x){return x[0]===f.mot;}),cl=cliDe(p);
+      var n={id:++PID,r:null,place:placeOf(p),cli:{name:cl.name,doc:cl.doc,docType:cl.docType},items:[],doc:nextDoc('Nota de crédito',p),method:f.dev,amount:-a,kind:'Nota de crédito',d:TODAY,h:nowHM(),anulado:false,ref:p.id,refDoc:p.doc,motivo:{c:mot[0],l:mot[1]},sunat:'pendiente'};
+      EXTRA.unshift(n);p.ncs=(p.ncs||[]).concat(n.id);if(p.r)lg(p.r,TODAY,nowHM(),'Nota de crédito '+n.doc+' sobre '+p.doc+' · '+money(a));
+      if(f.dev==='Efectivo')state.mov.push({h:n.h,type:'salida',cat:'Devolución por nota de crédito',desc:n.doc+' · '+p.doc,amount:a,who:ME()});
+      if(CFG.autoPrint)addJob('TICKET','Comprobante',n.doc);emitirSunat(n);closeModal(true);toast('Nota de crédito '+n.doc+' emitida · '+money(a));openDoc(n.id);refresh();};}});
+}
+function waModal(p){
+  var tel=p.r&&p.r.guest&&p.r.guest.phone?p.r.guest.phone:'';
+  openModal({title:'Enviar por WhatsApp',body:'<p>Se envía el enlace al PDF de la '+esc(p.kind.toLowerCase())+' <b class="mono">'+esc(p.doc)+'</b>. El cliente lo abre sin instalar nada.</p><div class="field"><label for="waTel">Celular</label><div class="inp-pre"><span>+51</span><input id="waTel" inputmode="numeric" maxlength="9" value="'+esc(tel)+'" placeholder="9 dígitos" autocomplete="off"></div></div><p class="ferr" id="waTE" hidden>El celular debe tener 9 dígitos y empezar con 9.</p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="waTGo">'+ic('message')+'Enviar</button>',
+    onMount:function(w){$('#waTGo',w).onclick=function(){var t=$('#waTel',w).value.trim();if(!/^9\d{8}$/.test(t)){$('#waTE',w).hidden=false;return;}closeModal(true);toast('Comprobante '+p.doc+' enviado por WhatsApp al '+t,{icon:'message'});};}});
+}
+function reemitir(p){
+  if(!p.r){toast('Vuelve a cobrar la mesa desde Restaurante',{icon:'alert'});return;}
+  p.anulado=true;p.anul={d:TODAY,h:nowHM(),motivo:'Rechazado por SUNAT',via:'Reemplazado por un comprobante nuevo'};
+  lg(p.r,TODAY,nowHM(),'Comprobante '+p.doc+' rechazado por SUNAT; se emite uno nuevo');closeDrawer();
+  var r=p.r;setTimeout(function(){openPay(r);var w=MODAL&&MODAL.el;if(w){var a=$('#payAmt',w);if(a){a.value=p.amount.toFixed(2);a.dispatchEvent(new Event('input'));}}},350);
+}
+
+/* ---------- ajustes · facturación ---------- */
+function sunatBody(){
+  var conn=NOOKI.online?(CFG.env==='Producción'?'ok':'clean'):'dan';
+  return '<div class="nk-card st-'+conn+'"><span class="hi">'+ic(NOOKI.online?'check':'alert')+'</span><div class="grow"><b>'+(NOOKI.online?'Conectado a Nooki · '+CFG.env:'Sin internet')+'</b><p>'+(NOOKI.online?'Los comprobantes se firman y se envían a SUNAT a través de '+NOOKI.api+'.'+(NOOKI.lastOk?' Último aceptado a las '+NOOKI.lastOk+'.':''):'Se sigue emitiendo; lo pendiente se envía solo cuando vuelva la conexión.')+'</p></div><button class="btn btn-sm" data-act="nooki-test">'+ic('arrow')+'Probar conexión</button></div>'+
+  '<div class="g2">'+
+    '<div class="field"><span class="lb">RUC del hotel</span><div class="secret '+(CFG.ruc?'ok':'')+'">'+ic(CFG.ruc?'check':'alert')+'<span>'+(CFG.ruc?esc(CFG.ruc)+' · '+esc(CFG.legal||CFG.name):'Falta: escríbelo en Empresa')+'</span></div></div>'+
+    '<div class="field"><span class="lb">Certificado digital y usuario SOL</span><div class="secret ok">'+ic('check')+'<span>Guardados en Nooki, cifrados. Se cambian en '+NOOKI.portal+'.</span></div></div>'+
+    '<div class="field span2"><span class="lb" id="envL">Ambiente</span><div class="segm" role="radiogroup" aria-labelledby="envL">'+['Pruebas','Producción'].map(function(x){return '<button type="button" role="radio" data-act="cfg-env" data-v="'+x+'" aria-checked="'+(CFG.env===x)+'">'+x+'</button>';}).join('')+'</div><span class="hint">'+(CFG.env==='Pruebas'?'En pruebas los comprobantes no tienen valor legal: el PDF sale con la marca «SIN VALOR LEGAL».':'Los comprobantes se envían a SUNAT con valor legal. El paso a producción lo aprueba Nooki.')+'</span></div>'+
+  '</div>'+
+  '<h3>Series</h3>'+lt('minmax(0,1.6fr) 120px',['Comprobante','>Serie'],seriesHotel().map(function(s){return '<div class="lt-r">'+cell('Comprobante',esc(s[0]),'wide')+cell('Serie','<b class="mono">'+s[1]+'</b>','r')+'</div>';}))+'<p class="hint">Las series las crea Nooki. Si el hotel abre otra caja, se agrega una serie nueva.</p>'+
+  '<h3>Impuesto</h3><div class="g2">'+inp('cfIgv','Porcentaje de IGV',CFG.igv,{k:'igv',type:'number',pre:'%',attr:' min="0" max="18" step="0.5"',hint:'18 % general · 10.5 % hoteles MYPE en 2026 (Ley 31556).'})+
+    '<label class="rsw"><span><b>Exonerado por la Ley de la Amazonía</b><small>'+(CFG.amazonia?'Activo: el hospedaje sale sin IGV':'Ley 27037 · Madre de Dios y demás zonas de la Amazonía')+'</small></span>'+sw(CFG.amazonia,'cfg-amaz','','Exonerado por la Ley de la Amazonía')+'</label></div>'+
+    '<p class="hint">'+(/madre de dios|loreto|ucayali|amazonas|san mart/i.test(CFG.addr)?'El hotel está en zona de la Amazonía: lo más probable es que el hospedaje vaya exonerado. ':'')+'Lo confirma el contador del hotel y Nooki lo deja fijo para que nadie lo cambie por error.</p>'+
+  '<h3>Al cobrar</h3><div class="g2">'+
+    '<div class="field"><span class="lb" id="adL">Adelantos de reservas</span><div class="segm" role="radiogroup" aria-labelledby="adL">'+[['cobro','Comprobante al cobrar'],['checkout','Comprobante en el check-out']].map(function(x){return '<button type="button" role="radio" data-act="cfg-adel" data-v="'+x[0]+'" aria-checked="'+(CFG.adel===x[0])+'">'+x[1]+'</button>';}).join('')+'</div><span class="hint">'+(CFG.adel==='cobro'?'Cada adelanto sale con su boleta o factura.':'El adelanto se registra con nota de venta y la boleta o factura sale al final.')+' Lo define el contador.</span></div>'+
+    '<label class="rsw"><span><b>Imprimir el ticket al emitir</b><small>'+(CFG.autoPrint?'Sale solo en la ticketera de recepción':'Se imprime con el botón del comprobante')+'</small></span>'+sw(CFG.autoPrint,'cfg-print','','Imprimir ticket al emitir')+'</label>'+
+  '</div>'+
+  '<h3>Prueba sin internet</h3><label class="rsw"><span><b>Simular que se cayó el internet</b><small>'+(NOOKI.online?'Actívalo para ver cómo sigue funcionando el cobro':'Activo: los comprobantes quedan esperando')+'</small></span>'+sw(!NOOKI.online,'nooki-net','','Simular sin internet')+'</label>';
+}
+Object.assign(ACT,{
+  'doc-send':function(){var p=findPay(state.dw.pid);if(!p)return;if(!NOOKI.online){toast('Sin internet: se enviará cuando vuelva la conexión',{icon:'alert'});return;}p.offline=false;p.sunat='aceptado';NOOKI.lastOk=nowHM();if(p.r)lg(p.r,TODAY,nowHM(),'Comprobante '+p.doc+' aceptado por SUNAT');toast('SUNAT aceptó la '+p.kind.toLowerCase()+' '+p.doc);refresh();},
+  'doc-print':function(){var p=findPay(state.dw.pid);if(!p)return;addJob('TICKET','Comprobante',p.doc);toast('Ticket de '+p.doc+' enviado a la impresora',{icon:'printer'});},
+  'doc-file':function(a){var p=findPay(state.dw.pid);if(!p)return;var t=a.dataset.v;toast(t==='PDF'?'PDF de '+p.doc+' abierto':t+' de '+p.doc+' descargado',{icon:'receipt'});},
+  'doc-wa':function(){var p=findPay(state.dw.pid);if(p)waModal(p);},
+  'doc-nc':function(){var p=findPay(state.dw.pid);if(p)ncModal(p);},
+  'doc-reemit':function(){var p=findPay(state.dw.pid);if(p)reemitir(p);},
+  'cfg-amaz':function(){CFG.amazonia=!CFG.amazonia;toast(CFG.amazonia?'Hospedaje exonerado de IGV (Amazonía)':'Hospedaje con IGV '+CFG.igv+'%',{icon:'receipt'});render({soft:true});},
+  'cfg-adel':function(a){CFG.adel=a.dataset.v;render({soft:true});},
+  'cfg-print':function(){CFG.autoPrint=!CFG.autoPrint;render({soft:true});},
+  'nooki-net':function(){NOOKI.online=!NOOKI.online;if(NOOKI.online)enviarPendientes();else toast('Sin internet: el cobro sigue funcionando',{icon:'alert'});render({soft:true});updateNav&&updateNav();},
+  'nooki-test':function(){if(!NOOKI.online){toast('No hay internet: no se pudo llegar a Nooki',{icon:'alert'});return;}toast('Conexión con Nooki correcta · '+CFG.env,{icon:'check'});}
+});
+
+
+/* ================= v8: una sola PC en recepción, sin usuarios ================= */
+/* La PC de recepción abre directo con acceso completo (perfil administrador).
+   No hay pantalla de ingreso, PIN ni permisos por cargo. El equipo (Ajustes →
+   Personal) sigue existiendo para asignar limpieza, caja y mozos. */
+function ME(){return 'Recepción';}
+function can(){return true;}
+function entrarRecepcion(){state.user=null;var l=document.getElementById('lock');if(l)l.hidden=true;$('.app').inert=false;applyPerms();render();}
+SETS=SETS.filter(function(x){return x[0]!=='permisos';});
+Object.assign(ACT,{
+  'me':function(a){menu(a,[{head:'Recepción · '+CFG.name},{label:effTheme()==='dark'?'Usar tema claro':'Usar tema oscuro',icon:effTheme()==='dark'?'sun':'moon',run:toggleTheme},{label:'Atajos: Ctrl K para buscar, / para filtrar el panel',icon:'search',disabled:true}],{width:260});}
+});
+
+/* ================= v9: clave de administrador y auditoría ================= */
+/* Sin usuarios, lo delicado pide una clave de administrador: entrar a Ajustes y a
+   Auditoría, anular comprobantes, emitir notas de crédito, anular reservas y
+   cambiar el precio de una reserva. Con la clave correcta queda abierto 10 minutos
+   (se renueva con cada uso) o hasta tocar «Bloquear».
+   Auditoría: todo lo que pasa en el sistema queda anotado con fecha y hora. En la
+   versión real se guarda en la base de datos y no se puede editar ni borrar. */
+var ADM={clave:'1234',hasta:0,fallos:0,esperaHasta:0,MIN:10};
+var AUD=[],AUDSEQ=0;
+function adminActivo(){return Date.now()<ADM.hasta;}
+function renovarAdmin(){ADM.hasta=Date.now()+ADM.MIN*60000;}
+function audit(mod,txt,nivel,d,h){if(!AUD)return;AUD.push({seq:++AUDSEQ,d:d==null?TODAY:d,h:h||nowHM(),mod:mod,txt:txt,nivel:nivel||''});}
+function modActual(){var L=LABEL[state.view];return L?L[1]:'Sistema';}
+/* cada aviso que da el sistema es un movimiento: se anota en la auditoría */
+function toast(msg,o){
+  toastBase(msg,o);o=o||{};
+  if(!AUD||o.noAudit)return;
+  if(/^Tema (claro|oscuro)|^Hola,/.test(msg))return;
+  var mod=/^SUNAT /.test(msg)?'SUNAT':/^Volvió internet|^Sin internet/.test(msg)?'Facturación':modActual();
+  audit(mod,msg,o.icon==='alert'?'alerta':/^SUNAT /.test(msg)?'sunat':'');
+}
+function intentarClave(v,motivo){
+  var ahora=Date.now();
+  if(ahora<ADM.esperaHasta)return 'Demasiados intentos. Espera '+Math.ceil((ADM.esperaHasta-ahora)/1000)+' segundos.';
+  if(v!==ADM.clave){ADM.fallos++;audit('Seguridad','Clave de administrador incorrecta · '+motivo,'alerta');
+    if(ADM.fallos>=5){ADM.fallos=0;ADM.esperaHasta=ahora+60000;audit('Seguridad','Cinco claves incorrectas seguidas: bloqueado 1 minuto','alerta');return 'Demasiados intentos. Espera 1 minuto.';}
+    return 'Clave incorrecta. Te quedan '+(5-ADM.fallos)+' intentos.';}
+  ADM.fallos=0;renovarAdmin();audit('Seguridad','Clave de administrador correcta · '+motivo,'clave');actualizarAdmChip();return '';
+}
+function pedirClave(motivo,fn){
+  if(adminActivo()){renovarAdmin();fn();return;}
+  openModal({title:'Clave de administrador',width:400,
+    body:'<p>'+esc(motivo)+' necesita la clave de administrador.</p><div class="field"><label for="admPin2">Clave</label><input id="admPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="••••"></div><p class="ferr" id="admE2" hidden></p><p class="hint">Queda abierto '+ADM.MIN+' minutos. Demo: la clave es 1234.</p>',
+    foot:'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="admGo">'+ic('login')+'Continuar</button>',
+    onMount:function(w){var inp=$('#admPin2',w),go2=function(){var m=intentarClave(inp.value.trim(),motivo);if(m){var e=$('#admE2',w);e.textContent=m;e.hidden=false;inp.value='';inp.focus();return;}closeModal(true);fn();};
+      $('#admGo',w).onclick=go2;inp.addEventListener('keydown',function(e){if(e.key==='Enter')go2();});}});
+}
+function lockedView(t){
+  return '<div class="noperm card adm-lock"><span class="np-ic">'+ic('login')+'</span><h2>'+esc(t)+' pide la clave de administrador</h2><p>Escríbela para entrar. Queda abierto '+ADM.MIN+' minutos o hasta que toques «Bloquear».</p>'+
+    '<form class="adm-f" data-form="adm" data-t="'+esc(t)+'"><input id="admPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off" aria-label="Clave de administrador" placeholder="••••"><button class="btn btn-primary btn-lg">'+ic('login')+'Entrar</button></form><p class="ferr" id="admE" hidden></p><p class="hint">Demo: la clave es 1234</p></div>';
+}
+document.addEventListener('submit',function(e){
+  if(!e.target.matches('[data-form="adm"]'))return;e.preventDefault();
+  var i=$('#admPin'),m=intentarClave(i.value.trim(),'Entrar a '+e.target.dataset.t);
+  if(m){var er=$('#admE');er.textContent=m;er.hidden=false;i.value='';i.focus();return;}
+  render();
+});
+var _vAjustes=VIEWS.ajustes;
+VIEWS.ajustes=function(){if(!adminActivo())return lockedView('Ajustes');renovarAdmin();return _vAjustes();};
+VIEWS.auditoria=function(){if(!adminActivo())return lockedView('Auditoría');renovarAdmin();return renderAuditoria();};
+/* aviso arriba mientras el modo administrador está abierto */
+(function(){var c=$('#cajaBtn');if(!c||$('#admChip'))return;var b=document.createElement('button');b.type='button';b.id='admChip';b.className='adm-chip';b.dataset.act='adm-lock';b.hidden=true;c.parentNode.insertBefore(b,c);})();
+function actualizarAdmChip(){var b=$('#admChip');if(!b)return;var on=adminActivo();b.hidden=!on;if(on){var s=Math.max(0,Math.round((ADM.hasta-Date.now())/1000));b.innerHTML=ic('login')+'<span>Administrador · '+Math.floor(s/60)+':'+('0'+s%60).slice(-2)+'</span><b>Bloquear</b>';b.setAttribute('aria-label','Modo administrador abierto. Tocar para bloquear');}}
+setInterval(function(){var was=!$('#admChip')||!$('#admChip').hidden;actualizarAdmChip();if(was&&!adminActivo()&&(state.view==='ajustes'||state.view==='auditoria')&&!$('#admPin'))render({soft:true});},1000);
+/* cambiar el precio en una reserva nueva también pide la clave */
+document.addEventListener('focusin',function(e){
+  var t=e.target;if(!(t.dataset&&t.dataset.rp)||adminActivo())return;t.blur();
+  pedirClave('Cambiar el precio de la reserva',function(){audit('Reservas','Precio de la reserva habilitado para cambiar','clave');setTimeout(function(){var n=$('[data-rp="'+t.dataset.rp+'"]');if(n){n.focus();n.select&&n.select();}},60);});
+},true);
+function anular(r){pedirClave('Anular la reserva #'+r.id,function(){anularBase(r);});}
+Object.assign(ACT,{
+  'doc-void':function(){var p=findPay(state.dw.pid);if(p)pedirClave('Anular '+p.kind.toLowerCase()+' '+p.doc,function(){voidDoc(p);});},
+  'doc-nc':function(){var p=findPay(state.dw.pid);if(p)pedirClave('Emitir una nota de crédito sobre '+p.doc,function(){ncModal(p);});},
+  'adm-lock':function(){ADM.hasta=0;audit('Seguridad','Modo administrador bloqueado','clave');actualizarAdmChip();toast('Modo administrador bloqueado',{icon:'login',noAudit:true});if(state.view==='ajustes'||state.view==='auditoria')render();},
+  'au-per':function(a){state.auPer=a.dataset.v;render({soft:true});},
+  'au-niv':function(a){state.auNiv=state.auNiv===a.dataset.v?'all':a.dataset.v;render({soft:true});},
+  'adm-save':function(){var a=$('#scA').value.trim(),n=$('#scN').value.trim(),r2=$('#scR').value.trim(),e=$('#scE'),m='';
+    if(a!==ADM.clave)m='La clave actual no es correcta.';else if(!/^\d{4,6}$/.test(n))m='La clave nueva debe tener de 4 a 6 números.';else if(n!==r2)m='Las dos claves nuevas no coinciden.';else if(n===ADM.clave)m='La clave nueva es igual a la actual.';
+    if(m){e.textContent=m;e.hidden=false;if(a!==ADM.clave)audit('Seguridad','Intento de cambiar la clave con la clave actual incorrecta','alerta');return;}
+    ADM.clave=n;audit('Seguridad','Clave de administrador cambiada','clave');toast('Clave de administrador cambiada',{icon:'login',noAudit:true});render({soft:true});}
+});
+
+/* ---------- ajustes · clave de administrador ---------- */
+SETS.push(['seguridad','Clave de administrador','login']);
+function seguridadBody(){
+  return '<p class="hint" style="margin-top:0">La PC de recepción no tiene usuarios. Esta clave protege lo delicado: Ajustes, Auditoría, anular comprobantes, notas de crédito, anular reservas y cambiar precios. Dásela solo al administrador o al dueño.</p>'+
+  '<div class="g2">'+inp('scA','Clave actual','',{type:'password',attr:' inputmode="numeric" maxlength="6"'})+'<span></span>'+inp('scN','Clave nueva','',{type:'password',attr:' inputmode="numeric" maxlength="6"',hint:'De 4 a 6 números.'})+inp('scR','Repite la clave nueva','',{type:'password',attr:' inputmode="numeric" maxlength="6"'})+'</div>'+
+  '<p class="ferr" id="scE" hidden></p><div><button class="btn btn-primary" data-act="adm-save">'+ic('check')+'Cambiar clave</button></div>'+
+  '<p class="hint">Después de 5 intentos equivocados el sistema espera 1 minuto. Todos los intentos quedan en Auditoría.</p>';
+}
+
+/* ---------- auditoría ---------- */
+var NIV={clave:{l:'Con clave',c:'clean',i:'login'},alerta:{l:'Alerta',c:'dan',i:'alert'},sunat:{l:'SUNAT',c:'ok',i:'check'}};
+function auPerOk(d){var p=state.auPer||'hoy';return p==='hoy'?d===TODAY:p==='7d'?(d>TODAY-7&&d<=TODAY):d>=1&&d<=31;}
+function auList(){
+  var q=norm((state.auQ||'').trim()),mod=state.auMod||'all',niv=state.auNiv||'all';
+  return AUD.filter(function(a){return auPerOk(a.d)&&(mod==='all'||a.mod===mod)&&(niv==='all'||a.nivel===niv)&&(!q||norm(a.mod+' '+a.txt).indexOf(q)>-1);})
+    .sort(function(x,y){return (y.d-x.d)||(x.h<y.h?1:x.h>y.h?-1:0)||(y.seq-x.seq);});
+}
+function renderAuditoria(){
+  var per=AUD.filter(function(a){return auPerOk(a.d);}),mods=[];AUD.forEach(function(a){if(mods.indexOf(a.mod)<0)mods.push(a.mod);});mods.sort();
+  SEL['au-mod']={value:function(){return state.auMod||'all';},opts:function(){return [{v:'all',l:'Todos los módulos'}].concat(mods.map(function(m){return {v:m,l:m};}));},pick:function(v){state.auMod=v;render({soft:true});}};
+  var n=function(k){return per.filter(function(a){return a.nivel===k;}).length;};
+  var list=auList().slice(0,400),PERA=[['hoy','Hoy'],['7d','Últimos 7 días'],['mes','Octubre']],cur=state.auPer||'hoy';
+  var rows=list.map(function(a){var nv=NIV[a.nivel];return '<div class="lt-r'+(a.nivel==='alerta'?' au-alert':'')+'">'+cell('Fecha','<span class="tn">'+fmtD(a.d)+' · '+a.h+'</span>')+cell('Módulo',esc(a.mod))+cell('Movimiento','<span class="au-t">'+esc(a.txt)+'</span>','wide')+cell('Tipo',nv?'<span class="pill st-'+nv.c+'">'+ic(nv.i)+nv.l+'</span>':'<span class="hint">—</span>','r')+'</div>';});
+  return '<div class="page-head"><div><h1>Auditoría</h1><p class="sub">Todo lo que se hizo en el sistema, con fecha y hora · PC de recepción</p></div></div>'+
+  '<div class="kpis">'+kpiBox('occ','history','Movimientos',String(per.length),'En el período elegido')+
+    kpiBox('clean','login','Con clave de administrador',String(n('clave')),'Toca para verlos',' data-act="au-niv" data-v="clave"')+
+    kpiBox('dan','alert','Alertas',String(n('alerta')),'Claves equivocadas y errores',' data-act="au-niv" data-v="alerta"')+
+    kpiBox('ok','check','Respuestas de SUNAT',String(n('sunat')),'Comprobantes aceptados',' data-act="au-niv" data-v="sunat"')+'</div>'+
+  '<div class="vtool"><div class="segm" role="radiogroup" aria-label="Período">'+PERA.map(function(x){return '<button type="button" role="radio" data-act="au-per" data-v="'+x[0]+'" aria-checked="'+(cur===x[0])+'">'+x[1]+'</button>';}).join('')+'</div>'+
+    sel('au-mod',(state.auMod&&state.auMod!=='all')?state.auMod:'Todos los módulos')+
+    (state.auNiv&&state.auNiv!=='all'?'<button type="button" class="btn" data-act="au-niv" data-v="'+state.auNiv+'">'+ic('x')+NIV[state.auNiv].l+'</button>':'')+
+    '<div class="inp-ic tb-s">'+ic('search')+'<input type="search" id="auSearch" placeholder="Buscar en los movimientos" value="'+esc(state.auQ||'')+'" autocomplete="off" aria-label="Buscar en la auditoría"></div></div>'+
+  '<div id="auList">'+(list.length?lt('150px 140px minmax(0,1fr) 140px',['Fecha y hora','Módulo','Movimiento','>Tipo'],rows):'<div class="empty"><b>No hay movimientos con estos filtros</b>Cambia el período, el módulo o borra la búsqueda.</div>')+'</div>'+
+  '<p class="hint">Este registro no se puede editar ni borrar desde el sistema. En la versión real también se copia a la nube y el dueño lo ve desde su celular.</p>';
+}
+document.addEventListener('input',function(e){if(e.target.id==='auSearch'){state.auQ=e.target.value;keepRender('auSearch');}});
+
+/* acceso para las pruebas automáticas del prototipo */
+window.NK={adm:ADM,anular:anular,toast:toast,res:RES,renovar:renovarAdmin};
+/* historia inicial de la auditoría a partir de los datos de ejemplo */
+(function(){
+  var ya=nowHM(),fut=function(d,h){return d>TODAY||(d===TODAY&&h>ya);};
+  RES.forEach(function(r){(r.log||[]).forEach(function(l){if(fut(l.d,l.h))return;var t=l.text,mod=/^Pago|omprobante|Nota de crédito/.test(t)?'Ventas':/heck-in|heck-out/.test(t)?'Recepción':'Reservas';audit(mod,t+' · '+roomOf(r)+' · reserva #'+r.id,/anulad/.test(t)?'clave':'',l.d,l.h);});});
+  allPays().forEach(function(p){if(!fut(p.d,p.h)&&p.doc&&(p.sunat==='aceptado'||p.sunat==='anulado'))audit('SUNAT','SUNAT aceptó la '+p.kind.toLowerCase()+' '+p.doc,'sunat',p.d,p.h);});
+  EXTRA.forEach(function(p){if(!fut(p.d,p.h))audit('Restaurante',p.kind+' '+p.doc+' emitida'+(p.place?' · '+p.place:'')+' · '+money(p.amount),'',p.d,p.h);});
+  allPays().forEach(function(p){if(p.anulado&&p.anul&&p.anul.d<=TODAY)audit('Seguridad','Clave de administrador correcta · Anular '+p.kind.toLowerCase()+' '+p.doc,'clave',p.anul.d,p.anul.h);});
+  audit('Seguridad','Clave de administrador incorrecta · Entrar a Ajustes','alerta',TODAY-1,'22:41');
+})();
+
+/* ================= v10: reportes con filtros y exportación a Excel ================= */
+/* Cada reporte tiene su período (hoy, ayer, 7 días, el mes o fechas elegidas) y sus
+   propios filtros. «Descargar Excel» arma un .xlsx de verdad (sin librerías externas,
+   funciona sin internet): título, período, encabezado con color, columnas con formato
+   de soles, fechas y porcentajes, filas alternadas, total que respeta los filtros de
+   Excel, encabezado fijo y filtros automáticos. «Descargar todos» arma un libro con
+   una hoja por reporte. */
+var REPS=[
+  ['comprobantes','Comprobantes emitidos','Boletas, facturas y notas con su estado en SUNAT. Lo que pide el contador.','receipt'],
+  ['ocupacion','Ocupación por día','Habitaciones ocupadas, porcentaje de ocupación, tarifa promedio e ingreso de cada día.','bed'],
+  ['metodo','Ventas por método de pago','Cuánto entró por efectivo, Yape, Plin, tarjetas y transferencias.','card'],
+  ['categoria','Ventas por categoría','Hospedaje, bebidas, platos y servicios vendidos.','chart'],
+  ['origen','Reservas por origen','Reservas, noches, ingresos y comisión de cada canal.','list'],
+  ['huespedes','Huéspedes','Todos los huéspedes del período con su documento.','users'],
+  ['mincetur','Reporte MINCETUR','Arribos y pernoctaciones por procedencia, como lo pide MINCETUR.','chart'],
+  ['caja','Caja por turno','Apertura, movimientos y conteo de cada turno.','wallet'],
+  ['stock','Stock de almacén','Stock actual de cada producto y si está bajo.','package']
+];
+var REPDEF={comprobantes:'hoy',ocupacion:'7d',metodo:'mes',categoria:'mes',origen:'mes',huespedes:'7d',mincetur:'mes',caja:'7d',stock:null};
+var PERS=[['hoy','Hoy'],['ayer','Ayer'],['7d','7 días'],['mes','Este mes'],['rango','Elegir fechas']];
+function repF(k){state.repF=state.repF||{};var f=state.repF[k];if(!f){f=state.repF[k]={per:REPDEF[k],a:Math.max(1,TODAY-6),b:TODAY,x:{}};}return f;}
+function repRange(k){var f=repF(k);if(!f.per)return null;
+  if(f.per==='hoy')return [TODAY,TODAY];if(f.per==='ayer')return [TODAY-1,TODAY-1];if(f.per==='7d')return [Math.max(1,TODAY-6),TODAY];if(f.per==='mes')return [1,31];
+  var a=Math.max(1,Math.min(f.a,f.b)),b=Math.min(31,Math.max(f.a,f.b));return [a,b];}
+function fullD(d){var x=dt(d);return pad(x.getUTCDate())+'/'+pad(x.getUTCMonth()+1)+'/'+x.getUTCFullYear();}
+function repPerTxt(k){var r=repRange(k);if(!r)return 'Al '+fullD(TODAY);var f=repF(k);if(f.per==='mes')return 'Octubre 2026';return r[0]===r[1]?fullD(r[0]):fullD(r[0])+' al '+fullD(r[1]);}
+/* filtros propios de cada reporte: [clave, etiqueta, opciones] */
+function repOpts(k){
+  var all=function(l){return [{v:'all',l:l}];};
+  if(k==='comprobantes')return [['tipo','Tipo',all('Todos los tipos').concat(['Boleta','Factura','Nota de crédito','Nota de venta'].map(function(x){return {v:x,l:x};}))],['est','Estado',all('Todos los estados').concat([['aceptado','Aceptados'],['pendiente','Por enviar'],['rechazado','Rechazados'],['anulado','Anulados']].map(function(x){return {v:x[0],l:x[1]};}))]];
+  if(k==='ocupacion')return [['tipo','Habitación',all('Todas las habitaciones').concat(TYPE_ORDER.filter(function(t){return t!=='AU';}).map(function(t){return {v:t,l:TYPES[t].n};}))]];
+  if(k==='metodo')return [['tipo','Tipo',all('Todos los comprobantes').concat(['Boleta','Factura','Nota de venta'].map(function(x){return {v:x,l:x};}))]];
+  if(k==='categoria')return [['lugar','Dónde',all('Hotel y restaurante').concat([{v:'hotel',l:'Solo hotel'},{v:'rest',l:'Solo restaurante'}])]];
+  if(k==='origen')return [['org','Origen',all('Todos los orígenes').concat(ORIGINS.map(function(o){return {v:o.n,l:o.n};}))]];
+  if(k==='huespedes')return [['nac','Procedencia',all('Todas las procedencias').concat([{v:'pe',l:'Peruanos'},{v:'ex',l:'Extranjeros'}])],['tipo','Habitación',all('Todas las habitaciones').concat(TYPE_ORDER.map(function(t){return {v:t,l:TYPES[t].n};}))]];
+  if(k==='mincetur')return [['nac','Procedencia',all('Todas').concat([{v:'pe',l:'Solo residentes en Perú'},{v:'ex',l:'Solo extranjeros'}])]];
+  if(k==='caja'){var w=[];TURNOS.forEach(function(t){var n=t.who.replace(/ \(.*\)$/,'');if(w.indexOf(n)<0)w.push(n);});return [['who','Quién',all('Todas las personas').concat(w.map(function(n){return {v:n,l:n};}))]];}
+  if(k==='stock'){var c=[];PRODUCTS.forEach(function(p){if(p.t==='Producto'&&c.indexOf(p.c)<0)c.push(p.c);});return [['cat','Categoría',all('Todas las categorías').concat(c.map(function(x){return {v:x,l:x};}))],['st','Estado',all('Todos').concat([{v:'bajo',l:'Solo stock bajo o sin stock'}])]];}
+  return [];
+}
+function fx(k,n){return repF(k).x[n]||'all';}
+function repFiltTxt(k){return repOpts(k).filter(function(o){return fx(k,o[0])!=='all';}).map(function(o){var v=fx(k,o[0]);return o[1]+': '+(o[2].find(function(x){return x.v===v;})||{l:v}).l;}).join(' · ');}
+function over(ci,co,a,b){return Math.max(0,Math.min(co,b+1)-Math.max(ci,a));}
+/* datos: columnas con tipo (t texto, i entero, m soles, d fecha, p porcentaje, h hora) */
+function repData(k){
+  var R=repRange(k),a=R?R[0]:1,b=R?R[1]:31,inR=function(d){return d>=a&&d<=b;},C=function(h,t,s){return {h:h,t:t||'t',sum:!!s};},ok=function(r){return r.state!=='anulada';};
+  if(k==='comprobantes'){var tp=fx(k,'tipo'),es=fx(k,'est');
+    var ps=allPays().filter(function(p){return inR(p.d)&&(tp==='all'||p.kind===tp)&&(es==='all'||(es==='anulado'?p.anulado:(!p.anulado&&p.sunat===es)));}).slice().sort(function(x,y){return (x.d-y.d)||(x.h<y.h?-1:x.h>y.h?1:0);});
+    return {c:[C('Fecha','d'),C('Hora','h'),C('Tipo'),C('Número'),C('Cliente'),C('Documento'),C('Valor venta','m',1),C('IGV','m',1),C('Total','m',1),C('Método de pago'),C('Estado SUNAT')],
+      rows:ps.map(function(p){var tot=p.anulado?0:p.amount,base=p.kind==='Nota de venta'?tot:Math.round(tot/igvF()*100)/100;return [p.d,p.h,p.kind,p.doc,clientOf(p),docOf(p),base,Math.round((tot-base)*100)/100,tot,p.method,p.anulado?'Anulado':({aceptado:'Aceptado',pendiente:'Por enviar',rechazado:'Rechazado',interno:'Interno (no va a SUNAT)'}[p.sunat]||p.sunat)];}),
+      nota:'Los anulados figuran con importe 0. '+igvTxt()+'.'};}
+  if(k==='ocupacion'){var tt=fx(k,'tipo'),rs=ROOMS.filter(function(r){return r.n!=='AUD'&&(tt==='all'||r.t===tt);}),n=rs.length,rows=[];
+    for(var d=a;d<=b;d++){var o=0,ing=0;RES.forEach(function(r){if(!ok(r)||r.room==='AUD'||!(r.ci<=d&&d<r.co))return;if(tt!=='all'&&room(r.room).t!==tt)return;o++;ing+=r.rate;});rows.push([d,o,n,n?o/n:0,o?ing/o:0,ing]);}
+    return {c:[C('Fecha','d'),C('Ocupadas','i',1),C('Habitaciones','i'),C('Ocupación','p'),C('Tarifa promedio','m'),C('Ingreso hospedaje','m',1)],rows:rows,nota:'Los días que todavía no llegan muestran las reservas confirmadas.'};}
+  if(k==='metodo'){var t2=fx(k,'tipo'),mm={};allPays().forEach(function(p){if(p.anulado||!inR(p.d)||p.amount<0||(t2!=='all'&&p.kind!==t2))return;var x=mm[p.method]=mm[p.method]||{n:0,t:0};x.n++;x.t+=p.amount;});
+    var tot=Object.keys(mm).reduce(function(s,m){return s+mm[m].t;},0);
+    return {c:[C('Método de pago'),C('Comprobantes','i',1),C('Importe','m',1),C('Porcentaje','p')],rows:Object.keys(mm).sort(function(x,y){return mm[y].t-mm[x].t;}).map(function(m){return [m,mm[m].n,mm[m].t,tot?mm[m].t/tot:0];})};}
+  if(k==='categoria'){var lu=fx(k,'lugar'),c={};var add=function(cc,q,t){var x=c[cc]=c[cc]||{q:0,t:0};x.q+=q;x.t+=t;};
+    if(lu!=='rest')RES.forEach(function(r){if(!ok(r))return;var ni=over(r.ci,r.co,a,Math.min(b,TODAY));if(!ni)return;add('Hospedaje',ni,ni*r.rate);r.items.forEach(function(i){var p=PROD(i.n);add(p?p.c:'Otros',i.q,i.q*i.p);});});
+    if(lu!=='hotel')EXTRA.forEach(function(p){if(p.anulado||!inR(p.d)||!p.items)return;p.items.forEach(function(i){var pr=PROD(i.n);add((pr?pr.c:'Otros')+(lu==='rest'?'':' (restaurante)'),i.q,i.q*i.p);});});
+    var tt2=Object.keys(c).reduce(function(s,x){return s+c[x].t;},0);
+    return {c:[C('Categoría'),C('Cantidad','i',1),C('Importe','m',1),C('Porcentaje','p')],rows:Object.keys(c).sort(function(x,y){return c[y].t-c[x].t;}).map(function(x){return [x,c[x].q,c[x].t,tt2?c[x].t/tt2:0];}),nota:'Hospedaje cuenta las noches del período; la cantidad es el número de noches.'};}
+  if(k==='origen'){var og=fx(k,'org'),o2={};RES.forEach(function(r){if(!ok(r)||(og!=='all'&&r.origin!==og))return;var ni=over(r.ci,r.co,a,b);if(!ni)return;var x=o2[r.origin]=o2[r.origin]||{n:0,ni:0,t:0};x.n++;x.ni+=ni;x.t+=ni*r.rate;});
+    return {c:[C('Origen'),C('Reservas','i',1),C('Noches','i',1),C('Hospedaje','m',1),C('Comisión %','p'),C('Comisión','m',1),C('Neto para el hotel','m',1)],
+      rows:Object.keys(o2).sort(function(x,y){return o2[y].t-o2[x].t;}).map(function(x){var pc=(ORIGINS.find(function(z){return z.n===x;})||{c:0}).c/100,cm=Math.round(o2[x].t*pc*100)/100;return [x,o2[x].n,o2[x].ni,o2[x].t,pc,cm,o2[x].t-cm];})};}
+  if(k==='huespedes'){var na=fx(k,'nac'),ty=fx(k,'tipo'),rows2=[],pn=function(g){return na==='all'||(na==='pe'?g.nat==='Perú':g.nat!=='Perú');};
+    RES.filter(function(r){return ok(r)&&r.ci<=Math.min(b,TODAY)&&r.co>=a&&(ty==='all'||room(r.room).t===ty);}).sort(function(x,y){return x.ci-y.ci;}).forEach(function(r){[r.guest].concat(r.extra).forEach(function(g){if(pn(g))rows2.push([g.name,g.docType,g.doc,g.nat,rname(r.room),TYPES[room(r.room).t].n,r.ci,r.co,nights(r)]);});});
+    return {c:[C('Huésped'),C('Tipo doc.'),C('Documento'),C('Nacionalidad'),C('Habitación'),C('Tipo de habitación'),C('Llegada','d'),C('Salida','d'),C('Noches','i')],rows:rows2};}
+  if(k==='mincetur'){var nm=fx(k,'nac'),m={};RES.forEach(function(r){if(!ok(r)||r.ci>Math.min(b,TODAY))return;[r.guest].concat(r.extra).forEach(function(g){var pe=g.nat==='Perú';if((nm==='pe'&&!pe)||(nm==='ex'&&pe))return;var key=pe?'Perú (residentes)':g.nat,x=m[key]=m[key]||{a:0,p:0},pn2=over(r.ci,r.co,a,Math.min(b,TODAY));if(r.ci>=a&&r.ci<=b)x.a++;x.p+=pn2;});});
+    return {c:[C('Procedencia'),C('Arribos','i',1),C('Pernoctaciones','i',1)],rows:Object.keys(m).filter(function(x){return m[x].a||m[x].p;}).sort(function(x,y){return m[y].p-m[x].p;}).map(function(x){return [x,m[x].a,m[x].p];}),nota:'Arribo: huésped que llegó en el período. Pernoctación: cada noche de cada huésped.'};}
+  if(k==='caja'){var wh=fx(k,'who'),off=DAYNO-TODAY;
+    return {c:[C('Día','d'),C('Turno'),C('Desde'),C('Hasta'),C('Apertura','m'),C('Entradas','m',1),C('Salidas','m',1),C('Contado','m'),C('Diferencia','m',1)],
+      rows:TURNOS.filter(function(t){var d=t.day-off;return inR(d)&&(wh==='all'||t.who.replace(/ \(.*\)$/,'')===wh);}).slice().reverse().map(function(t){return [t.day-off,t.who,t.from,t.to,t.a,t.inc,t.out,t.cont,Math.round((t.cont-(t.a+t.inc-t.out))*100)/100];}),nota:'Diferencia: contado menos lo que debía haber (apertura + entradas − salidas). 0 = cuadra.'};}
+  if(k==='stock'){var ct=fx(k,'cat'),sb=fx(k,'st');
+    return {c:[C('Producto'),C('Categoría'),C('Stock','i'),C('Mínimo','i'),C('Costo','m'),C('Valor en almacén','m',1),C('Estado')],
+      rows:PRODUCTS.filter(function(p){return p.t==='Producto'&&(ct==='all'||p.c===ct)&&(sb==='all'||stockSt(p)!=='bien');}).map(function(p){var cs=p.cost||0;return [p.n,p.c,p.stock,p.min,cs,Math.max(0,p.stock)*cs,SST[stockSt(p)].l];})};}
+  return {c:[],rows:[]};
+}
+function repFmt(v,t){if(v==null||v==='')return '—';if(t==='m')return money(v);if(t==='i')return Number(v).toLocaleString('en-US');if(t==='p')return (v*100).toFixed(1)+'%';if(t==='d')return fmtD(v);return String(v);}
+function repSum(d,i){return d.rows.reduce(function(s,r){return s+(+r[i]||0);},0);}
+
+/* ---------- vista ---------- */
+function repTools(k){
+  var f=repF(k),h='';
+  if(f.per){h+='<div class="segm rp-per" role="radiogroup" aria-label="Período">'+PERS.map(function(p){return '<button type="button" role="radio" data-act="rp-per" data-k="'+k+'" data-v="'+p[0]+'" aria-checked="'+(f.per===p[0])+'">'+p[1]+'</button>';}).join('')+'</div>';
+    if(f.per==='rango')h+='<label class="rp-d"><span>Desde</span><input type="date" data-rd="a" data-k="'+k+'" min="2026-10-01" max="2026-10-31" value="'+iso(f.a)+'"></label><label class="rp-d"><span>Hasta</span><input type="date" data-rd="b" data-k="'+k+'" min="2026-10-01" max="2026-10-31" value="'+iso(f.b)+'"></label>';}
+  repOpts(k).forEach(function(o){var key='rf-'+k+'-'+o[0];
+    SEL[key]={value:function(){return fx(k,o[0]);},opts:function(){return o[2];},pick:function(v){repF(k).x[o[0]]=v;render({soft:true});}};
+    var cur=o[2].find(function(x){return x.v===fx(k,o[0]);})||o[2][0];h+='<span class="rp-sel" title="'+esc(o[1])+'">'+sel(key,cur.l)+'</span>';});
+  return '<div class="rep-tools">'+h+'</div>';
+}
+function repTable(d){
+  var num=function(t){return t!=='t'&&t!=='h';};
+  var head='<tr>'+d.c.map(function(c){return '<th'+(num(c.t)?' class="r"':'')+'>'+esc(c.h)+'</th>';}).join('')+'</tr>';
+  var body=d.rows.length?d.rows.map(function(r){return '<tr>'+r.map(function(v,i){var t=d.c[i].t,txt=repFmt(v,t);if(d.c[i].h==='Diferencia')txt=v===0?'Cuadra':(v>0?'+':'−')+money(Math.abs(v));if(d.c[i].h==='Estado SUNAT'||d.c[i].h==='Estado')txt='<span class="rp-st rp-'+(/Anulad|Rechaz|Sin stock/.test(v)?'dan':/Por enviar|bajo/.test(v)?'warn':'ok')+'">'+esc(v)+'</span>';else txt=esc(txt);return '<td'+(num(t)?' class="r"':'')+'>'+txt+'</td>';}).join('')+'</tr>';}).join(''):'<tr><td colspan="'+d.c.length+'" class="rp-empty">Sin datos con estos filtros.</td></tr>';
+  var hasSum=d.rows.length>1&&d.c.some(function(c){return c.sum;});
+  var foot=hasSum?'<tfoot><tr>'+d.c.map(function(c,i){return i===0?'<td>Total</td>':'<td'+(num(c.t)?' class="r"':'')+'>'+(c.sum?esc(repFmt(repSum(d,i),c.t)):'')+'</td>';}).join('')+'</tr></tfoot>':'';
+  return '<table class="rtable"><thead>'+head+'</thead><tbody>'+body+'</tbody>'+foot+'</table>';
+}
+function renderReportes(){
+  return '<div class="page-head"><div><h1>Reportes</h1><p class="sub">Elige el período y los filtros de cada reporte. Se descargan en Excel listos para imprimir o mandar al contador.</p></div><div class="head-actions"><button class="btn" data-act="rep-xls-all">'+ic('download')+'Descargar todos en un Excel</button></div></div><div class="reps">'+REPS.map(function(x){var k=x[0],open=state.repOpen===k,body='';
+    if(open){var d=repData(k),ft=repFiltTxt(k);
+      body='<div class="rep-body">'+repTools(k)+'<p class="rp-per-t">'+ic('calendar')+'<b>'+esc(repPerTxt(k))+'</b>'+(ft?' · '+esc(ft):'')+'</p><div class="rep-scroll">'+repTable(d)+'</div>'+(d.nota?'<p class="hint">'+esc(d.nota)+'</p>':'')+
+      '<div class="rep-f"><span class="hint">'+plural(d.rows.length,'fila','filas')+'</span><span class="rep-fb"><button class="btn btn-sm" data-act="rep-copy" data-k="'+k+'">'+ic('list')+'Copiar</button><button class="btn btn-sm btn-ok" data-act="rep-xls" data-k="'+k+'">'+ic('download')+'Descargar Excel</button></span></div></div>';}
+    return '<section class="card rep'+(open?' open':'')+'"><button type="button" class="rep-h" data-act="rep" data-k="'+k+'" aria-expanded="'+open+'"><span class="kpi-ic st-occ">'+ic(x[3])+'</span><span class="grow"><b>'+x[1]+'</b><small>'+x[2]+'</small></span>'+(REPDEF[k]&&!open?'<span class="rp-badge">'+esc(repPerTxt(k))+'</span>':'')+ic('chevron-down','rep-chev')+'</button>'+body+'</section>';}).join('')+'</div>';
+}
+document.addEventListener('change',function(e){var t=e.target;if(!t.dataset||!t.dataset.rd)return;var d=fromIso(t.value);if(d==null)return;var f=repF(t.dataset.k);f[t.dataset.rd]=Math.max(1,Math.min(31,d));render({soft:true});});
+
+/* ---------- Excel (.xlsx) sin librerías ---------- */
+var CRCT=(function(){var t=[];for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(u){var c=0xFFFFFFFF;for(var i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function zipBlob(files,mime){
+  var enc=new TextEncoder(),parts=[],cen=[],off=0;
+  var u16=function(v){return [v&255,(v>>>8)&255];},u32=function(v){return [v&255,(v>>>8)&255,(v>>>16)&255,(v>>>24)&255];};
+  files.forEach(function(f){var name=enc.encode(f[0]),data=enc.encode(f[1]),crc=crc32(data);
+    var lh=[].concat(u32(0x04034b50),u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0));
+    parts.push(new Uint8Array(lh),name,data);
+    cen.push(new Uint8Array([].concat(u32(0x02014b50),u16(20),u16(20),u16(0x0800),u16(0),u16(0),u16(0x21),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(off))),name);
+    off+=lh.length+name.length+data.length;});
+  var cl=cen.reduce(function(s,x){return s+x.length;},0);
+  return new Blob(parts.concat(cen,[new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(cl),u32(off),u16(0)))]),{type:mime});
+}
+function xe(s){return String(s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function colL(i){var s='';i++;while(i>0){var m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;}
+function xlSerial(d){return dt(d).getTime()/864e5+25569;}
+/* estilos: 1 título · 2 subtítulo · 3 encabezado · 4 encabezado número · 5-10 celdas (t,i,m,d,p,h) · 11-16 lo mismo en fila alterna · 17-22 total · 23 nota */
+var XL_T=['t','i','m','d','p','h'];
+function xlStyles(){
+  var cell=function(f,nf,fill,al){return '<xf numFmtId="'+nf+'" fontId="'+f+'" fillId="'+fill+'" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"'+(nf?' applyNumberFormat="1"':'')+(fill?' applyFill="1"':'')+'><alignment vertical="center"'+(al?' horizontal="'+al+'"':'')+'/></xf>';};
+  var NF={t:0,i:3,m:164,d:165,p:166,h:0},AL={t:'',i:'right',m:'right',d:'center',p:'right',h:'center'};
+  var xs=['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>','<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>','<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1"/>',
+    '<xf numFmtId="0" fontId="3" fillId="2" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>',
+    '<xf numFmtId="0" fontId="3" fillId="2" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment vertical="center" horizontal="right" wrapText="1"/></xf>'];
+  XL_T.forEach(function(t){xs.push(cell(0,NF[t],0,AL[t]));});
+  XL_T.forEach(function(t){xs.push(cell(0,NF[t],3,AL[t]));});
+  XL_T.forEach(function(t){xs.push(cell(4,NF[t],4,AL[t]));});
+  xs.push('<xf numFmtId="0" fontId="5" fillId="0" borderId="0" xfId="0" applyFont="1"/>');
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'+
+  '<numFmts count="3"><numFmt numFmtId="164" formatCode="&quot;S/ &quot;#,##0.00;[Red]-&quot;S/ &quot;#,##0.00"/><numFmt numFmtId="165" formatCode="dd/mm/yyyy"/><numFmt numFmtId="166" formatCode="0.0%"/></numFmts>'+
+  '<fonts count="6"><font><sz val="11"/><color rgb="FF1F2937"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="15"/><color rgb="FF1E3A8A"/><name val="Calibri"/><family val="2"/></font><font><sz val="10"/><color rgb="FF6B7280"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font><font><b/><sz val="11"/><color rgb="FF111827"/><name val="Calibri"/><family val="2"/></font><font><i/><sz val="9"/><color rgb="FF6B7280"/><name val="Calibri"/><family val="2"/></font></fonts>'+
+  '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E3A8A"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF3F6FC"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE3E9F6"/><bgColor indexed="64"/></patternFill></fill></fills>'+
+  '<borders count="3"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFDCE1EA"/></left><right style="thin"><color rgb="FFDCE1EA"/></right><top style="thin"><color rgb="FFDCE1EA"/></top><bottom style="thin"><color rgb="FFDCE1EA"/></bottom><diagonal/></border><border><left style="thin"><color rgb="FF1E3A8A"/></left><right style="thin"><color rgb="FF1E3A8A"/></right><top style="thin"><color rgb="FF1E3A8A"/></top><bottom style="thin"><color rgb="FF1E3A8A"/></bottom><diagonal/></border></borders>'+
+  '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="'+xs.length+'">'+xs.join('')+'</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+}
+function xlSheet(s){
+  var n=s.c.length,last=colL(n-1),H=5,rows=[],r=0;
+  var cs=function(ref,st,v,t){if(v==null||v==='')return '<c r="'+ref+'" s="'+st+'"/>';if(t==='t'||t==='h'||typeof v!=='number')return '<c r="'+ref+'" s="'+st+'" t="inlineStr"><is><t xml:space="preserve">'+xe(v)+'</t></is></c>';return '<c r="'+ref+'" s="'+st+'"><v>'+(t==='d'?xlSerial(v):v)+'</v></c>';};
+  rows.push('<row r="1" ht="24" customHeight="1">'+cs('A1',1,s.title,'t')+'</row>');
+  rows.push('<row r="2">'+cs('A2',2,s.sub,'t')+'</row>');
+  rows.push('<row r="3">'+cs('A3',2,s.sub2,'t')+'</row>');
+  rows.push('<row r="5" ht="22" customHeight="1">'+s.c.map(function(c,i){return cs(colL(i)+H,(c.t==='t'||c.t==='h')?3:4,c.h,'t');}).join('')+'</row>');
+  s.rows.forEach(function(rw,j){var R=H+1+j,alt=j%2?6:0;rows.push('<row r="'+R+'">'+rw.map(function(v,i){var t=s.c[i].t;return cs(colL(i)+R,5+XL_T.indexOf(t)+alt,v,t);}).join('')+'</row>');});
+  var end=H+s.rows.length,tr=end+1;
+  if(s.rows.length&&s.c.some(function(c){return c.sum;}))rows.push('<row r="'+tr+'" ht="20" customHeight="1">'+s.c.map(function(c,i){var L=colL(i),st=17+XL_T.indexOf(c.t);if(i===0)return '<c r="'+L+tr+'" s="17" t="inlineStr"><is><t>Total</t></is></c>';if(!c.sum)return '<c r="'+L+tr+'" s="'+st+'"/>';return '<c r="'+L+tr+'" s="'+st+'"><f>SUBTOTAL(9,'+L+(H+1)+':'+L+end+')</f><v>'+repSum(s,i)+'</v></c>';}).join('')+'</row>');
+  if(!s.rows.length)rows.push('<row r="'+(H+1)+'">'+cs('A'+(H+1),5,'Sin datos con estos filtros.','t')+'</row>');
+  if(s.nota)rows.push('<row r="'+(tr+2)+'">'+cs('A'+(tr+2),23,s.nota,'t')+'</row>');
+  var w=s.c.map(function(c,i){var m=c.h.length;s.rows.forEach(function(rw){var v=rw[i],l=c.t==='m'?repFmt(v,'m').length+3:c.t==='d'?10:c.t==='p'?7:String(v==null?'':v).length;if(l>m)m=l;});return Math.min(48,Math.max(9,Math.round(m*1.15)+3));});
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'+
+    '<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr><dimension ref="A1:'+last+Math.max(tr,H+1)+'"/>'+
+    '<sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="'+H+'" topLeftCell="A'+(H+1)+'" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A'+(H+1)+'" sqref="A'+(H+1)+'"/></sheetView></sheetViews>'+
+    '<sheetFormatPr defaultRowHeight="16.5"/><cols>'+w.map(function(x,i){return '<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+x+'" customWidth="1"/>';}).join('')+'</cols>'+
+    '<sheetData>'+rows.join('')+'</sheetData>'+(s.rows.length?'<autoFilter ref="A'+H+':'+last+end+'"/>':'')+
+    '<printOptions horizontalCentered="1"/><pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="'+(n>6?'landscape':'portrait')+'" fitToWidth="1" fitToHeight="0"/>'+
+    '<headerFooter><oddFooter>&amp;L'+xe(CFG.name)+'&amp;RPágina &amp;P de &amp;N</oddFooter></headerFooter></worksheet>';
+}
+function xlsxBlob(sheets){
+  var names=[];sheets.forEach(function(s){var b=s.name.replace(/[\[\]:*?\/\\]/g,'').slice(0,31),x=b,i=2;while(names.indexOf(x)>-1)x=b.slice(0,28)+' '+(i++);names.push(x);});
+  var files=[['[Content_Types].xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map(function(s,i){return '<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';}).join('')+'<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>'],
+    ['_rels/.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>'],
+    ['docProps/core.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>'+xe(CFG.name+' · Reportes')+'</dc:title><dc:creator>Hotel Selva Inn</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">'+new Date().toISOString().slice(0,19)+'Z</dcterms:created></cp:coreProperties>'],
+    ['xl/workbook.xml','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>'+names.map(function(n,i){return '<sheet name="'+xe(n)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>';}).join('')+'</sheets><definedNames>'+sheets.map(function(s,i){if(!s.rows.length)return '';var q="'"+names[i].replace(/'/g,"''")+"'";return '<definedName name="_xlnm._FilterDatabase" localSheetId="'+i+'" hidden="1">'+xe(q)+'!$A$5:$'+colL(s.c.length-1)+'$'+(5+s.rows.length)+'</definedName><definedName name="_xlnm.Print_Titles" localSheetId="'+i+'">'+xe(q)+'!$5:$5</definedName>';}).join('')+'</definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'],
+    ['xl/_rels/workbook.xml.rels','<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map(function(s,i){return '<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>';}).join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ['xl/styles.xml',xlStyles()]];
+  sheets.forEach(function(s,i){files.push(['xl/worksheets/sheet'+(i+1)+'.xml',xlSheet(s)]);});
+  return zipBlob(files,'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+function repSheet(k){var x=REPS.find(function(r){return r[0]===k;}),d=repData(k),ft=repFiltTxt(k);
+  return {name:x[1],title:CFG.name+' · '+x[1],sub:'Período: '+repPerTxt(k)+(ft?' · '+ft:''),sub2:(CFG.legal?CFG.legal+' · ':'')+(CFG.ruc?'RUC '+CFG.ruc+' · ':'')+'Generado el '+fullD(TODAY)+' a las '+nowHM(),c:d.c,rows:d.rows,nota:d.nota};}
+var LAST_XLSX=null;
+function bajar(blob,name){LAST_XLSX={name:name,blob:blob};var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1500);}
+function slug(s){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');}
+Object.assign(ACT,{
+  'rp-per':function(a){var f=repF(a.dataset.k);f.per=a.dataset.v;if(f.per==='rango'){var r=[Math.max(1,TODAY-6),TODAY];f.a=f.a||r[0];f.b=f.b||r[1];}render({soft:true});},
+  'rep-xls':function(a){var k=a.dataset.k,s=repSheet(k),R=repRange(k),nm=slug(s.name)+'_'+slug(CFG.name)+'_'+(R?iso(R[0])+(R[0]!==R[1]?'_al_'+iso(R[1]):''):iso(TODAY))+'.xlsx';bajar(xlsxBlob([s]),nm);toast('Excel descargado: '+nm,{icon:'download'});},
+  'rep-xls-all':function(){var nm='Reportes_'+slug(CFG.name)+'_'+iso(TODAY)+'.xlsx';bajar(xlsxBlob(REPS.map(function(r){return repSheet(r[0]);})),nm);toast('Excel con '+REPS.length+' hojas descargado',{icon:'download'});},
+  'rep-copy':function(a){var d=repData(a.dataset.k);copyText([d.c.map(function(c){return c.h;})].concat(d.rows.map(function(r){return r.map(function(v,i){var t=d.c[i].t;return t==='d'?fullD(v):t==='p'?(v*100).toFixed(1)+'%':t==='m'?(Math.round(v*100)/100).toFixed(2):v;});})).map(function(r){return r.join('\t');}).join('\n'));}
+});
+window.NK=window.NK||{};window.NK.xlsx=function(){return LAST_XLSX;};
+
+/* ================= v11: agregar, editar y quitar habitaciones y tipos ================= */
+/* Ajustes → Habitaciones y tarifas (ya pide la clave de administrador). Se pueden agregar
+   habitaciones una por una o varias seguidas (por ejemplo, todo un piso nuevo: 501 a 510),
+   cambiarles el tipo o el piso, quitarlas de la venta o eliminarlas si nunca tuvieron
+   reservas. También se agregan tipos nuevos (Suite, Familiar…) con su tarifa y capacidad. */
+function ordenarRooms(){ROOMS.sort(function(a,b){var fa=a.f||99,fb=b.f||99;return (fa-fb)||String(a.n).localeCompare(String(b.n),'es',{numeric:true});});}
+function pisos(){var f=[];ROOMS.forEach(function(r){if(f.indexOf(r.f)<0)f.push(r.f);});return f.sort(function(a,b){return (a||99)-(b||99);});}
+function pisoTxt(f){return f?'Piso '+f:'Áreas comunes';}
+function resDe(n){return RES.filter(function(r){return r.room===n;});}
+function resVivas(n){return RES.filter(function(r){return r.room===n&&['ocupado','reservado','confirmado'].indexOf(r.state)>-1&&r.co>=TODAY;});}
+function tiposSel(){return TYPE_ORDER.map(function(t){return {v:t,l:TYPES[t].n,hint:money0(TYPES[t].rate)};});}
+
+function tarifasBody(){
+  var tipos=lt('minmax(0,1.6fr) 110px 110px 170px 52px',['Tipo','>Habitaciones','>Personas','>Tarifa por noche',''],TYPE_ORDER.map(function(t){var T=TYPES[t],n=ROOMS.filter(function(r){return r.t===t;}).length;
+    return '<div class="lt-r">'+cell('Tipo','<b>'+esc(T.n)+'</b>','wide')+cell('Habitaciones','<span class="tn">'+n+'</span>','r')+cell('Personas','<span class="tn">'+T.cap+'</span>','r')+
+      cell('Tarifa','<span class="inp-pre"><span>S/</span><input type="number" data-rate="'+t+'" value="'+T.rate+'" min="0" step="5" aria-label="Tarifa de '+esc(T.n)+'"></span>','r')+
+      cell('','<button type="button" class="btn-icon" data-act="tipo-edit" data-t="'+t+'" aria-label="Editar tipo '+esc(T.n)+'">'+ic('edit')+'</button>','r')+'</div>';}));
+  var hab=pisos().map(function(f){var list=ROOMS.filter(function(r){return r.f===f;});
+    return '<div class="hb-piso"><div class="hb-ph"><b>'+pisoTxt(f)+'</b><span class="hint">'+plural(list.length,'habitación','habitaciones')+'</span></div><div class="hb-grid">'+list.map(function(r){
+      var viva=activeRes(r.n);
+      return '<div class="hb'+(r.off?' off':'')+'"><button type="button" class="hb-main" data-act="hab-edit" data-room="'+esc(r.n)+'" aria-label="Editar habitación '+esc(rname(r.n))+'"><b>'+esc(rname(r.n))+(viva?'<i class="hb-occ" title="Con huéspedes ahora"></i>':'')+'</b><small>'+esc(TYPES[r.t].n)+(r.off?' · fuera de venta':'')+'</small></button>'+sw(!r.off,'room-sw',' data-room="'+esc(r.n)+'"','Habitación '+rname(r.n)+' a la venta')+'</div>';}).join('')+'</div></div>';}).join('');
+  var vend=ROOMS.filter(function(r){return !r.off&&r.t!=='AU';}).length;
+  return '<div class="blk-h2"><h3>Tipos de habitación</h3><button type="button" class="btn btn-sm" data-act="tipo-add">'+ic('plus')+'Agregar tipo</button></div>'+tipos+
+    '<p class="hint">Las tarifas nuevas se usan en las reservas que crees desde ahora. Los feriados y temporadas se configuran en «Tarifas por temporada».</p>'+
+    '<div class="blk-h2" style="margin-top:10px"><h3>Habitaciones <span class="hint">· '+ROOMS.length+' en total'+', '+vend+' a la venta</span></h3><button type="button" class="btn btn-sm btn-primary" data-act="hab-add">'+ic('plus')+'Agregar habitación</button></div>'+
+    '<p class="hint" style="margin-top:0">Toca una habitación para cambiarle el número, el tipo o el piso. El interruptor la saca de la venta (mantenimiento, remodelación) sin borrarla.</p>'+hab;
+}
+
+/* ---------- habitación: agregar o editar ---------- */
+function habModal(rm){
+  var nueva=!rm,f={n:rm?rm.n:'',t:rm?rm.t:'MQ',f:rm?rm.f:(pisos().filter(function(x){return x;}).slice(-1)[0]||1),venta:rm?!rm.off:true,varias:false,hasta:''};
+  var conRes=rm?resDe(rm.n).length:0;
+  SEL['hb-t']={value:function(){return f.t;},opts:tiposSel,pick:function(v){f.t=v;$('[data-sel="hb-t"] span',MODAL.el).textContent=TYPES[v].n;}};
+  var body='<div class="g2">'+
+    '<div class="field"><label for="hbN">'+(nueva?'Número':'Número')+'</label><input id="hbN" value="'+esc(f.n)+'" maxlength="8" autocomplete="off" placeholder="Ej. 501"'+(conRes?' disabled':'')+'>'+(conRes?'<span class="hint">No se cambia porque ya tiene reservas.</span>':'')+'</div>'+
+    '<div class="field hb-hasta" '+(nueva?'':'hidden')+'><label for="hbH">Hasta (opcional)</label><input id="hbH" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="Ej. 510"><span class="hint">Para crear varias seguidas, como todo un piso.</span></div>'+
+    (nueva?'':'<span></span>')+
+    '<div class="field"><span class="lb">Tipo</span>'+sel('hb-t',TYPES[f.t].n)+'</div>'+
+    '<div class="field"><label for="hbF">Piso</label><input id="hbF" type="number" min="0" max="30" value="'+f.f+'"><span class="hint">0 = áreas comunes (auditorio, salones).</span></div></div>'+
+    '<label class="rsw" style="margin-top:6px"><span><b>A la venta</b><small>Aparece en el panel, en el timeline y al crear reservas</small></span>'+sw(f.venta,'hb-venta','','A la venta')+'</label>'+
+    '<p class="ferr" id="hbE" hidden></p>';
+  var foot=(nueva?'':'<button class="btn btn-dang-o" id="hbDel" style="margin-right:auto">'+ic('trash')+'Eliminar</button>')+'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="hbGo">'+ic('check')+(nueva?'Agregar':'Guardar')+'</button>';
+  openModal({title:nueva?'Agregar habitación':'Habitación '+rname(rm.n),width:540,body:body,foot:foot,onMount:function(w){
+    var err=function(m){var e=$('#hbE',w);e.textContent=m;e.hidden=false;};
+    w.addEventListener('click',function(e){var s=e.target.closest('[data-act="hb-venta"]');if(!s)return;e.stopPropagation();f.venta=!f.venta;s.setAttribute('aria-checked',String(f.venta));},true);
+    $('#hbGo',w).onclick=function(){
+      var n=$('#hbN',w).value.trim().toUpperCase(),piso=parseInt($('#hbF',w).value,10),h=nueva?$('#hbH',w).value.trim():'';
+      if(!n)return err('Escribe el número de la habitación.');
+      if(!/^[0-9A-Z-]{1,8}$/.test(n))return err('Usa solo números o letras, sin espacios (ej. 501 o 5A).');
+      if(isNaN(piso)||piso<0||piso>30)return err('El piso debe ser un número de 0 a 30.');
+      var nums=[n];
+      if(h){if(!/^\d+$/.test(n)||!/^\d+$/.test(h))return err('Para crear varias seguidas, «Número» y «Hasta» deben ser números.');var a=+n,b=+h;if(b<a)return err('«Hasta» debe ser mayor que el número inicial.');if(b-a>49)return err('Máximo 50 habitaciones a la vez.');nums=[];for(var i=a;i<=b;i++)nums.push(String(i));}
+      var rep=nums.filter(function(x){return room(x)&&(nueva||x!==rm.n);});
+      if(rep.length)return err((rep.length===1?'Ya existe la habitación ':'Ya existen las habitaciones ')+rep.join(', ')+'.');
+      if(nueva){nums.forEach(function(x){ROOMS.push({n:x,t:f.t,f:piso,off:!f.venta,cleaning:false});});ordenarRooms();closeModal();
+        toast(nums.length===1?'Habitación '+n+' agregada · '+TYPES[f.t].n+' · '+pisoTxt(piso):nums.length+' habitaciones agregadas ('+nums[0]+' a '+nums[nums.length-1]+') · '+TYPES[f.t].n+' · '+pisoTxt(piso),{icon:'check'});render({soft:true});return;}
+      if(!f.venta&&!rm.off&&activeRes(rm.n))return err('Tiene huéspedes ahora. Haz el check-out antes de sacarla de la venta.');
+      var cambios=[];if(n!==rm.n){cambios.push('número '+rm.n+' → '+n);rm.n=n;}if(f.t!==rm.t){cambios.push('tipo '+TYPES[rm.t].n+' → '+TYPES[f.t].n);rm.t=f.t;}if(piso!==rm.f){cambios.push(pisoTxt(rm.f)+' → '+pisoTxt(piso));rm.f=piso;}if(rm.off===f.venta){cambios.push(f.venta?'vuelve a la venta':'fuera de venta');rm.off=!f.venta;if(!rm.off)rm.cleaning=false;}
+      ordenarRooms();closeModal();toast(cambios.length?'Habitación '+rname(rm.n)+': '+cambios.join(', '):'Sin cambios en la habitación '+rname(rm.n),{icon:'check'});render({soft:true});
+    };
+    if(!nueva)$('#hbDel',w).onclick=function(){
+      if(resVivas(rm.n).length)return err('No se puede eliminar: tiene '+plural(resVivas(rm.n).length,'reserva vigente','reservas vigentes')+'. Muévelas a otra habitación primero.');
+      if(conRes)return err('Esta habitación tiene historial de reservas, así que no se borra (los reportes la necesitan). Sácala de la venta con el interruptor.');
+      var i=ROOMS.indexOf(rm);if(i>-1)ROOMS.splice(i,1);closeModal();toast('Habitación '+rname(rm.n)+' eliminada',{icon:'trash'});render({soft:true});
+    };
+  }});
+}
+
+/* ---------- tipo de habitación: agregar o editar ---------- */
+function tipoModal(t){
+  var nuevo=!t,T=t?TYPES[t]:{n:'',rate:200,beds:1,cap:2},n=t?ROOMS.filter(function(r){return r.t===t;}).length:0;
+  openModal({title:nuevo?'Agregar tipo de habitación':'Tipo '+T.n,width:480,
+    body:'<div class="g2">'+inp('tpN','Nombre',T.n,{ph:'Ej. Suite familiar',span:true})+inp('tpC','Personas',String(T.cap),{type:'number',attr:' min="1" max="60"'})+inp('tpB','Camas',String(T.beds),{type:'number',attr:' min="0" max="10"'})+inp('tpR','Tarifa por noche',String(T.rate),{type:'number',pre:'S/',attr:' min="0" step="5"'})+'</div><p class="ferr" id="tpE" hidden></p>'+(nuevo?'':'<p class="hint">'+plural(n,'habitación es','habitaciones son')+' de este tipo.</p>'),
+    foot:(nuevo||t==='AU'?'':'<button class="btn btn-dang-o" id="tpDel" style="margin-right:auto">'+ic('trash')+'Eliminar</button>')+'<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="tpGo">'+ic('check')+(nuevo?'Agregar tipo':'Guardar')+'</button>',
+    onMount:function(w){var err=function(m){var e=$('#tpE',w);e.textContent=m;e.hidden=false;};
+      $('#tpGo',w).onclick=function(){var nm=$('#tpN',w).value.trim(),c=parseInt($('#tpC',w).value,10),b=parseInt($('#tpB',w).value,10),r=parseFloat($('#tpR',w).value);
+        if(nm.length<3)return err('Escribe el nombre del tipo (ej. Suite familiar).');
+        if(TYPE_ORDER.some(function(k){return k!==t&&norm(TYPES[k].n)===norm(nm);}))return err('Ya existe un tipo con ese nombre.');
+        if(!(c>=1))return err('Indica cuántas personas entran.');if(isNaN(b)||b<0)return err('Indica cuántas camas tiene.');if(!(r>=0))return err('Indica la tarifa por noche.');
+        if(nuevo){var k='X'+(TYPE_ORDER.length+1)+Date.now().toString(36).slice(-3);TYPES[k]={n:nm,rate:r,beds:b,cap:c};var ia=TYPE_ORDER.indexOf('AU');TYPE_ORDER.splice(ia<0?TYPE_ORDER.length:ia,0,k);closeModal();toast('Tipo «'+nm+'» agregado · '+money0(r)+' por noche. Ahora agrégale habitaciones.',{icon:'check'});}
+        else{TYPES[t].n=nm;TYPES[t].cap=c;TYPES[t].beds=b;TYPES[t].rate=r;closeModal();toast('Tipo «'+nm+'» actualizado',{icon:'check'});}
+        render({soft:true});};
+      if(!nuevo&&t!=='AU')$('#tpDel',w).onclick=function(){if(n)return err('No se puede eliminar: '+plural(n,'habitación es','habitaciones son')+' de este tipo. Cámbialas de tipo primero.');if(RES.some(function(r){return r.room&&room(r.room)&&room(r.room).t===t;}))return err('Hay reservas con este tipo.');
+        TYPE_ORDER.splice(TYPE_ORDER.indexOf(t),1);var nm=TYPES[t].n;delete TYPES[t];closeModal();toast('Tipo «'+nm+'» eliminado',{icon:'trash'});render({soft:true});};
+    }});
+}
+Object.assign(ACT,{
+  'hab-add':function(){habModal(null);},
+  'hab-edit':function(a){var rm=room(a.dataset.room);if(rm)habModal(rm);},
+  'tipo-add':function(){tipoModal(null);},
+  'tipo-edit':function(a){tipoModal(a.dataset.t);}
+});
+/* en el modal de habitación, el campo «Hasta» solo tiene sentido al agregar */
+window.NK=window.NK||{};window.NK.rooms=function(){return ROOMS.length;};
+window.NK.quitar=function(ns){ns.forEach(function(n){var r=room(n);if(r&&!resDe(n).length)ROOMS.splice(ROOMS.indexOf(r),1);});};
+
+/* ====== DATOS REALES DEL HOTEL (Supabase) ======
+   Lo inserta pruebas/generar_sistema.py justo antes del arranque del prototipo.
+   Reemplaza los datos de ejemplo por los de window.DATOS_HOTEL (los carga app/puente.js). */
+(function () {
+  var D = window.DATOS_HOTEL; if (!D) return;
+  var DOC = { '1': 'DNI', '4': 'Carné de extranjería', '7': 'Pasaporte', '6': 'RUC', '0': 'Sin documento' };
+  var cfg = D.config || {};
+  function isoLima(t) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(t); }
+  function hhmm(t) { return new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false }).format(t); }
+  function hora(x, porDefecto) { return x ? String(x).slice(0, 5) : porDefecto; }
+
+  TODAY = fromIso(D.hoy); NOW_H = D.hora;
+
+  TYPES = {}; TYPE_ORDER = [];
+  D.tipos.forEach(function (t) { TYPES[t.codigo] = { n: t.nombre, rate: Number(t.tarifa), beds: t.camas, cap: t.capacidad }; TYPE_ORDER.push(t.codigo); });
+
+  var pers = {}; D.personal.forEach(function (p) { pers[p.id] = p.nombre; });
+  var limp = {}; D.limpieza.forEach(function (l) { limp[l.habitacion] = l; });
+  ROOMS = D.habitaciones.slice().sort(function (a, b) { return a.piso - b.piso || String(a.numero).localeCompare(String(b.numero), 'es', { numeric: true }); })
+    .map(function (h) { return { n: h.numero, t: h.tipo, f: h.piso, off: !!h.fuera_de_venta, cleaning: !!limp[h.numero] }; });
+  HK = {}; HKDONE = []; REPASO = {};
+  D.limpieza.forEach(function (l) { HK[l.habitacion] = { st: l.estado, who: pers[l.personal_id] || '', since: hhmm(new Date(l.desde)), kind: l.tipo }; });
+
+  var cli = {}; D.clientes.forEach(function (c) { cli[c.id] = c; });
+  var comp = {}; D.comprobantes.forEach(function (c) { comp[c.id] = c; });
+  RES = D.reservas.filter(function (r) { return r.estado !== 'no_show'; }).map(function (r) {
+    var c = cli[r.cliente_id] || {}, e = cli[r.empresa_id];
+    return { id: r.id, group: r.grupo_id || r.id, room: r.habitacion,
+      guest: { name: c.nombre || 'Sin nombre', doc: c.num_doc || '', docType: DOC[c.tipo_doc] || 'DNI', nat: c.nacionalidad || 'Perú' },
+      company: e ? { name: e.nombre, ruc: e.num_doc } : null, origin: r.origen || 'Directo', ext: r.codigo_externo || '', motivo: r.motivo || '',
+      ref: 'Ninguna', ci: fromIso(r.entrada), co: fromIso(r.salida), rate: Number(r.tarifa), tarifa: r.tarifa_nombre || 'Regular',
+      persons: r.personas, state: r.estado, items: [], pays: [], notes: [], extra: [], log: [] };
+  });
+  var porId = {}; RES.forEach(function (r) { porId[r.id] = r; });
+  D.consumos.forEach(function (x) { var r = porId[x.reserva_id]; if (r) r.items.push({ n: x.descripcion, p: Number(x.precio), q: Number(x.cantidad) }); });
+  PID = 0;
+  D.pagos.forEach(function (p) {
+    var r = porId[p.reserva_id]; if (!r) return;
+    var cp = comp[p.comprobante_id] || {}, t = new Date(p.creado_en);
+    r.pays.push({ id: p.id, r: r, doc: cp.numero_completo || '', method: p.forma_pago, amount: Number(p.monto),
+      kind: { boleta: 'Boleta', factura: 'Factura', nota_venta: 'Nota de venta' }[cp.tipo] || 'Boleta',
+      d: fromIso(isoLima(t)), h: hhmm(t), sunat: cp.estado || 'pendiente', anulado: !!p.anulado });
+    if (p.id > PID) PID = p.id;
+  });
+  nid = RES.reduce(function (m, r) { return Math.max(m, r.id); }, 0);
+
+  PRODUCTS = D.productos.map(function (p) {
+    var precio = Number(p.precio), l = p.precios || {};
+    return { id: p.id, n: p.nombre, c: p.categoria, p: precio, t: p.tipo, cost: p.costo != null ? Number(p.costo) : null,
+      stock: p.tipo === 'Producto' ? Number(p.stock || 0) : null, min: p.stock_minimo != null ? Number(p.stock_minimo) : 0,
+      lot: p.lote || '', exp: p.vence || '', rest: !!p.en_restaurante, dest: p.destino || '', ant: 15, on: p.activo !== false,
+      prices: { publico: l.publico != null ? Number(l.publico) : precio, booking: l.booking != null ? Number(l.booking) : precio,
+        personal: l.personal != null ? Number(l.personal) : precio, promo: l.promo != null ? Number(l.promo) : precio } };
+  });
+  STOCKMOV = [];
+  EMP = D.personal.map(function (p) { return { name: p.nombre, cargo: p.cargo, turno: p.turno || '', on: p.activo !== false }; });
+  STAFF = EMP.filter(function (e) { return e.on; }).map(function (e) { return e.name; });
+  SEASONS = D.temporadas.map(function (s) { return { n: s.nombre, from: s.desde, to: s.hasta, pct: Number(s.porcentaje) }; });
+  WEEKEND = { on: !!cfg.fin_semana_activo, pct: Number(cfg.fin_semana_pct || 0) };
+  if (D.origenes.length) ORIGINS = D.origenes.filter(function (o) { return o.activo !== false; }).map(function (o) { return { n: o.nombre, c: Number(o.comision_pct || 0) }; });
+  if (D.formas.length) { METHODS = D.formas.map(function (f) { return f.nombre; }); PAYON = {}; METHODS.forEach(function (m) { PAYON[m] = true; }); }
+  if (D.motivos.length) MOTIVOS = D.motivos.map(function (m) { return m.nombre; });
+  if (D.mesas.length) {
+    AMB = D.mesas.map(function (m) { return m.ambiente; }).filter(function (a, i, x) { return x.indexOf(a) === i; });
+    TABLES = D.mesas.map(function (m) { return { id: m.id, n: m.nombre, amb: m.ambiente, seats: m.asientos, order: null }; });
+    state.amb = AMB[0];
+  }
+  TURNOS = []; CIERRES = []; WA = []; EXTRA = []; AUD = []; CLI_EXTRA = [];
+  NOGRATO = {}; D.noGratos.forEach(function (c) { if (c.num_doc) NOGRATO[c.num_doc] = { motivo: c.motivo_no_grato || '', d: TODAY }; });
+
+  CFG.name = cfg.nombre_comercial || CFG.name; CFG.legal = cfg.razon_social || ''; CFG.ruc = cfg.ruc || '';
+  CFG.addr = cfg.direccion || ''; CFG.phone = cfg.telefono || ''; CFG.mail = cfg.correo || '';
+  CFG.igv = Number(cfg.igv_pct != null ? cfg.igv_pct : CFG.igv); CFG.amazonia = !!cfg.amazonia;
+  CFG.ci = hora(cfg.hora_checkin, CFG.ci); CFG.co = hora(cfg.hora_checkout, CFG.co); CFG.maxco = hora(cfg.hora_max_checkout, CFG.maxco);
+  CFG.env = cfg.ambiente_nooki === 'produccion' ? 'Producción' : 'Beta';
+
+  state.caja = !!D.caja;
+  if (D.caja) { state.cajaSince = hhmm(new Date(D.caja.abierto_en)); state.cajaOpenAmt = Number(D.caja.monto_inicial || 0); }
+})();
+
+/* Nombre del usuario que entró */
+function ME() { return (window.PUENTE && PUENTE.nombre) || 'Recepción'; }
+
+/* Clave de administrador: se verifica en el servidor, no en el navegador */
+function pedirClave(motivo, fn) {
+  if (adminActivo()) { renovarAdmin(); fn(); return; }
+  openModal({ title: 'Clave de administrador', width: 400,
+    body: '<p>' + esc(motivo) + ' necesita la clave de administrador.</p><div class="field"><label for="admPin2">Clave</label><input id="admPin2" type="password" autocomplete="off" placeholder="••••"></div><p class="ferr" id="admE2" hidden></p><p class="hint">Queda abierto ' + ADM.MIN + ' minutos.</p>',
+    foot: '<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="admGo">' + ic('login') + 'Continuar</button>',
+    onMount: function (w) {
+      var inp = $('#admPin2', w), e = $('#admE2', w);
+      var go2 = function () {
+        PUENTE.clave(inp.value.trim()).then(function (r) {
+          if (r && r.ok) { closeModal(true); renovarAdmin(); actualizarAdmChip(); fn(); return; }
+          e.textContent = { incorrecta: 'Clave incorrecta. Te quedan ' + (r && r.intentos_restantes) + ' intentos.', espera: 'Demasiados intentos. Espera 1 minuto.',
+            sin_clave: 'Todavía no hay clave de administrador. Créala en Ajustes.', sin_permiso: 'Tu cuenta no puede hacer esto.' }[r && r.motivo] || 'No se pudo verificar la clave.';
+          e.hidden = false; inp.value = ''; inp.focus();
+        }, function () { e.textContent = 'Sin conexión: no se pudo verificar la clave.'; e.hidden = false; });
+      };
+      $('#admGo', w).onclick = go2; inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') go2(); });
+    } });
+}
+
+/* El administrador (Nooki) nunca necesita la clave */
+function adminActivo() { return (window.PUENTE && PUENTE.rol === 'admin') || Date.now() < ADM.hasta; }
+function actualizarAdmChip() {
+  var b = $('#admChip'); if (!b) return;
+  if (PUENTE.rol === 'admin') { b.hidden = true; return; }   // sin contador para el administrador
+  var on = Date.now() < ADM.hasta; b.hidden = !on;
+  if (on) { var s = Math.max(0, Math.round((ADM.hasta - Date.now()) / 1000)); b.innerHTML = ic('login') + '<span>Administrador · ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) + '</span><b>Bloquear</b>'; b.setAttribute('aria-label', 'Modo administrador abierto. Tocar para bloquear'); }
+}
+
+/* Menú del usuario: nombre real, tema, Usuarios y facturación (sistema anterior) y Salir */
+Object.assign(ACT, {
+  'me': function (a) {
+    var items = [{ head: ME() + ' · ' + CFG.name },
+      { label: effTheme() === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro', icon: effTheme() === 'dark' ? 'sun' : 'moon', run: toggleTheme }];
+    if (PUENTE.rol === 'admin') items.push({ label: 'Usuarios y conexión con el facturador', icon: 'search', run: function () { location.href = '/anterior.html#usuarios'; } });
+    items.push({ label: 'Salir', icon: 'login', run: PUENTE.salir });
+    menu(a, items, { width: 280 });
+  }
+});
+(function () {
+  var b = document.querySelector('.me b'), s = document.querySelector('.me small'), av = document.querySelector('.me .av');
+  var roles = { admin: 'Administrador', recepcion: 'Recepción', dueno: 'Dueño' };
+  if (b) b.textContent = ME();
+  if (s) s.textContent = roles[PUENTE.rol] || '';
+  if (av) av.textContent = ME().replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ ]/g, '').trim().split(/\s+/).slice(0, 2).map(function (x) { return x[0]; }).join('').toUpperCase();
+})();
+
+/* ---------- inicio ---------- */
+$('#dw').inert=true;
+var k0=location.hash.slice(1);
+if(k0==='nueva')state.form=newForm();
+if(k0)state.view=k0;
+render();
+entrarRecepcion();
+})();
