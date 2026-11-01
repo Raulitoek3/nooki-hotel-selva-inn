@@ -136,3 +136,76 @@ input:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 
 .modulo .pill{justify-self:start;margin-bottom:4px}
 .modulo b{font-size:16px}
 @media (max-width: 760px){.modulos{grid-template-columns:1fr}.modulo{min-height:0}}
+
+/* Botón de peligro (eliminar) */
+.btn-peligro{background:var(--dan);border-color:var(--dan);color:#fff}
+.btn-peligro:hover{background:var(--dan);filter:brightness(1.08);border-color:var(--dan)}
+#mCuerpo .btn-peligro{justify-self:start;background:var(--surface);color:var(--dan);border-color:var(--dan)}
+
+/* Estados de habitación (mismos tonos que el prototipo) */
+:root{--occ:#1d4ed8;--occ-s:#e0e9ff;--res:#6941c6;--res-s:#f4ebff;--libre:#067647;--libre-s:#dcfae6;--lleno:#b42318;--lleno-s:#fee4e2}
+:root[data-theme="dark"]{--occ:#84a9ff;--occ-s:#172446;--res:#b9a4ff;--res-s:#241b42;--libre:#47cd89;--libre-s:#0f2b1d;--lleno:#ff8a80;--lleno-s:#3a1512}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--occ:#84a9ff;--occ-s:#172446;--res:#b9a4ff;--res-s:#241b42;--libre:#47cd89;--libre-s:#0f2b1d;--lleno:#ff8a80;--lleno-s:#3a1512}}
+.p-lleno{background:var(--lleno);color:#fff}
+.p-lleno-txt{color:var(--lleno)}
+.chip{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:999px;background:var(--sunken);color:var(--text-2);font-size:13px;font-weight:500;white-space:nowrap}
+
+/* Inicio: ocupación por piso */
+.ocupacion{padding:22px 24px;margin-top:16px}
+.op-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.op-lista{list-style:none;padding:0;margin:0}
+.op-lista li{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 0;border-top:1px solid var(--border)}
+.op-lista li.lleno .op-l b{color:var(--lleno)}
+.op-l{display:grid;gap:4px;min-width:0}
+.op-l b{font-size:16px}
+.op-tipos{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.op-r{display:grid;justify-items:end;gap:8px;flex:none}
+.barra{display:block;width:140px;height:8px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.barra i{display:block;height:100%;background:var(--occ);border-radius:99px}
+.lleno .barra i{background:var(--lleno)}
+
+/* Ajustes */
+.tabs{display:flex;gap:6px;padding:6px;background:var(--sunken);border-radius:14px;margin-bottom:16px;overflow-x:auto}
+.tabs button{flex:1 0 auto;min-height:44px;padding:0 16px;border:0;border-radius:10px;background:none;color:var(--text-2);font:600 14px var(--sans);cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--accent);box-shadow:var(--sh-xs)}
+.aj-form{display:grid;gap:16px}
+.aj-sec{padding:22px 24px;display:grid;gap:14px}
+.aj-sec.angosto{max-width:520px}
+.aj-sec h2{margin-bottom:-6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid2 .ancho{grid-column:1/-1}
+.aj-pie{display:flex;justify-content:flex-end}
+.aj-barra{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.resumen{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--text-2);font-size:14px}
+.resumen b{color:var(--text);font-size:16px}
+.chip-clave{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.candado{max-width:460px;padding:24px;display:grid;gap:14px}
+
+/* Pisos */
+.piso{padding:20px 22px;margin-bottom:14px;display:grid;gap:12px}
+.piso.lleno{border-color:var(--lleno);box-shadow:0 0 0 1px var(--lleno)}
+.piso-cab{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.piso-cab .ayuda{margin-top:4px}
+.habs{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+.hab{display:grid;gap:2px;text-align:left;min-height:84px;padding:10px 12px;border-radius:12px;border:1px solid var(--s,var(--border));background:var(--ss,var(--surface));color:var(--text);font:inherit;cursor:pointer;transition:box-shadow .15s}
+.hab:hover{box-shadow:0 0 0 3px var(--focus)}
+.hab b{font-size:18px}
+.hab span{font-size:13px;color:var(--text-2)}
+.hab i{font-style:normal;font-size:12px;font-weight:600;color:var(--s,var(--text-3))}
+.h-libre{--s:var(--libre);--ss:var(--libre-s)}
+.h-occ{--s:var(--occ);--ss:var(--occ-s)}
+.h-res{--s:var(--res);--ss:var(--res-s)}
+.h-fuera{--s:var(--text-3);--ss:var(--sunken)}
+
+/* Tabla de tipos en celular */
+@media (max-width: 760px){
+  .grid2,.grid3{grid-template-columns:1fr}
+  .aj-sec,.ocupacion,.piso{padding:18px 16px}
+  .op-lista li{flex-direction:column;align-items:flex-start}
+  .op-r{justify-items:start}
+  .tabla td.c-dato{display:inline-block;width:auto;margin-right:14px}
+  .tabla td.c-dato::before{content:attr(data-l) ': ';color:var(--text-3)}
+  .habs{grid-template-columns:repeat(auto-fill,minmax(104px,1fr))}
+  .aj-pie .btn{width:100%}
+}

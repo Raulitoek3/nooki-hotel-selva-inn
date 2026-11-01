@@ -56,8 +56,74 @@ function estadoNuevo() {
       { id: 'u-rec', nombre: 'Recepción de prueba', correo: 'recepcion@ejemplo.test', rol: 'recepcion', activo: true, creado_en: '2026-10-31T19:05:00Z', ultimo_ingreso: null },
       { id: 'u-due', nombre: 'Dueño de prueba', correo: 'dueno.activo@ejemplo.test', rol: 'dueno', activo: true, creado_en: '2026-10-31T19:06:00Z', ultimo_ingreso: null }
     ],
-    llamadas: []
+    llamadas: [],
+    clave: null, fallos: 0, esperaHasta: 0, claveHasta: {},
+    tablas: datosHotel()
   };
+}
+
+// Hotel de prueba: 4 pisos. El piso 3 está lleno hoy; la 201 está reservada para hoy.
+function diaLima(delta) {
+  const d = new Date(Date.now() + delta * 86400000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(d);
+}
+function datosHotel() {
+  const h = (numero, tipo, piso, extra) => Object.assign({ numero, tipo, piso, fuera_de_venta: false, zk_habitacion: null, notas: null }, extra || {});
+  return {
+    config: [{ id: 1, nombre_comercial: 'Hotel Selva Inn', razon_social: null, ruc: null, direccion: 'Jr. 28 de Julio 541, Puerto Maldonado, Madre de Dios',
+      telefono: '+51 946 895 818', correo: 'info@hotelselvainn.com', amazonia: true, igv_pct: 10.5, adelanto_comprobante: 'al_cobrar',
+      impresion_automatica: true, hora_checkin: '09:00:00', hora_checkout: '11:00:00', hora_max_checkout: '11:30:00' }],
+    tipos_habitacion: [
+      { codigo: 'P', nombre: 'Personal', tarifa: 160, camas: 1, capacidad: 1, orden: 1, activo: true },
+      { codigo: 'D', nombre: 'Doble', tarifa: 200, camas: 2, capacidad: 2, orden: 2, activo: true },
+      { codigo: 'MQ', nombre: 'Matrimonial Queen', tarifa: 180, camas: 1, capacidad: 2, orden: 4, activo: true },
+      { codigo: 'MK', nombre: 'Matrimonial King', tarifa: 220, camas: 1, capacidad: 2, orden: 5, activo: true },
+      { codigo: 'AU', nombre: 'Auditorio', tarifa: 125, camas: 0, capacidad: 40, orden: 7, activo: true }
+    ],
+    habitaciones: [h('101', 'P', 1), h('102', 'P', 1), h('103', 'P', 1), h('104', 'P', 1),
+      h('201', 'MQ', 2), h('202', 'P', 2), h('203', 'D', 2), h('301', 'MK', 3), h('302', 'P', 3), h('AUD', 'AU', 0)],
+    reservas: [
+      { id: 1, habitacion: '301', entrada: diaLima(-1), salida: diaLima(1), estado: 'ocupado' },
+      { id: 2, habitacion: '302', entrada: diaLima(-2), salida: diaLima(2), estado: 'ocupado' },
+      { id: 3, habitacion: '101', entrada: diaLima(0), salida: diaLima(2), estado: 'ocupado' },
+      { id: 4, habitacion: '201', entrada: diaLima(0), salida: diaLima(1), estado: 'confirmado' },
+      { id: 5, habitacion: '102', entrada: diaLima(-5), salida: diaLima(-3), estado: 'finalizada' }
+    ]
+  };
+}
+const LLAVE = { config: 'id', tipos_habitacion: 'codigo', habitaciones: 'numero', reservas: 'id' };
+const AJUSTES = ['config', 'tipos_habitacion', 'habitaciones'];
+const UNICOS = { tipos_habitacion: ['codigo', 'nombre'], habitaciones: ['numero'] };
+const REFERENCIAS = { habitaciones: [['reservas', 'habitacion', 'numero']], tipos_habitacion: [['habitaciones', 'tipo', 'codigo']] };
+
+function cumpleFiltros(fila, params) {
+  for (const [k, v] of params) {
+    if (['select', 'order', 'limit', 'offset', 'columns', 'on_conflict'].includes(k)) continue;
+    const i = v.indexOf('.'); const op = v.slice(0, i); const val = v.slice(i + 1);
+    const a = fila[k] == null ? '' : String(fila[k]);
+    const num = (x) => x !== '' && !isNaN(Number(x));
+    const cmp = num(a) && num(val) ? Number(a) - Number(val) : a.localeCompare(val);
+    if (op === 'eq' && !(a === val)) return false;
+    if (op === 'neq' && a === val) return false;
+    if (op === 'lt' && !(cmp < 0)) return false;
+    if (op === 'lte' && !(cmp <= 0)) return false;
+    if (op === 'gt' && !(cmp > 0)) return false;
+    if (op === 'gte' && !(cmp >= 0)) return false;
+    if (op === 'in') { const lista = val.replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, '')); if (!lista.includes(a)) return false; }
+  }
+  return true;
+}
+function ordenar(filas, orden) {
+  if (!orden) return filas;
+  const claves = orden.split(',').map((o) => o.split('.'));
+  return filas.slice().sort((x, y) => {
+    for (const [c, dir] of claves) {
+      const a = x[c], b = y[c];
+      const r = typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), 'es', { numeric: true });
+      if (r) return dir === 'desc' ? -r : r;
+    }
+    return 0;
+  });
 }
 
 async function simular(page, E) {
@@ -121,6 +187,75 @@ async function simular(page, E) {
         return json({ ok: true });
       }
       return json({ error: { mensaje: 'Acción no válida.' } }, 400);
+    }
+    const yoU = E.usuarios.find((u) => u.id === sub && u.activo);
+    const claveAbierta = () => yoU && (yoU.rol === 'admin' || (yoU.rol === 'recepcion' && (E.claveHasta[sub] || 0) > Date.now()));
+    const objeto = (req.headers()['accept'] || '').includes('vnd.pgrst.object');
+    const representar = /return=representation/.test(req.headers()['prefer'] || '');
+
+    const mt = url.pathname.match(/^\/rest\/v1\/(\w+)$/);
+    if (mt && E.tablas[mt[1]]) {
+      const t = mt[1], filas = E.tablas[t], metodo = req.method();
+      const puede = yoU && (!AJUSTES.includes(t) || claveAbierta());
+      if (metodo === 'GET') {
+        const sel = yoU ? ordenar(filas.filter((f) => cumpleFiltros(f, url.searchParams)), url.searchParams.get('order')) : [];
+        if (objeto) return sel.length ? json(sel[0]) : json({ code: 'PGRST116', message: 'no rows' }, 406);
+        return json(sel);
+      }
+      if (metodo === 'POST') {
+        if (!puede) return json({ code: '42501', message: 'new row violates row-level security policy' }, 403);
+        let nuevas = req.postDataJSON(); if (!Array.isArray(nuevas)) nuevas = [nuevas];
+        for (const n of nuevas) for (const u of (UNICOS[t] || [])) {
+          if (filas.some((f) => f[u] === n[u]) || nuevas.filter((x) => x[u] === n[u]).length > 1) return json({ code: '23505', message: 'duplicate key' }, 409);
+        }
+        nuevas.forEach((n) => filas.push(Object.assign({ fuera_de_venta: false, notas: null, activo: true }, n)));
+        return representar ? json(nuevas, 201) : route.fulfill({ status: 201, headers: { 'Access-Control-Allow-Origin': '*' } });
+      }
+      const afectadas = puede ? filas.filter((f) => cumpleFiltros(f, url.searchParams)) : [];
+      if (metodo === 'PATCH') {
+        const cambios = req.postDataJSON();
+        for (const u of (UNICOS[t] || [])) if (cambios[u] != null && filas.some((f) => f[u] === cambios[u] && !afectadas.includes(f))) return json({ code: '23505', message: 'duplicate key' }, 409);
+        afectadas.forEach((f) => Object.assign(f, cambios));
+        return json(afectadas);
+      }
+      if (metodo === 'DELETE') {
+        for (const f of afectadas) for (const [tr, col, pk] of (REFERENCIAS[t] || [])) {
+          if (E.tablas[tr].some((x) => x[col] === f[pk])) return json({ code: '23503', message: 'foreign key violation' }, 409);
+        }
+        E.tablas[t] = filas.filter((f) => !afectadas.includes(f));
+        return json(afectadas);
+      }
+    }
+
+    const mr = url.pathname.match(/^\/rest\/v1\/rpc\/(\w+)$/);
+    if (mr) {
+      const f = mr[1], b = (() => { try { return req.postDataJSON() || {}; } catch { return {}; } })();
+      const opera = yoU && (yoU.rol === 'admin' || yoU.rol === 'recepcion');
+      if (f === 'admin_abierto') return json(!!claveAbierta());
+      if (f === 'hay_clave') return json(!!E.clave);
+      if (f === 'bloquear_clave') { delete E.claveHasta[sub]; return json(null); }
+      if (f === 'renovar_clave') {
+        if ((E.claveHasta[sub] || 0) > Date.now()) { E.claveHasta[sub] = Date.now() + 600000; return json({ ok: true, hasta: new Date(E.claveHasta[sub]).toISOString() }); }
+        return json({ ok: false, hasta: null });
+      }
+      if (f === 'verificar_clave') {
+        if (!opera) return json({ ok: false, motivo: 'sin_permiso' });
+        if (!E.clave) return json({ ok: false, motivo: 'sin_clave' });
+        if (E.esperaHasta > Date.now()) return json({ ok: false, motivo: 'espera' });
+        if (b.p_clave === E.clave) { E.fallos = 0; E.claveHasta[sub] = Date.now() + 600000; return json({ ok: true, hasta: new Date(E.claveHasta[sub]).toISOString() }); }
+        E.fallos++;
+        if (E.fallos >= 5) { E.fallos = 0; E.esperaHasta = Date.now() + 60000; return json({ ok: false, motivo: 'espera' }); }
+        return json({ ok: false, motivo: 'incorrecta', intentos_restantes: 5 - E.fallos });
+      }
+      if (f === 'cambiar_clave') {
+        if (!opera) return json({ ok: false, motivo: 'sin_permiso' });
+        if (!b.p_nueva || b.p_nueva.length < 4) return json({ ok: false, motivo: 'muy_corta' });
+        if (E.clave && yoU.rol !== 'admin') {
+          if (!claveAbierta()) return json({ ok: false, motivo: 'clave_cerrada' });
+          if (b.p_actual !== E.clave) return json({ ok: false, motivo: 'actual_incorrecta' });
+        }
+        E.clave = b.p_nueva; return json({ ok: true });
+      }
     }
     return json({ message: 'no simulado: ' + url.pathname }, 404);
   });
@@ -241,6 +376,117 @@ async function entrar(page, correo, clave) {
     await pv.waitForSelector('#view h1');
     prueba('el enlace abre Reportes en la vista previa', (await pv.textContent('#view h1')).includes('Reportes'));
     await pv.close();
+
+    // Inicio: ocupación por piso con el piso lleno
+    await page.waitForSelector('.op-lista li');
+    const pisosInicio = await page.$$eval('.op-lista li', (ls) => ls.map((l) => l.textContent));
+    prueba('Inicio muestra la ocupación de los 4 pisos', pisosInicio.length === 4, pisosInicio.length + ' pisos');
+    prueba('el piso 3 aparece como Lleno', pisosInicio.some((t) => t.startsWith('Piso 3') && t.includes('Lleno')));
+    prueba('cada piso dice cuántas habitaciones tiene por tipo', pisosInicio.some((t) => t.startsWith('Piso 1') && t.includes('4 habitaciones') && t.includes('4 Personal')));
+    prueba('el auditorio va en "Otros espacios" al final', pisosInicio[3].startsWith('Otros espacios'));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-9-inicio-ocupacion.png'), fullPage: true });
+
+    // Ajustes · Datos del hotel (admin: sin clave)
+    await page.click('#nav a[href="#ajustes"]');
+    await page.waitForSelector('#fDatos');
+    prueba('admin entra a Ajustes sin pedir clave', !(await page.$('#fCandado')));
+    prueba('Ajustes tiene 4 secciones', (await page.$$('.tabs [role=tab]')).length === 4);
+    prueba('los datos del hotel vienen de la base', (await page.inputValue('#dNombre')) === 'Hotel Selva Inn' && (await page.inputValue('#dTel')) === '+51 946 895 818');
+    prueba('Amazonía marcada y sin campo de IGV', (await page.isChecked('#dAmaz')) && (await page.isHidden('#dIgvCaja')));
+    await page.fill('#dRuc', '123');
+    await page.click('#dGuardar');
+    await page.waitForSelector('#dErr:not([hidden])');
+    prueba('RUC inválido avisa', (await page.textContent('#dErr')).includes('11 números'));
+    await page.fill('#dRuc', '20999999999');
+    await page.fill('#dRazon', 'Empresa de Prueba S.A.C.');
+    await page.click('#dGuardar');
+    await page.waitForFunction(() => /guardados/.test(document.querySelector('#aviso').textContent));
+    prueba('guardar datos del hotel', E.tablas.config[0].ruc === '20999999999' && E.tablas.config[0].razon_social === 'Empresa de Prueba S.A.C.');
+    prueba('sin scroll de lado (datos del hotel)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-10-ajustes-datos.png'), fullPage: true });
+
+    // Ajustes · Pisos y habitaciones
+    await page.click('.tabs [data-p="habitaciones"]');
+    await page.waitForSelector('.piso');
+    prueba('habitaciones agrupadas en 4 pisos', (await page.$$('.piso')).length === 4);
+    prueba('el piso 3 se marca como lleno', (await page.$$('.piso.lleno')).length === 1 && (await page.textContent('.piso.lleno h2')) === 'Piso 3');
+    prueba('colores por estado: ocupada, reservada hoy y libre',
+      !!(await page.$('.hab.h-occ[data-n="301"]')) && !!(await page.$('.hab.h-res[data-n="201"]')) && !!(await page.$('.hab.h-libre[data-n="104"]')));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-11-pisos.png'), fullPage: true });
+
+    await page.click('#bAgregarHab');
+    await page.fill('#fNums', '401 a 403');
+    await page.selectOption('#fTipo', 'D');
+    await page.click('#mOk');
+    await page.waitForSelector('#velo', { state: 'hidden' });
+    await page.waitForSelector('.hab[data-n="403"]');
+    prueba('agregar 401 a 403 crea 3 habitaciones en el piso 4',
+      ['401', '402', '403'].every((n) => E.tablas.habitaciones.some((h) => h.numero === n && h.piso === 4 && h.tipo === 'D')));
+    prueba('aparece el piso 4 con 3 Doble', (await page.textContent('.piso:has(h2:text-is("Piso 4"))')).includes('3 Doble'));
+
+    await page.click('#bAgregarHab');
+    await page.fill('#fNums', '101');
+    await page.click('#mOk');
+    await page.waitForSelector('#mError:not([hidden])');
+    prueba('no deja repetir una habitación', (await page.textContent('#mError')).includes('ya existe'));
+    await page.click('#mCancelar');
+
+    await page.click('.hab[data-n="104"]');
+    await page.check('#fFuera');
+    await page.click('#mOk');
+    await page.waitForSelector('.hab.h-fuera[data-n="104"]');
+    prueba('poner una habitación fuera de venta', E.tablas.habitaciones.find((h) => h.numero === '104').fuera_de_venta === true);
+
+    await page.click('.hab[data-n="301"]');
+    await page.click('#fEliminar');
+    await page.click('#mOk');
+    await page.waitForSelector('#mError:not([hidden])');
+    prueba('no deja eliminar una habitación con reservas', (await page.textContent('#mError')).includes('Fuera de venta'));
+    await page.click('#mCancelar');
+
+    await page.click('.hab[data-n="403"]');
+    await page.click('#fEliminar');
+    await page.click('#mOk');
+    await page.waitForSelector('.hab[data-n="403"]', { state: 'detached' });
+    prueba('eliminar una habitación sin reservas', !E.tablas.habitaciones.some((h) => h.numero === '403'));
+
+    // Ajustes · Tipos y tarifas
+    await page.click('.tabs [data-p="tipos"]');
+    await page.waitForSelector('#bAgregarTipo');
+    prueba('lista los 5 tipos', (await page.$$('#ajPanel tbody tr')).length === 5);
+    await page.click('#bAgregarTipo');
+    await page.fill('#fNom', 'Suite Matrimonial');
+    await page.fill('#fTar', '280');
+    await page.click('#mOk');
+    await page.waitForSelector('#ajPanel tr:has-text("Suite Matrimonial")');
+    prueba('agregar el tipo Suite Matrimonial', E.tablas.tipos_habitacion.some((t) => t.nombre === 'Suite Matrimonial' && t.tarifa === 280));
+    await page.click('#ajPanel tr:has-text("Personal") button[data-act="editar"]');
+    await page.fill('#fNom', 'Individual Simple');
+    await page.click('#mOk');
+    await page.waitForSelector('#ajPanel tr:has-text("Individual Simple")');
+    prueba('renombrar Personal a Individual Simple', E.tablas.tipos_habitacion.find((t) => t.codigo === 'P').nombre === 'Individual Simple');
+    await page.click('#ajPanel tr:has-text("Individual Simple") button[data-act="eliminar"]');
+    await page.click('#mOk');
+    await page.waitForSelector('#mError:not([hidden])');
+    prueba('no deja eliminar un tipo que tiene habitaciones', (await page.textContent('#mError')).includes('cámbialas'));
+    await page.click('#mCancelar');
+    prueba('sin scroll de lado (tipos)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-12-tipos.png'), fullPage: true });
+
+    // Ajustes · Clave de administrador
+    await page.click('.tabs [data-p="clave"]');
+    await page.waitForSelector('#fClaveAdm');
+    prueba('sin clave: ofrece crearla', (await page.textContent('#fClaveAdm h2')).includes('Crear'));
+    await page.fill('#kNue', 'Clave-1234');
+    await page.fill('#kRep', 'otra');
+    await page.click('#fClaveAdm button[type=submit]');
+    await page.waitForSelector('#kErr:not([hidden])');
+    prueba('claves distintas avisa', (await page.textContent('#kErr')).includes('no son iguales'));
+    await page.fill('#kRep', 'Clave-1234');
+    await page.click('#fClaveAdm button[type=submit]');
+    await page.waitForFunction(() => /Clave creada/.test(document.querySelector('#aviso').textContent));
+    prueba('crear la clave de administrador', E.clave === 'Clave-1234');
+
     await page.click('#nav a[href="#usuarios"]');
     await page.waitForSelector('.tabla');
 
@@ -262,6 +508,27 @@ async function entrar(page, correo, clave) {
     await page.evaluate(() => { location.hash = '#usuarios'; });
     await page.waitForTimeout(150);
     prueba('recepción no puede abrir Usuarios', await page.isVisible('.bienvenida'));
+    await page.evaluate(() => { location.hash = '#ajustes'; });
+    await page.waitForSelector('#fCandado');
+    prueba('recepción: Ajustes pide la clave', true);
+    await page.fill('#cClave', 'mala');
+    await page.click('#fCandado button');
+    await page.waitForSelector('#cErr:not([hidden])');
+    prueba('clave incorrecta dice los intentos que quedan', (await page.textContent('#cErr')).includes('4 intentos'));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-13-candado.png') });
+    await page.fill('#cClave', 'Clave-1234');
+    await page.click('#fCandado button');
+    await page.waitForSelector('#fDatos');
+    prueba('con la clave se abre Ajustes', (await page.textContent('#ajClave')).includes('Clave abierta'));
+    await page.fill('#dTel', '+51 900 000 000');
+    await page.click('#dGuardar');
+    await page.waitForFunction(() => /guardados/.test(document.querySelector('#aviso').textContent));
+    prueba('recepción guarda con la clave abierta', E.tablas.config[0].telefono === '+51 900 000 000');
+    await page.click('#bBloquear');
+    await page.waitForSelector('#fCandado');
+    prueba('Bloquear vuelve a pedir la clave', true);
+    await page.evaluate(() => { location.hash = '#inicio'; });
+    await page.waitForSelector('.bienvenida');
     prueba('sin scroll de lado (inicio)', await sinScrollLateral(page));
     await page.screenshot({ path: path.join(OUT, nombreVista + '-5-recepcion.png') });
 
@@ -282,6 +549,15 @@ async function entrar(page, correo, clave) {
     prueba('dueño ve Reportes, Caja y Auditoría',
       deDueno.includes('Reportes') && deDueno.includes('Caja') && deDueno.includes('Auditoría'));
     prueba('aviso de solo lectura', (await page.textContent('.bienvenida')).includes('Solo lectura'));
+    prueba('dueño no ve Ajustes en el menú', !(await page.textContent('#nav')).includes('Ajustes'));
+    await page.waitForSelector('.op-lista li');
+    prueba('dueño ve la ocupación por piso', (await page.$$('.op-lista li')).length >= 4);
+    prueba('dueño no tiene botón para editar pisos', !(await page.$('.ocupacion a[href="#ajustes/habitaciones"]')));
+    await page.evaluate(() => { location.hash = '#ajustes'; });
+    await page.waitForTimeout(150);
+    prueba('dueño no puede abrir Ajustes', !(await page.$('#ajCuerpo')));
+    await page.evaluate(() => { location.hash = '#inicio'; });
+    await page.waitForSelector('.modulos');
     await page.screenshot({ path: path.join(OUT, nombreVista + '-7-modulos-dueno.png'), fullPage: true });
 
     // Vista previa: todas las pantallas del prototipo cargan sin errores
