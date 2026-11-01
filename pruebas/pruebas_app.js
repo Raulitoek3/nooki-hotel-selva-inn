@@ -1042,8 +1042,17 @@ async function entrar(page, correo, clave) {
       prueba('Guardar: no cierra dos veces el mismo día', E.tablas.cierres.length === 1 && /ya está cerrado/.test(await page.textContent('body')));
       await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S2'); t.order = { items: [{ n: 'Café', p: 4, q: 1, sent: 0 }], since: NKS.ahora(), mozo: 'Mozo', state: 'abierta' }; NKS.refresh(); });
       await esperar(() => E.tablas.pedido_items.some((i) => i.descripcion === 'Café'));
-      // Al volver a entrar se ve lo guardado
-      await page.reload();
+      // Clave de administrador: el admin la crea en Ajustes (se guarda en el servidor)
+      await page.evaluate(() => { location.hash = '#ajustes'; });
+      await page.waitForTimeout(400);
+      const pestanaClave = page.locator('[data-act="set"][data-v="seguridad"]').first();
+      if (await pestanaClave.count()) await pestanaClave.click();
+      await page.waitForSelector('#scN', { timeout: 5000 });
+      prueba('Clave: sin "1234" de demostración en el sistema', !/Demo: la clave/.test(await page.textContent('#view')));
+      await page.fill('#scN', 'Clave-Real-9'); await page.fill('#scR', 'Clave-Real-9');
+      await page.click('[data-act="adm-save"]');
+      prueba('Clave: se crea en el servidor desde Ajustes', await esperar(() => E.clave === 'Clave-Real-9'));
+
       await page.waitForSelector('#view h1', { timeout: 15000 });
       await page.evaluate(() => { location.hash = '#ventas'; });
       await page.waitForTimeout(800);
@@ -1052,6 +1061,29 @@ async function entrar(page, correo, clave) {
       prueba('Al recargar: la mesa abierta sigue con su pedido', await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S2'); return !!(t.order && t.order.items[0].n === 'Café'); }));
       prueba('Al recargar: los días cerrados y turnos vienen de la base', await page.evaluate(() => NKS.turnos().length === 1 && NKS.turnos()[0].cont === 54));
       await page.screenshot({ path: path.join(OUT, 'sistema-escritorio-3-ventas-guardadas.png') });
+    }
+    if (nombreVista === 'escritorio') {
+      // Recepción: Ajustes pide la clave del servidor; "1234" no sirve
+      const ctx2 = await browser.newContext({ viewport, locale: 'es-PE' });
+      const p2 = await ctx2.newPage();
+      p2.on('pageerror', (e) => errores.push('sistema recepción: ' + e.message));
+      await simular(p2, E);
+      await p2.goto(URL0);
+      await p2.waitForURL(/ingreso\.html/);
+      await entrar(p2, 'recepcion@ejemplo.test', 'Prueba-Rec-1');
+      await p2.waitForSelector('#view h1', { timeout: 15000 });
+      await p2.evaluate(() => { location.hash = '#ajustes'; });
+      await p2.waitForSelector('#admPin', { timeout: 5000 });
+      prueba('Recepción: Ajustes está bloqueado sin pista de clave', !/1234/.test(await p2.textContent('#view')));
+      await p2.fill('#admPin', '1234'); await p2.press('#admPin', 'Enter');
+      await p2.waitForSelector('#admE:not([hidden])', { timeout: 5000 });
+      prueba('Recepción: la clave de demostración "1234" no abre Ajustes', !!(await p2.$('#admPin')) && /incorrecta/i.test(await p2.textContent('#admE')));
+      await p2.fill('#admPin', 'Clave-Real-9'); await p2.press('#admPin', 'Enter');
+      let abierto = false;
+      for (let i = 0; i < 50 && !abierto; i++) { await p2.waitForTimeout(100); abierto = !(await p2.$('#admPin')); }
+      prueba('Recepción: la clave real (del servidor) abre Ajustes', abierto);
+      await p2.screenshot({ path: path.join(OUT, 'sistema-escritorio-4-recepcion-ajustes.png') });
+      await ctx2.close();
     }
     await ctx.close();
   }

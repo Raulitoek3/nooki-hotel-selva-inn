@@ -2528,14 +2528,67 @@ function pedirClave(motivo, fn) {
       var go2 = function () {
         PUENTE.clave(inp.value.trim()).then(function (r) {
           if (r && r.ok) { closeModal(true); renovarAdmin(); actualizarAdmChip(); fn(); return; }
-          e.textContent = { incorrecta: 'Clave incorrecta. Te quedan ' + (r && r.intentos_restantes) + ' intentos.', espera: 'Demasiados intentos. Espera 1 minuto.',
-            sin_clave: 'Todavía no hay clave de administrador. Créala en Ajustes.', sin_permiso: 'Tu cuenta no puede hacer esto.' }[r && r.motivo] || 'No se pudo verificar la clave.';
+          e.textContent = textoClave(r);
           e.hidden = false; inp.value = ''; inp.focus();
         }, function () { e.textContent = 'Sin conexión: no se pudo verificar la clave.'; e.hidden = false; });
       };
       $('#admGo', w).onclick = go2; inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') go2(); });
     } });
 }
+
+function textoClave(r) {
+  var m = r && r.motivo;
+  if (m === 'incorrecta') return r.intentos_restantes != null ? 'Clave incorrecta. Te quedan ' + r.intentos_restantes + ' intentos.' : 'Clave incorrecta.';
+  return { espera: 'Demasiados intentos. Espera 1 minuto.', sin_clave: 'Todavía no hay clave de administrador. La crea el administrador (Nooki) en Ajustes.',
+    sin_permiso: 'Tu cuenta no puede hacer esto.' }[m] || 'No se pudo verificar la clave.';
+}
+
+/* Pantalla de bloqueo de Ajustes y Auditoría: la clave se revisa en el servidor (nunca la "1234" de demostración) */
+function lockedView(t) {
+  return '<div class="noperm card adm-lock"><span class="np-ic">' + ic('login') + '</span><h2>' + esc(t) + ' pide la clave de administrador</h2><p>Escríbela para entrar. Queda abierto ' + ADM.MIN + ' minutos o hasta que toques «Bloquear».</p>' +
+    '<form class="adm-f" data-form="adm" data-t="' + esc(t) + '"><input id="admPin" type="password" autocomplete="off" aria-label="Clave de administrador" placeholder="••••"><button class="btn btn-primary btn-lg">' + ic('login') + 'Entrar</button></form><p class="ferr" id="admE" hidden></p></div>';
+}
+document.addEventListener('submit', function (e) {
+  if (!e.target.matches || !e.target.matches('[data-form="adm"]')) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  var i = $('#admPin'), er = $('#admE'), b = e.target.querySelector('button');
+  if (!i || !i.value.trim()) return;
+  if (b) b.disabled = true;
+  PUENTE.clave(i.value.trim()).then(function (r) {
+    if (b) b.disabled = false;
+    if (r && r.ok) { renovarAdmin(); actualizarAdmChip(); render(); return; }
+    er.textContent = textoClave(r); er.hidden = false; i.value = ''; i.focus();
+  }, function () { if (b) b.disabled = false; er.textContent = 'Sin conexión: no se pudo verificar la clave.'; er.hidden = false; });
+}, true);
+
+/* Ajustes → Clave de administrador: se crea o cambia en el servidor (queda guardada cifrada) */
+var HAY_CLAVE = null;
+PUENTE.sb.rpc('hay_clave').then(function (r) { HAY_CLAVE = !r.error && !!r.data; });
+function seguridadBody() {
+  var pide = HAY_CLAVE !== false && PUENTE.rol !== 'admin';
+  return '<p class="hint" style="margin-top:0">La PC de recepción no tiene usuarios. Esta clave protege lo delicado: Ajustes, Auditoría, anular comprobantes, notas de crédito, anular reservas y cambiar precios. Dásela solo al administrador o al dueño.</p>' +
+    (HAY_CLAVE === false ? '<div class="warn">' + ic('alert') + '<span>Todavía no hay clave de administrador. Créala aquí.</span></div>' : '') +
+    '<div class="g2">' + (pide ? inp('scA', 'Clave actual', '', { type: 'password' }) + '<span></span>' : '') +
+    inp('scN', 'Clave nueva', '', { type: 'password', hint: 'Mínimo 4 caracteres. No la compartas por chat.' }) + inp('scR', 'Repite la clave nueva', '', { type: 'password' }) + '</div>' +
+    '<p class="ferr" id="scE" hidden></p><div><button class="btn btn-primary" data-act="adm-save">' + ic('check') + (HAY_CLAVE === false ? 'Crear clave' : 'Cambiar clave') + '</button></div>' +
+    '<p class="hint">Después de 5 intentos equivocados el sistema espera 1 minuto. Todos los intentos quedan en Auditoría.</p>';
+}
+var admLockBase = ACT['adm-lock'];
+Object.assign(ACT, {
+  'adm-save': function () {
+    var a = $('#scA'), n = $('#scN').value, r2 = $('#scR').value, e = $('#scE');
+    var m = n.length < 4 ? 'La clave nueva debe tener al menos 4 caracteres.' : n !== r2 ? 'Las dos claves nuevas no coinciden.' : a && !a.value ? 'Escribe la clave actual.' : '';
+    if (m) { e.textContent = m; e.hidden = false; return; }
+    PUENTE.sb.rpc('cambiar_clave', { p_actual: a ? a.value : null, p_nueva: n }).then(function (res) {
+      var r = res.data;
+      if (!res.error && r && r.ok) { var nueva = HAY_CLAVE === false; HAY_CLAVE = true; toast(nueva ? 'Clave de administrador creada' : 'Clave de administrador cambiada', { icon: 'login' }); render({ soft: true }); return; }
+      e.textContent = res.error ? 'No se pudo guardar la clave.' : ({ actual_incorrecta: 'La clave actual no es correcta.', clave_cerrada: 'La clave se cerró. Vuelve a entrar a Ajustes.',
+        muy_corta: 'La clave debe tener al menos 4 caracteres.', sin_permiso: 'Tu cuenta no puede cambiar la clave.' }[r && r.motivo] || 'No se pudo cambiar la clave.');
+      e.hidden = false;
+    }, function () { e.textContent = 'Sin conexión: no se guardó la clave.'; e.hidden = false; });
+  },
+  'adm-lock': function () { PUENTE.sb.rpc('bloquear_clave').then(function () {}, function () {}); if (admLockBase) admLockBase.apply(this, arguments); }
+});
 
 /* El administrador (Nooki) nunca necesita la clave */
 function adminActivo() { return (window.PUENTE && PUENTE.rol === 'admin') || Date.now() < ADM.hasta; }
