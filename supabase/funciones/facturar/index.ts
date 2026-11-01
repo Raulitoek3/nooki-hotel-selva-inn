@@ -6,7 +6,9 @@
 // POST { accion: "consultar", comprobante_id }      → actualiza el estado desde Nooki
 // POST { accion: "reenviar",  comprobante_id }      → reintenta uno en error / sin conexión
 // POST { accion: "anular",    comprobante_id, motivo }
-// POST { accion: "nota_credito", comprobante_id, motivo: "01"|"02"|"06", descripcion }  (pide clave abierta o admin)
+// POST { accion: "nota_credito", comprobante_id, motivo, descripcion, monto?, ref? }  (pide clave abierta o admin)
+//        motivo 01, 02, 06: por el total (Nooki copia los ítems). 04, 07, 09: por "monto" (un ítem con ese importe).
+//        ref: código único de esa nota (permite varias notas parciales sobre el mismo comprobante sin duplicar).
 // POST { accion: "probar" }                         → datos de la empresa en Nooki (ambiente, Amazonía, series)
 // POST { accion: "configurar_aviso" }               → registra la URL de nooki-aviso en Nooki (solo admin)
 
@@ -99,8 +101,9 @@ Deno.serve(async (req) => {
   async function enviar(c: any) {
     if (c.tipo === "nota_credito") {
       const { data: af } = await sb.from("comprobantes").select("nooki_id, numero_completo").eq("id", c.afectado_id).maybeSingle();
+      const parcial = !["01", "02", "06"].includes(String(c.motivo_nota));
       const r = await nooki("POST", "/v1/notas-credito", { serie: c.serie, comprobante_afectado_id: af?.nooki_id, comprobante_afectado: af?.numero_completo,
-        motivo: c.motivo_nota, descripcion_motivo: c.descripcion_motivo }, c.idempotency_key);
+        motivo: c.motivo_nota, descripcion_motivo: c.descripcion_motivo, ...(parcial ? { items: c.items } : {}) }, c.idempotency_key);
       if (r.ok) return await guardar(c.id, desdeNooki(r.data));
       return await guardar(c.id, { estado: "error", mensaje_sunat: String(r.data?.error?.mensaje ?? `El facturador respondió ${r.status}.`).slice(0, 500) });
     }
@@ -208,16 +211,32 @@ Deno.serve(async (req) => {
     if (!(await claveAbierta())) return error("Esto pide la clave de administrador.", 403);
     if (b.accion === "nota_credito") {
       if (!["aceptado", "observado"].includes(c.estado) || !["boleta", "factura"].includes(c.tipo)) return error("Solo se hace nota de crédito de boletas o facturas aceptadas.");
-      if (!["01", "02", "06"].includes(String(b.motivo))) return error("Elige el motivo de la nota de crédito.");
+      const motivo = String(b.motivo ?? "");
+      if (!["01", "02", "04", "06", "07", "09"].includes(motivo)) return error("Elige el motivo de la nota de crédito.");
+      const parcial = !["01", "02", "06"].includes(motivo);
+      const { data: previas } = await sb.from("comprobantes").select("id, total, estado, idempotency_key").eq("afectado_id", c.id).eq("tipo", "nota_credito");
+      const idem = b.ref ? `hotel:nc:${c.id}:${String(b.ref).replace(/[^\w-]/g, "").slice(0, 40)}` : `hotel:nc:${c.id}`;
+      const vigentes = (previas ?? []).filter((x: any) => !["anulado", "rechazado"].includes(x.estado) && x.idempotency_key !== idem);
+      const usado = vigentes.reduce((s: number, x: any) => s + Number(x.total), 0);
+      const saldo = Math.round((Number(c.total) - usado) * 100) / 100;
+      const monto = parcial ? Math.round(Number(b.monto) * 100) / 100 : saldo;
+      if (!parcial && vigentes.length) return error("Ya tiene una nota de crédito: usa un motivo por monto (07 o 09).");
+      if (!(monto > 0)) return error("Escribe un monto mayor a cero.");
+      if (monto > saldo + 0.001) return error(`El monto supera lo que queda por acreditar (S/ ${saldo.toFixed(2)}).`);
+      let itemsNc = c.items;
+      if (parcial) {
+        const { data: cfg } = await sb.from("config").select("amazonia").eq("id", 1).maybeSingle();
+        const it: Record<string, unknown> = { descripcion: String(b.descripcion ?? "").slice(0, 200) || "Ajuste sobre " + c.numero_completo, unidad: "ZZ", cantidad: 1, precio_unitario: monto };
+        itemsNc = [cfg?.amazonia ? { ...it, tip_afe_igv: "20" } : it];
+      }
       const tipoSerie = c.tipo === "factura" ? "nota_credito_factura" : "nota_credito_boleta";
       const { data: sNc } = await sb.from("series").select("serie").eq("tipo", tipoSerie).eq("activa", true).limit(1).maybeSingle();
       if (!sNc) return error("No hay serie activa para notas de crédito.");
-      const idem = `hotel:nc:${c.id}`;
       let { data: nc } = await sb.from("comprobantes").select("*").eq("idempotency_key", idem).maybeSingle();
       if (!nc) {
         const ins = await sb.from("comprobantes").insert({
           tipo: "nota_credito", serie: sNc.serie, cliente_tipo_doc: c.cliente_tipo_doc, cliente_num_doc: c.cliente_num_doc, cliente_nombre: c.cliente_nombre,
-          cliente_direccion: c.cliente_direccion, items: c.items, total: c.total, estado: "pendiente", afectado_id: c.id, motivo_nota: String(b.motivo),
+          cliente_direccion: c.cliente_direccion, items: itemsNc, total: monto, estado: "pendiente", afectado_id: c.id, motivo_nota: motivo,
           descripcion_motivo: String(b.descripcion ?? "").slice(0, 250) || "Anulación de la operación", reserva_id: c.reserva_id, pedido_id: c.pedido_id,
           idempotency_key: idem, creado_por: yo.id,
         }).select().single();
@@ -229,6 +248,8 @@ Deno.serve(async (req) => {
       return json({ comprobante: nc });
     }
     if (!["aceptado", "observado"].includes(c.estado)) return error("Solo se anulan comprobantes aceptados por SUNAT.");
+    const { data: ncs } = await sb.from("comprobantes").select("id").eq("afectado_id", c.id).not("estado", "in", "(anulado,rechazado,error)").limit(1);
+    if (ncs?.length) return error("Tiene una nota de crédito vigente: anúlala primero.");
     if (!b.motivo) return error("Escribe el motivo.");
     const r = await nooki("POST", `/v1/comprobantes/${c.nooki_id}/anular`, { motivo: String(b.motivo) });
     if (!r.ok) return error(r.data?.error?.mensaje ?? "No se pudo anular.");

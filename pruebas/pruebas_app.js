@@ -150,7 +150,7 @@ function cumpleFiltros(fila, params) {
     if (op === 'gte' && !(cmp >= 0)) return false;
     const enLista = (txt) => txt.replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, ''));
     if (op === 'in') { if (!enLista(val).includes(a)) return false; }
-    if (op === 'not') { const j = val.indexOf('.'); const op2 = val.slice(0, j), v2 = val.slice(j + 1); if (op2 === 'in' && enLista(v2).includes(a)) return false; if (op2 === 'eq' && a === v2) return false; }
+    if (op === 'not') { const j = val.indexOf('.'); const op2 = val.slice(0, j), v2 = val.slice(j + 1); if (op2 === 'in' && enLista(v2).includes(a)) return false; if (op2 === 'eq' && a === v2) return false; if (op2 === 'is' && (v2 === 'null' ? fila[k] == null : String(fila[k]) === v2)) return false; }
     if (op === 'is') { if (val === 'null' ? fila[k] != null : String(fila[k]) !== val) return false; }
     if (op === 'like' || op === 'ilike') { const re = new RegExp('^' + val.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/\*/g, '.*') + '$', op === 'ilike' ? 'i' : ''); if (!re.test(a)) return false; }
   }
@@ -311,7 +311,7 @@ async function simular(page, E) {
         if (yoU.rol !== 'admin' && !claveAbierta()) return json({ error: { mensaje: 'Esto pide la clave de administrador.' } }, 403);
         E.num.BC01 = (E.num.BC01 || 0) + 1;
         const nc = { id: E.tablas.comprobantes.length + 1, tipo: 'nota_credito', serie: 'BC01', numero: E.num.BC01, numero_completo: 'BC01-' + E.num.BC01, estado: 'aceptado',
-          total: c.total, cliente_nombre: c.cliente_nombre, afectado_id: c.id, emitido_en: AHORA() };
+          total: ['04', '07', '09'].includes(String(b.motivo)) ? Number(b.monto) : c.total, motivo_nota: b.motivo, cliente_nombre: c.cliente_nombre, afectado_id: c.id, emitido_en: AHORA() };
         E.tablas.comprobantes.push(nc); return json({ comprobante: nc });
       }
       return json({ comprobante: c });
@@ -952,6 +952,11 @@ async function entrar(page, correo, clave) {
       await page.waitForTimeout(250);
     }
     prueba('las pantallas del prototipo abren sin errores', true);
+    await page.evaluate(() => { location.hash = '#timeline'; });
+    await page.waitForTimeout(300);
+    const mesHoy = new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', month: 'long' }).format(new Date()).toLowerCase();
+    const tl = (await page.textContent('#view')).toLowerCase();
+    prueba('el timeline muestra el mes de hoy (no octubre fijo)', tl.includes(mesHoy) && (mesHoy === 'octubre' || !tl.includes('octubre 2026')));
 
     if (nombreVista === 'escritorio') {
       // ===== GUARDAR: lo que se hace en el prototipo llega a la base =====
@@ -987,6 +992,66 @@ async function entrar(page, correo, clave) {
       let quitada = false;
       for (let i = 0; i < 60 && !quitada; i++) { await page.waitForTimeout(100); quitada = await page.evaluate(() => !NKS.res().some((x) => x.id === 99002)); }
       prueba('Guardar: no deja cruzar reservas (la quita y avisa)', quitada && E.tablas.reservas.filter((r) => r.habitacion === '202').length === 1 && /No se guardó/.test(await page.textContent('body')));
+
+      // Restaurante: pedido en la mesa, cambio de cantidad y cobro con boleta
+      await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S1'); t.order = { items: [{ n: 'Gaseosa', p: 5, q: 2, sent: 2 }], since: NKS.ahora(), mozo: 'Mozo', state: 'abierta' }; NKS.refresh(); });
+      const ped = () => E.tablas.pedidos.find((x) => x.mesa_id === 'S1');
+      prueba('Guardar: pedido del restaurante en su mesa', await esperar(() => ped() && E.tablas.pedido_items.some((i) => i.pedido_id === ped().id && i.descripcion === 'Gaseosa' && Number(i.cantidad) === 2 && Number(i.enviados) === 2)));
+      await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S1'); t.order.items[0].q = 3; t.order.state = 'precuenta'; NKS.refresh(); });
+      prueba('Guardar: cambiar cantidad y precuenta del pedido', await esperar(() => ped().estado === 'precuenta' && E.tablas.pedido_items.some((i) => i.descripcion === 'Gaseosa' && Number(i.cantidad) === 3)));
+      await page.evaluate(() => {
+        const t = NKS.mesas().find((x) => x.id === 'S1');
+        NKS.extra().unshift({ id: NKS.nuevoId(), r: null, place: 'Mesa ' + t.n + ' · ' + t.amb, cli: { name: 'Clientes varios', doc: '—', docType: 'DNI' }, items: t.order.items.map((i) => ({ n: i.n, p: i.p, q: i.q })),
+          doc: '', method: 'Efectivo', amount: 15, kind: 'Boleta', d: NKS.hoy(), h: NKS.ahora(), sunat: 'pendiente', anulado: false });
+        NKS.mov().push({ h: NKS.ahora(), type: 'ingreso', cat: 'Venta de restaurante', desc: 'Mesa', amount: 15, who: 'Prueba' });
+        t.order = null; NKS.refresh();
+      });
+      const pagoRest = () => E.tablas.pagos.find((x) => x.pedido_id === (ped() || {}).id);
+      prueba('Guardar: cobro de la mesa (pedido cobrado, pago y boleta)', await esperar(() => ped().estado === 'cobrada' && pagoRest() && pagoRest().tipo === 'restaurante' && pagoRest().comprobante_id));
+      prueba('Guardar: la venta en efectivo no se duplica en la caja', !E.tablas.caja_movimientos.some((m) => m.motivo === 'Venta de restaurante'));
+      // Caja: salida manual
+      await page.evaluate(() => { NKS.mov().push({ h: NKS.ahora(), type: 'salida', cat: 'Compra de útiles', desc: 'Papel', amount: 10, who: 'Prueba' }); NKS.refresh(); });
+      prueba('Guardar: salida de caja', await esperar(() => E.tablas.caja_movimientos.some((m) => m.tipo === 'salida' && Number(m.monto) === 10 && m.turno_id === E.tablas.caja_turnos[0].id)));
+      // Nota de crédito por un monto (motivo 09)
+      await page.evaluate(() => {
+        const p = NKS.extra().find((x) => x.kind === 'Boleta');
+        const n = { id: NKS.nuevoId(), r: null, place: p.place, cli: p.cli, items: [], doc: '', method: 'Efectivo', amount: -5, kind: 'Nota de crédito', d: NKS.hoy(), h: NKS.ahora(), anulado: false,
+          ref: p.id, refDoc: p.doc, motivo: { c: '09', l: 'Disminución en el valor' }, sunat: 'pendiente' };
+        NKS.extra().unshift(n); p.ncs = (p.ncs || []).concat(n.id); NKS.refresh();
+      });
+      prueba('Guardar: nota de crédito por monto', await esperar(() => E.tablas.comprobantes.some((c) => c.tipo === 'nota_credito' && Number(c.total) === 5 && c.motivo_nota === '09')));
+      prueba('Guardar: la nota de crédito muestra su número real', await esperar(() => true) && /^BC01-/.test(await page.evaluate(() => NKS.extra().find((x) => x.kind === 'Nota de crédito').doc)));
+      // Anular la boleta de la reserva
+      await page.evaluate(() => { const p = NKS.res().find((x) => x.id === 4).pays[0]; p.anulado = true; p.sunat = 'anulado'; p.anul = { motivo: 'Prueba de anulación' }; NKS.refresh(); });
+      prueba('Guardar: anular comprobante (SUNAT y pago anulado)', await esperar(() => E.llamadas.includes('facturar:anular') && E.tablas.pagos.find((x) => x.reserva_id === 4).anulado === true));
+      // No grato
+      await page.evaluate(() => { NKS.noGrato()['87654321'] = { motivo: 'Prueba', d: NKS.hoy() }; NKS.refresh(); });
+      prueba('Guardar: cliente no grato', await esperar(() => E.tablas.clientes.some((c) => c.num_doc === '87654321' && c.no_grato === true && c.motivo_no_grato === 'Prueba')));
+      await page.evaluate(() => { delete NKS.noGrato()['87654321']; NKS.refresh(); });
+      prueba('Guardar: quitar no grato', await esperar(() => E.tablas.clientes.some((c) => c.num_doc === '87654321' && c.no_grato === false)));
+      // Cerrar caja con el monto contado
+      await page.evaluate(() => { NKS.turnos().unshift({ day: 1, who: 'Prueba', from: '', to: '', a: 50, inc: 15, out: 10, cont: 54 }); NKS.caja(false); });
+      prueba('Guardar: cierre de caja con el monto contado', await esperar(() => E.tablas.caja_turnos[0].cerrado_en && Number(E.tablas.caja_turnos[0].contado) === 54));
+      // Cierre del día
+      const hoyAntes = await page.evaluate(() => NKS.hoy());
+      await page.evaluate(() => NKS.cerrarDia());
+      await page.click('#czGo');
+      prueba('Guardar: cierre del día', await esperar(() => E.tablas.cierres.length === 1 && E.tablas.cierres[0].responsable));
+      prueba('Guardar: al cerrar el día la fecha sigue siendo la real', (await page.evaluate(() => NKS.hoy())) === hoyAntes && E.tablas.cierres[0].fecha === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()));
+      await page.evaluate(() => NKS.cerrarDia());
+      prueba('Guardar: no cierra dos veces el mismo día', E.tablas.cierres.length === 1 && /ya está cerrado/.test(await page.textContent('body')));
+      await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S2'); t.order = { items: [{ n: 'Café', p: 4, q: 1, sent: 0 }], since: NKS.ahora(), mozo: 'Mozo', state: 'abierta' }; NKS.refresh(); });
+      await esperar(() => E.tablas.pedido_items.some((i) => i.descripcion === 'Café'));
+      // Al volver a entrar se ve lo guardado
+      await page.reload();
+      await page.waitForSelector('#view h1', { timeout: 15000 });
+      await page.evaluate(() => { location.hash = '#ventas'; });
+      await page.waitForTimeout(800);
+      const ventas = await page.textContent('#view');
+      prueba('Al recargar: Ventas muestra el cobro del restaurante y la nota de crédito', /BC01-1/.test(ventas) && E.tablas.comprobantes.filter((c) => c.tipo === 'boleta').every((c) => ventas.includes(c.numero_completo)));
+      prueba('Al recargar: la mesa abierta sigue con su pedido', await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S2'); return !!(t.order && t.order.items[0].n === 'Café'); }));
+      prueba('Al recargar: los días cerrados y turnos vienen de la base', await page.evaluate(() => NKS.turnos().length === 1 && NKS.turnos()[0].cont === 54));
+      await page.screenshot({ path: path.join(OUT, 'sistema-escritorio-3-ventas-guardadas.png') });
     }
     await ctx.close();
   }

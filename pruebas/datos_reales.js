@@ -10,6 +10,9 @@
   function hora(x, porDefecto) { return x ? String(x).slice(0, 5) : porDefecto; }
 
   TODAY = fromIso(D.hoy); NOW_H = D.hora;
+  // Día de trabajo = día del año (1 de enero = 1)
+  DAYNO = Math.round((Date.parse(D.hoy) - Date.UTC(ANIO, 0, 1)) / 864e5) + 1;
+  (function () { var b = document.querySelector('.tag.day b'); if (b) b.textContent = DAYNO; })();
 
   TYPES = {}; TYPE_ORDER = [];
   D.tipos.forEach(function (t) { TYPES[t.codigo] = { n: t.nombre, rate: Number(t.tarifa), beds: t.camas, cap: t.capacidad }; TYPE_ORDER.push(t.codigo); });
@@ -39,7 +42,7 @@
     var cp = comp[p.comprobante_id] || {}, t = new Date(p.creado_en);
     r.pays.push({ id: p.id, r: r, doc: cp.numero_completo || '', method: p.forma_pago, amount: Number(p.monto),
       kind: { boleta: 'Boleta', factura: 'Factura', nota_venta: 'Nota de venta' }[cp.tipo] || 'Boleta',
-      d: fromIso(isoLima(t)), h: hhmm(t), sunat: cp.estado || 'pendiente', anulado: !!p.anulado });
+      d: fromIso(isoLima(t)), h: hhmm(t), sunat: cp.estado || 'pendiente', anulado: !!p.anulado || cp.estado === 'anulado', _id: p.id, _comp: p.comprobante_id || null });
     if (p.id > PID) PID = p.id;
   });
   nid = RES.reduce(function (m, r) { return Math.max(m, r.id); }, 0);
@@ -76,6 +79,74 @@
 
   state.caja = !!D.caja;
   if (D.caja) { state.cajaSince = hhmm(new Date(D.caja.abierto_en)); state.cajaOpenAmt = Number(D.caja.monto_inicial || 0); }
+
+  var KIND = { boleta: 'Boleta', factura: 'Factura', nota_venta: 'Nota de venta', nota_credito: 'Nota de crédito' };
+  function cliComp(c) { return { name: c.cliente_nombre || 'Clientes varios', doc: c.cliente_num_doc || '—', docType: DOC[c.cliente_tipo_doc] || 'DNI' }; }
+
+  /* Restaurante: pedidos abiertos en sus mesas y cobros de los últimos dos meses */
+  var mesaDe = {}; TABLES.forEach(function (t) { mesaDe[t.id] = t; });
+  var pedDb = {}; (D.pedidos || []).concat(D.pedidosAbiertos || []).forEach(function (x) { pedDb[x.id] = x; });
+  var itemsDe = {}; (D.pedidoItems || []).forEach(function (i) { (itemsDe[i.pedido_id] = itemsDe[i.pedido_id] || []).push(i); });
+  (D.pedidosAbiertos || []).forEach(function (x) {
+    var t = mesaDe[x.mesa_id]; if (!t || t.order) return;
+    t.order = { items: (itemsDe[x.id] || []).map(function (i) { return { n: i.descripcion, p: Number(i.precio), q: Number(i.cantidad), sent: Number(i.enviados || 0) }; }),
+      since: hhmm(new Date(x.abierto_en)), mozo: x.mozo || '', state: x.estado === 'precuenta' ? 'precuenta' : 'abierta', _id: x.id };
+  });
+  function lugarPedido(id) { var x = pedDb[id], t = x && mesaDe[x.mesa_id]; return t ? 'Mesa ' + t.n + ' · ' + t.amb : 'Restaurante'; }
+  (D.pagosRest || []).forEach(function (x) {
+    var cp = comp[x.comprobante_id] || {}, t = new Date(x.creado_en);
+    EXTRA.push({ id: x.id, r: null, place: lugarPedido(x.pedido_id), cli: cliComp(cp),
+      items: (itemsDe[x.pedido_id] || []).map(function (i) { return { n: i.descripcion, p: Number(i.precio), q: Number(i.cantidad) }; }),
+      doc: cp.numero_completo || '', method: x.forma_pago, amount: Number(x.monto), kind: KIND[cp.tipo] || 'Boleta', d: fromIso(isoLima(t)), h: hhmm(t),
+      sunat: cp.estado || 'pendiente', anulado: !!x.anulado || cp.estado === 'anulado', _db: true, _anulado: !!x.anulado || cp.estado === 'anulado', _id: x.id, _comp: x.comprobante_id || null, _ped: x.pedido_id });
+    if (x.id > PID) PID = x.id;
+  });
+
+  /* Notas de crédito: se enlazan con el comprobante que corrigen */
+  var porComp = {};
+  RES.forEach(function (r) { r.pays.forEach(function (x) { if (x._comp) porComp[x._comp] = x; }); });
+  EXTRA.forEach(function (x) { if (x._comp) porComp[x._comp] = x; });
+  var MOT = { '01': 'Anulación de la operación', '02': 'Anulación por error en el RUC', '04': 'Descuento global', '06': 'Devolución total', '07': 'Devolución por ítem', '09': 'Disminución en el valor' };
+  (D.notasCredito || []).forEach(function (c) {
+    var ref = porComp[c.afectado_id], af = comp[c.afectado_id] || {}, t = new Date(c.emitido_en);
+    var n = { id: 1000000 + c.id, r: null, place: ref ? placeOf(ref) : '', cli: cliComp(c), items: [], doc: c.numero_completo || c.serie, method: '—', amount: -Number(c.total),
+      kind: 'Nota de crédito', d: fromIso(isoLima(t)), h: hhmm(t), anulado: c.estado === 'anulado', ref: ref ? ref.id : null, refDoc: af.numero_completo || '',
+      motivo: { c: c.motivo_nota || '01', l: MOT[c.motivo_nota] || c.descripcion_motivo || '' }, sunat: c.estado, _db: true, _anulado: c.estado === 'anulado', _comp: c.id };
+    EXTRA.push(n); if (ref) ref.ncs = (ref.ncs || []).concat(n.id);
+  });
+  EXTRA.sort(function (a, b) { return (b.d - a.d) || (a.h < b.h ? 1 : a.h > b.h ? -1 : 0); });
+
+  /* Caja: lo que entró y salió en el turno abierto, y los turnos cerrados */
+  function movsDe(turno) {
+    var l = (D.pagosEfectivo || []).filter(function (x) { return x.turno_id === turno; }).map(function (x) {
+      var cp = comp[x.comprobante_id] || {};
+      return { t: x.creado_en, h: hhmm(new Date(x.creado_en)), type: 'ingreso', cat: x.pedido_id ? 'Venta de restaurante' : 'Cobro de hospedaje', desc: cp.numero_completo || '', amount: Number(x.monto), who: '', _db: true };
+    }).concat((D.cajaMov || []).filter(function (m) { return m.turno_id === turno; }).map(function (m) {
+      return { t: m.creado_en, h: hhmm(new Date(m.creado_en)), type: m.tipo, cat: m.motivo, desc: m.descripcion || '', amount: Number(m.monto), who: '', _db: true };
+    }));
+    return l.sort(function (a, b) { return a.t < b.t ? -1 : 1; });
+  }
+  state.mov = D.caja ? movsDe(D.caja.id) : [];
+  TURNOS = (D.turnos || []).map(function (t) {
+    var m = movsDe(t.id), inc = 0, out = 0, a = new Date(t.abierto_en), b = new Date(t.cerrado_en), da = fromIso(isoLima(a));
+    m.forEach(function (x) { if (x.type === 'ingreso') inc += x.amount; else out += x.amount; });
+    return { day: DAYNO - (TODAY - da), who: t.responsable, from: fmtD(da) + ' · ' + hhmm(a), to: fmtD(fromIso(isoLima(b))) + ' · ' + hhmm(b), a: Number(t.monto_inicial || 0),
+      inc: inc, out: out, cont: t.contado != null ? Number(t.contado) : Math.round((Number(t.monto_inicial || 0) + inc - out) * 100) / 100, _db: true };
+  });
+
+  /* Días cerrados */
+  CIERRES = (D.cierres || []).map(function (c) {
+    var d = fromIso(c.fecha);
+    return { day: DAYNO - (TODAY - d), d: d, who: c.responsable, h: hhmm(new Date(c.cerrado_en)), ing: Number(c.ingresos), occ: Number(c.ocupacion_pct), arr: c.llegadas, out: c.salidas, _db: true };
+  });
+
+  /* Clientes guardados (para buscarlos en Nueva reserva y en Clientes) */
+  var ya = {}; RES.forEach(function (r) { ya[r.guest.doc] = 1; });
+  (D.clientesTodos || []).forEach(function (c) {
+    if (c.tipo_doc === '6' || !c.num_doc || ya[c.num_doc]) return; ya[c.num_doc] = 1;
+    CLI_EXTRA.push({ name: c.nombre, doc: c.num_doc, docType: DOC[c.tipo_doc] || 'DNI', nat: c.nacionalidad || 'Perú', phone: c.telefono || '', _cli: c.id });
+    if (c.no_grato && !NOGRATO[c.num_doc]) NOGRATO[c.num_doc] = { motivo: c.motivo_no_grato || '', d: TODAY };
+  });
 })();
 
 /* Nombre del usuario que entró */
@@ -152,7 +223,17 @@ var SYNC = { cola: Promise.resolve(), turno: (window.DATOS_HOTEL && DATOS_HOTEL.
   SYNC.perId = {}; D.personal.forEach(function (p) { SYNC.perId[p.nombre] = p.id; });
   SYNC.prodId = {}; D.productos.forEach(function (p) { SYNC.prodId[p.nombre] = p.id; });
   SYNC.tempId = D.temporadas.map(function (s) { return s.id; });
+  SYNC.nograto = JSON.stringify(NOGRATO);
+  SYNC.ped = {};
+  var itemsDe = {}; (D.pedidoItems || []).forEach(function (i) { (itemsDe[i.pedido_id] = itemsDe[i.pedido_id] || []).push(i); });
+  TABLES.forEach(function (t) {
+    if (!t.order || !t.order._id) return;
+    var m = {}; (itemsDe[t.order._id] || []).forEach(function (i) { m[i.descripcion] = { id: i.id, q: Number(i.cantidad), sent: Number(i.enviados || 0) }; });
+    SYNC.ped[t.order._id] = { mesa: t.id, place: lugarMesa(t), obj: t.order, st: t.order.state, items: m };
+  });
+  TURNOS.forEach(function (t) { t._db = true; });
 })();
+function lugarMesa(t) { return 'Mesa ' + t.n + ' · ' + t.amb; }
 function foto(r) { return { state: r.state, rate: Number(r.rate), ci: r.ci, co: r.co, room: r.room, persons: r.persons }; }
 function roomFoto(h) { return { n: h.n, t: h.t, f: h.f, off: !!h.off }; }
 function prodFoto(p) { return { n: p.n, c: p.c, p: p.p, t: p.t, min: p.min, rest: !!p.rest, dest: p.dest || '', on: p.on !== false }; }
@@ -256,29 +337,209 @@ function facturar(cuerpo) {
     return (ctx && ctx.json ? ctx.json() : Promise.resolve(null)).then(function (j) { throw { mensaje: (j && j.error && j.error.mensaje) || 'el facturador no respondió' }; });
   });
 }
+function cliPago(r, p) {
+  if (!r) {   // cobro del restaurante
+    var c = p.cli || {}, doc = c.doc && c.doc !== '—' ? c.doc : null;
+    if (p.kind === 'Factura') return { tipo_doc: '6', num_doc: doc, nombre: c.name };
+    return doc ? { tipo_doc: DOC_COD[c.docType] || '1', num_doc: doc, nombre: c.name } : { tipo_doc: '0', num_doc: null, nombre: c.name || 'Clientes varios' };
+  }
+  return p.kind === 'Factura' && r.company ? { tipo_doc: '6', num_doc: r.company.ruc, nombre: r.company.name }
+    : r.guest && r.guest.doc ? { tipo_doc: DOC_COD[r.guest.docType] || '1', num_doc: r.guest.doc, nombre: r.guest.name } : { tipo_doc: '0', num_doc: null, nombre: (r.guest && r.guest.name) || 'Clientes varios' };
+}
+/* Pide a Nooki el comprobante de un pago ya guardado y muestra el número real */
+function emitirComprobante(p, cli) {
+  p.doc = 'Emitiendo…'; p.sunat = p.kind === 'Nota de venta' ? 'interno' : 'pendiente'; refreshBase();
+  return facturar({ accion: 'emitir', pago_id: p._id, tipo: TIPO_COMP[p.kind] || 'boleta', cliente: cli }).then(function (x) {
+    var c = x.comprobante || {}; p.doc = c.numero_completo || c.serie || ''; p.sunat = c.estado || 'pendiente'; p._comp = c.id;
+    toast(c.estado === 'aceptado' || c.estado === 'observado' ? 'SUNAT aceptó la ' + p.kind.toLowerCase() + ' ' + p.doc
+      : c.estado === 'interno' ? 'Nota de venta ' + p.doc : 'Comprobante ' + p.doc + ': ' + (c.mensaje_sunat || c.estado), { icon: c.estado === 'error' ? 'alert' : undefined });
+  }, function (e) { p.doc = 'Sin comprobante'; p.sunat = 'error'; avisoError('el comprobante (el pago sí quedó guardado)', e); });
+}
 function cambiosPagos(r) {
   r.pays.forEach(function (p) {
     if (!p._db && !p._guardando) {
       p._guardando = true;
       enCola(function () {
-        var cli = p.kind === 'Factura' && r.company ? { tipo_doc: '6', num_doc: r.company.ruc, nombre: r.company.name }
-          : r.guest && r.guest.doc ? { tipo_doc: DOC_COD[r.guest.docType] || '1', num_doc: r.guest.doc, nombre: r.guest.name } : { tipo_doc: '0', num_doc: null, nombre: (r.guest && r.guest.name) || 'Clientes varios' };
         return db(PUENTE.sb.from('pagos').insert({ reserva_id: r.id, turno_id: SYNC.turno, forma_pago: p.method, monto: Number(p.amount),
           tipo: r.state === 'ocupado' || r.state === 'finalizada' ? 'pago' : 'adelanto' }).select('id')).then(function (f) {
-          p._db = true; p._id = f[0].id; p.doc = 'Emitiendo…'; p.sunat = p.kind === 'Nota de venta' ? 'interno' : 'pendiente'; refreshBase();
-          return facturar({ accion: 'emitir', pago_id: p._id, tipo: TIPO_COMP[p.kind] || 'boleta', cliente: cli }).then(function (x) {
-            var c = x.comprobante || {}; p.doc = c.numero_completo || c.serie || ''; p.sunat = c.estado || 'pendiente'; p._comp = c.id;
-            toast(c.estado === 'aceptado' || c.estado === 'observado' ? 'SUNAT aceptó la ' + p.kind.toLowerCase() + ' ' + p.doc
-              : c.estado === 'interno' ? 'Nota de venta ' + p.doc : 'Comprobante ' + p.doc + ': ' + (c.mensaje_sunat || c.estado), { icon: c.estado === 'error' ? 'alert' : undefined });
-          }, function (e) { p.doc = 'Sin comprobante'; p.sunat = 'error'; avisoError('el comprobante (el pago sí quedó guardado)', e); });
+          p._db = true; p._id = f[0].id;
+          return emitirComprobante(p, cliPago(r, p));
         }).catch(function (e) { if (!p._db) { avisoError('el pago de ' + money(p.amount), e); var i = r.pays.indexOf(p); if (i >= 0) r.pays.splice(i, 1); } })
           .then(function () { p._guardando = false; refreshBase(); });
       });
-    } else if (p._db && p.anulado && !p._anulado && p._comp) {
-      p._anulado = true;
-      enCola(function () { return facturar({ accion: 'anular', comprobante_id: p._comp, motivo: 'Anulado desde recepción' }).then(function () { toast('Anulación enviada a SUNAT: ' + p.doc); }, function (e) { avisoError('la anulación en SUNAT', e); }); });
-    }
+    } else anulacion(p);
   });
+}
+/* Anular un comprobante: baja en SUNAT (si estaba aceptado) y el pago queda anulado */
+function anulacion(p) {
+  if (!p._db || !p.anulado || p._anulado) return;
+  p._anulado = true;
+  var motivo = (p.anul && p.anul.motivo) || 'Anulado desde recepción', enSunat = p._comp && p.kind !== 'Nota de venta' && p.sunat === 'anulado';
+  enCola(function () {
+    return (enSunat ? facturar({ accion: 'anular', comprobante_id: p._comp, motivo: motivo }) : Promise.resolve(null)).then(function (x) {
+      if (enSunat) toast('Anulación enviada a SUNAT: ' + p.doc, { icon: 'trash' });
+      if (x && x.comprobante && x.comprobante.estado) p.sunat = x.comprobante.estado;
+      return p._id ? db(PUENTE.sb.from('pagos').update({ anulado: true, motivo_anulacion: motivo }).eq('id', p._id).select('id')) : null;
+    }).catch(function (e) {
+      avisoError('la anulación de ' + p.doc, e);
+      p.anulado = false; p._anulado = false; p.sunat = 'aceptado'; delete p.anul; refreshBase();
+    });
+  });
+}
+
+/* Notas de crédito emitidas desde Ventas */
+function cambiosNotasCredito() {
+  EXTRA.forEach(function (n) {
+    if (n.kind !== 'Nota de crédito') return;
+    if (n._db) { anulacion(n); return; }
+    if (n._guardando) return;
+    n._guardando = true; n._ref = n._ref || Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var ref = findPay(n.ref);
+    n.doc = 'Emitiendo…';
+    enCola(function () {
+      if (!ref || !ref._comp) return Promise.reject({ mensaje: 'el comprobante original todavía no tiene número en SUNAT' });
+      return facturar({ accion: 'nota_credito', comprobante_id: ref._comp, motivo: n.motivo.c, descripcion: n.motivo.l, monto: -Number(n.amount), ref: n._ref }).then(function (x) {
+        var c = x.comprobante || {}; n._db = true; n._comp = c.id; n.doc = c.numero_completo || c.serie || ''; n.sunat = c.estado || 'pendiente';
+        toast(c.estado === 'aceptado' || c.estado === 'observado' ? 'SUNAT aceptó la nota de crédito ' + n.doc : 'Nota de crédito ' + n.doc + ': ' + (c.mensaje_sunat || c.estado), { icon: c.estado === 'error' ? 'alert' : undefined });
+      });
+    }).catch(function (e) {
+      avisoError('la nota de crédito', e);
+      var i = EXTRA.indexOf(n); if (i >= 0) EXTRA.splice(i, 1);
+      if (ref && ref.ncs) ref.ncs = ref.ncs.filter(function (id) { return id !== n.id; });
+    }).then(function () { n._guardando = false; refreshBase(); });
+  });
+}
+
+/* Restaurante: pedidos por mesa, cobros (con su comprobante) y cargos a la habitación */
+var REST_PEND = false;
+function cambiosRestaurante() {
+  if (REST_PEND) return; REST_PEND = true;
+  enCola(function () { REST_PEND = false; return syncRestaurante(); });
+}
+function itemsPedido(id, items, prev) {
+  var ahora = {}, p = Promise.resolve();
+  items.forEach(function (i) { if (Number(i.q) > 0) { var a = ahora[i.n] = ahora[i.n] || { q: 0, sent: 0, p: Number(i.p) }; a.q += Number(i.q); a.sent += Number(i.sent || 0); } });
+  Object.keys(ahora).forEach(function (n) {
+    var a = ahora[n], b = prev[n], env = Math.min(a.sent, a.q);
+    if (!b) p = p.then(function () {
+      var pr = PROD(n), dest = pr && (pr.dest === 'Cocina' || pr.dest === 'Barra') ? pr.dest : null;
+      return db(PUENTE.sb.from('pedido_items').insert({ pedido_id: id, producto_id: SYNC.prodId[n] || null, descripcion: n, precio: a.p, cantidad: a.q, enviados: env, destino: dest }).select('id'))
+        .then(function (f) { prev[n] = { id: f[0].id, q: a.q, sent: env }; });
+    });
+    else if (b.q !== a.q || b.sent !== env) p = p.then(function () {
+      return db(PUENTE.sb.from('pedido_items').update({ cantidad: a.q, enviados: env }).eq('id', b.id).select('id')).then(function () { b.q = a.q; b.sent = env; });
+    });
+  });
+  Object.keys(prev).forEach(function (n) {
+    if (ahora[n]) return; var b = prev[n]; delete prev[n];
+    p = p.then(function () { return db(PUENTE.sb.from('pedido_items').delete().eq('id', b.id).select('id')); });
+  });
+  return p;
+}
+function syncRestaurante() {
+  var pasos = Promise.resolve(), ahora = new Date().toISOString();
+  function paso(fn) { pasos = pasos.then(fn).catch(function (e) { avisoError('el pedido del restaurante', e); }); }
+  // pedidos que ya no están en ninguna mesa: se cobraron, se cargaron a una habitación o se anularon
+  Object.keys(SYNC.ped).forEach(function (k) {
+    var s = SYNC.ped[k], id = Number(k);
+    if (TABLES.some(function (t) { return t.order === s.obj; })) return;
+    delete SYNC.ped[k];
+    var pago = EXTRA.filter(function (x) { return !x._db && !x._ped && x.kind !== 'Nota de crédito' && x.place === s.place; })[0];
+    if (pago) { pago._ped = id; pago._pedItems = s.items; return; }   // lo cierra el cobro
+    var mesa = s.place.split(' · ')[0] + ' · ', r = null;
+    RES.some(function (x) {
+      var l = (x.log || []).filter(function (e) { return !e._ped && String(e.text || '').indexOf('Consumo de restaurante · ' + mesa) === 0; })[0];
+      if (l) { l._ped = id; r = x; return true; } return false;
+    });
+    paso(function () { return db(PUENTE.sb.from('pedidos').update({ estado: r ? 'cargada' : 'anulada', reserva_id: r && r._db ? r.id : null, cerrado_en: ahora }).eq('id', id).select('id')); });
+  });
+  // pedidos en las mesas
+  TABLES.forEach(function (t) {
+    var o = t.order; if (!o) return;
+    if (!o._id) {
+      if (o._guardando) return; o._guardando = true;
+      paso(function () {
+        return db(PUENTE.sb.from('pedidos').insert({ mesa_id: t.id, mozo: o.mozo || null, estado: o.state === 'precuenta' ? 'precuenta' : 'abierta' }).select('id')).then(function (f) {
+          o._id = f[0].id; o._guardando = false;
+          var mesa = TABLES.filter(function (x) { return x.order === o; })[0] || t;
+          SYNC.ped[o._id] = { mesa: mesa.id, place: lugarMesa(mesa), obj: o, st: o.state, items: {} };
+          if (mesa.id !== t.id) return db(PUENTE.sb.from('pedidos').update({ mesa_id: mesa.id }).eq('id', o._id).select('id')).then(function () { return itemsPedido(o._id, o.items, SYNC.ped[o._id].items); });
+          return itemsPedido(o._id, o.items, SYNC.ped[o._id].items);
+        }, function (e) { o._guardando = false; throw e; });
+      });
+      return;
+    }
+    var s = SYNC.ped[o._id]; if (!s) return;
+    var c = {};
+    if (s.mesa !== t.id) { c.mesa_id = t.id; s.mesa = t.id; s.place = lugarMesa(t); }
+    if (s.st !== o.state) { c.estado = o.state === 'precuenta' ? 'precuenta' : 'abierta'; s.st = o.state; }
+    if (Object.keys(c).length) paso(function () { return db(PUENTE.sb.from('pedidos').update(c).eq('id', o._id).select('id')); });
+    paso(function () { return itemsPedido(o._id, o.items, s.items); });
+  });
+  // cobros del restaurante
+  EXTRA.forEach(function (x) {
+    if (x.kind === 'Nota de crédito') return;
+    if (x._db) { anulacion(x); return; }
+    if (x._guardando) return; x._guardando = true;
+    paso(function () { return cobroRestaurante(x, ahora); });
+  });
+  return pasos;
+}
+function cobroRestaurante(x, ahora) {
+  var mesa = TABLES.filter(function (t) { return lugarMesa(t) === x.place; })[0];
+  var items = (x.items || []).map(function (i) { return { n: i.n, p: i.p, q: i.q, sent: i.q }; });
+  var pedido = x._ped
+    ? db(PUENTE.sb.from('pedidos').update({ estado: 'cobrada', cerrado_en: ahora }).eq('id', x._ped).select('id')).then(function () { return x._ped; })
+    : db(PUENTE.sb.from('pedidos').insert({ mesa_id: mesa ? mesa.id : null, estado: 'cobrada', cerrado_en: ahora }).select('id')).then(function (f) { return (x._ped = f[0].id); });
+  return pedido.then(function (id) {
+    return itemsPedido(id, items, x._pedItems || {}).then(function () {
+      return db(PUENTE.sb.from('pagos').insert({ pedido_id: id, turno_id: SYNC.turno, forma_pago: x.method, monto: Number(x.amount), tipo: 'restaurante' }).select('id'));
+    });
+  }).then(function (f) {
+    x._db = true; x._id = f[0].id; delete x._pedItems;
+    return emitirComprobante(x, cliPago(null, x));
+  }).catch(function (e) { avisoError('el cobro de la ' + x.place, e); }).then(function () { x._guardando = false; refreshBase(); });
+}
+
+/* Clientes nuevos y "no grato" */
+function cambiosClientes() {
+  CLI_EXTRA.forEach(function (g) {
+    if (g._cli || g._guardando) return; g._guardando = true;
+    enCola(function () { return asegurarCliente(g).catch(function (e) { avisoError('el cliente ' + g.name, e); }).then(function () { g._guardando = false; }); });
+  });
+  var ahora = JSON.stringify(NOGRATO);
+  if (ahora === SYNC.nograto) return;
+  var antes = JSON.parse(SYNC.nograto); SYNC.nograto = ahora;
+  Object.keys(NOGRATO).forEach(function (doc) { if (!antes[doc] || antes[doc].motivo !== NOGRATO[doc].motivo) marcarNoGrato(doc, true, NOGRATO[doc].motivo); });
+  Object.keys(antes).forEach(function (doc) { if (!NOGRATO[doc]) marcarNoGrato(doc, false, null); });
+}
+function marcarNoGrato(doc, si, motivo) {
+  var c = cliData().filter(function (x) { return x.g.doc === doc; })[0], g = c ? c.g : { doc: doc, name: 'Sin nombre', docType: 'DNI' };
+  enCola(function () {
+    return asegurarCliente(g).then(function (id) {
+      return db(PUENTE.sb.from('clientes').update({ no_grato: si, motivo_no_grato: si ? motivo : null }).eq('id', id).select('id'));
+    }).catch(function (e) { avisoError('el cliente ' + (g.name || doc), e); });
+  });
+}
+
+/* Cierre del día: se guarda en la base. La fecha la da el reloj (no se adelanta a mano) */
+function closeDay() {
+  if (CIERRES.some(function (c) { return c.d === TODAY; })) { toast('El día de hoy ya está cerrado', { icon: 'alert' }); return; }
+  var N = dayNums(), pct = isFinite(N.pct) ? N.pct : 0;
+  openModal({ title: 'Cerrar el día · ' + fmtD(TODAY), width: 460,
+    body: '<p>Se guardará el resumen del ' + fmtDL(TODAY) + '. El sistema pasa solo al día siguiente a la medianoche.</p><dl class="stay"><div><dt>Ingresos</dt><dd>' + money(N.ing) + '</dd></div><div><dt>Ocupación</dt><dd>' + pct + '%</dd></div></dl><p class="hint">Esto no se puede deshacer.</p>',
+    foot: '<button class="btn" data-close>Cancelar</button><button class="btn btn-ok" id="czGo">' + ic('check') + 'Sí, cerrar el día</button>',
+    onMount: function (w) {
+      var b = $('#czGo', w);
+      b.onclick = function () {
+        b.disabled = true;
+        db(PUENTE.sb.from('cierres').insert({ fecha: iso(TODAY), responsable: ME(), ingresos: Math.round(N.ing * 100) / 100, ocupacion_pct: pct, llegadas: N.ins, salidas: N.outs,
+          resumen: { por_forma_pago: N.by, ocupadas: N.occ, cobros: N.pays.length } }).select('id')).then(function () {
+          CIERRES.unshift({ day: DAYNO, d: TODAY, who: ME(), h: nowHM(), ing: N.ing, occ: pct, arr: N.ins, out: N.outs, _db: true });
+          closeModal(true); toast('Día cerrado y guardado · ' + fmtDL(TODAY), { icon: 'check' }); go('inicio');
+        }, function (e) { b.disabled = false; avisoError('el cierre del día', e); });
+      };
+    } });
 }
 
 function cambiosLimpieza() {
@@ -305,17 +566,31 @@ function cambiosLimpieza() {
   });
 }
 
+var MOV_AUTO = { 'Cobro de hospedaje': 1, 'Venta de restaurante': 1 };   // ya cuentan como pagos en efectivo del turno
 function cambiosCaja() {
-  if (state.caja === SYNC.caja) return;
+  var abrir = state.caja && !SYNC.caja, cerrar = !state.caja && SYNC.caja;
   SYNC.caja = state.caja;
-  if (state.caja) {
+  if (abrir) {
     enCola(function () {
       return db(PUENTE.sb.from('caja_turnos').insert({ responsable: ME(), monto_inicial: Number(state.cajaOpenAmt || 0) }).select('id'))
         .then(function (f) { SYNC.turno = f[0].id; }, function (e) { avisoError('la apertura de caja', e); });
     });
-  } else if (SYNC.turno) {
-    var id = SYNC.turno; SYNC.turno = null;
-    enCola(function () { return db(PUENTE.sb.from('caja_turnos').update({ cerrado_en: new Date().toISOString(), notas: 'Cerrada en recepción' }).eq('id', id).select('id')).catch(function (e) { avisoError('el cierre de caja', e); }); });
+  }
+  (state.mov || []).forEach(function (m) {
+    if (m._db) return; m._db = true;
+    if (MOV_AUTO[m.cat]) return;
+    enCola(function () {
+      if (!SYNC.turno) { avisoError('el movimiento de caja', { mensaje: 'la caja no está abierta' }); return; }
+      return db(PUENTE.sb.from('caja_movimientos').insert({ turno_id: SYNC.turno, tipo: m.type === 'salida' ? 'salida' : 'ingreso', motivo: m.cat || 'Otro',
+        forma_pago: 'Efectivo', monto: Number(m.amount), descripcion: m.desc || null }).select('id')).catch(function (e) { avisoError('el movimiento de caja de ' + money(m.amount), e); });
+    });
+  });
+  if (cerrar) {
+    var t = TURNOS[0], cont = t && !t._db ? Number(t.cont) : null; if (t) t._db = true;
+    enCola(function () {
+      var id = SYNC.turno; if (!id) return; SYNC.turno = null;
+      return db(PUENTE.sb.from('caja_turnos').update({ cerrado_en: new Date().toISOString(), contado: cont, notas: 'Cerrada en recepción' }).eq('id', id).select('id')).catch(function (e) { avisoError('el cierre de caja', e); });
+    });
   }
 }
 
@@ -403,7 +678,8 @@ function sincronizar() {
         if (!r._db) { guardarReserva(r); return; }
         cambiosReserva(r); cambiosConsumos(r); cambiosPagos(r);
       });
-      cambiosLimpieza(); cambiosCaja(); cambiosAjustes(); cambiosStock();
+      cambiosCaja(); cambiosRestaurante(); cambiosNotasCredito(); cambiosClientes();
+      cambiosLimpieza(); cambiosAjustes(); cambiosStock();
     } catch (e) { console.error(e); toast('No se pudo guardar un cambio. Recarga la página.', { icon: 'alert' }); }
   }, 0);
 }
@@ -416,5 +692,7 @@ window.NKS = {
   res: function () { return RES; }, hoy: function () { return TODAY; }, refresh: function () { refresh(); },
   checkin: function (r) { checkin(r); }, checkout: function (r) { doCheckout(r, false); },
   pagar: function (r, monto, metodo, tipo) { var p = addPay(r, monto, metodo, tipo, TODAY, nowHM()); emitirSunat(p); refresh(); return p; },
-  caja: function (abrir, monto) { state.cajaOpenAmt = monto || 0; setCaja(abrir); refresh(); }
+  caja: function (abrir, monto) { if (abrir) { state.cajaOpenAmt = monto || 0; state.mov = []; } setCaja(abrir); refresh(); },
+  mesas: function () { return TABLES; }, extra: function () { return EXTRA; }, mov: function () { return state.mov; }, turnos: function () { return TURNOS; },
+  noGrato: function () { return NOGRATO; }, nuevoId: function () { return ++PID; }, cerrarDia: function () { closeDay(); }, ahora: function () { return nowHM(); }
 };
