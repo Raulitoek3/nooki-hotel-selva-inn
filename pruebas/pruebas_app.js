@@ -295,6 +295,7 @@ async function simular(page, E) {
       if (!yoU || yoU.rol === 'dueno') return json({ error: { mensaje: 'Tu cuenta no puede emitir comprobantes.' } }, 403);
       E.llamadas.push('facturar:' + b.accion);
       if (b.accion === 'probar') return json({ error: { mensaje: 'Falta configurar la conexión con el facturador (llaves de Nooki en Supabase).' } }, 400);
+      if (b.accion === 'configurar_aviso') { if (yoU.rol !== 'admin') return json({ error: { mensaje: 'Solo el administrador.' } }, 403); E.avisoActivo = true; return json({ ok: true }); }
       if (b.accion === 'emitir') {
         const pago = E.tablas.pagos.find((x) => x.id === b.pago_id);
         const serie = { boleta: 'B001', factura: 'F001', nota_venta: 'NV01' }[b.tipo];
@@ -373,552 +374,6 @@ async function entrar(page, correo, clave) {
   const browser = await chromium.launch();
   const errores = [];
 
-  for (const [nombreVista, viewport] of [['escritorio', { width: 1440, height: 900 }], ['celular', { width: 390, height: 844 }]]) {
-    console.log('\n' + nombreVista.toUpperCase());
-    const E = estadoNuevo();
-    const ctx = await browser.newContext({ viewport, locale: 'es-PE' });
-    const page = await ctx.newPage();
-    page.on('pageerror', (e) => errores.push(nombreVista + ': ' + e.message));
-    page.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) errores.push(nombreVista + ' (seguridad): ' + m.text()); });
-    await simular(page, E);
-    await page.goto(URL0 + 'anterior.html');
-
-    await page.waitForSelector('#vIngreso:not([hidden])');
-    prueba('muestra el ingreso', await page.isVisible('#fIngreso'));
-    prueba('sin scroll de lado (ingreso)', await sinScrollLateral(page));
-    prueba('se ve el logo del hotel', await page.$eval('.marca-grande img', (i) => i.complete && i.naturalWidth > 0));
-    prueba('dice Hotel Selva Inn y no Nooki', (await page.textContent('body')).includes('Hotel Selva Inn') && !/nooki/i.test(await page.title() + await page.textContent('#vIngreso')));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-1-ingreso.png') });
-
-    await entrar(page, 'oficinavirtual@nooki.pe', 'mala-clave');
-    await page.waitForSelector('#iError:not([hidden])');
-    prueba('contraseña mala avisa', (await page.textContent('#iError')).includes('incorrectos'));
-
-    await entrar(page, 'sinacceso@ejemplo.test', 'Prueba-Sin-1');
-    await page.waitForFunction(() => ((document.querySelector('#iError') || {}).textContent || '').includes('no tiene acceso'));
-    prueba('cuenta sin rol no entra', await page.isVisible('#vIngreso'));
-
-    await entrar(page, 'oficinavirtual@nooki.pe', 'Prueba-Admin-1');
-    await page.waitForSelector('.tabla');
-    prueba('admin entra directo a Usuarios', page.url().endsWith('#usuarios'));
-    prueba('lista con 3 usuarios', (await page.$$('.tabla tbody tr')).length === 3);
-    prueba('menú muestra Usuarios', (await page.textContent('#nav')).includes('Usuarios'));
-    prueba('sin scroll de lado (usuarios)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-2-usuarios.png'), fullPage: true });
-
-    // Crear con contraseña corta
-    await page.click('#bNuevo');
-    await page.fill('#fNombre', 'Dueño de prueba');
-    await page.fill('#fCorreo', 'dueno@ejemplo.test');
-    await page.selectOption('#fRol', 'dueno');
-    await page.fill('#fClave', 'corta');
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-3-agregar.png') });
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('contraseña corta avisa', (await page.textContent('#mError')).includes('8 caracteres'));
-    prueba('la ventana sigue abierta', await page.isVisible('#velo'));
-
-    await page.fill('#fClave', 'Prueba-Dueno-1');
-    await page.click('#mOk');
-    await page.waitForSelector('#velo', { state: 'hidden' });
-    await page.waitForFunction(() => document.querySelectorAll('.tabla tbody tr').length === 4);
-    prueba('usuario creado aparece en la lista', (await page.textContent('#lista')).includes('dueno@ejemplo.test'));
-    prueba('aviso de creado', (await page.textContent('#aviso')).includes('creado'));
-
-    // Correo repetido
-    await page.click('#bNuevo');
-    await page.fill('#fNombre', 'Otra');
-    await page.fill('#fCorreo', 'dueno@ejemplo.test');
-    await page.fill('#fClave', 'Prueba-Otra-1');
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('correo repetido avisa', (await page.textContent('#mError')).includes('Ya existe'));
-    await page.keyboard.press('Escape');
-    prueba('Escape cierra la ventana', await page.isHidden('#velo'));
-
-    // Editar: desactivar al dueño
-    await page.click('tr:has-text("dueno@ejemplo.test") button[data-act="editar"]');
-    await page.uncheck('#fActivo');
-    await page.click('#mOk');
-    await page.waitForFunction(() => /Desactivado/.test(((document.querySelector('.tabla tbody tr:last-child') || {}).textContent || '')));
-    prueba('desactivar usuario', true);
-
-    // Editarme: rol y activo bloqueados
-    await page.click('tr:has-text("(tú)") button[data-act="editar"]');
-    prueba('no puedo cambiar mi propio rol', await page.isDisabled('#fRol'));
-    prueba('no puedo desactivarme', await page.isDisabled('#fActivo'));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-4-editar.png') });
-    await page.click('#mCancelar');
-
-    // Inicio del admin: mapa de todos los módulos
-    await page.click('#nav a[href="#inicio"]');
-    await page.waitForSelector('.modulos');
-    prueba('admin ve los 19 módulos', (await page.$$('.modulo')).length === 19);
-    prueba('Usuarios figura como Conectado', (await page.textContent('.modulo[href="#usuarios"]')).includes('Conectado'));
-    prueba('WhatsApp (aún sin conectar) abre la vista previa en otra pestaña',
-      (await page.getAttribute('.modulo[href="/vista-previa/#whatsapp"]', 'target')) === '_blank');
-    prueba('Panel, Reservas, Caja, Ventas, Limpieza, Reportes, Auditoría y Ajustes figuran como Conectado',
-      ['panel', 'reservas', 'caja', 'ventas', 'limpieza', 'reportes', 'auditoria', 'ajustes'].every((k) => true) &&
-      (await page.$$eval('.modulo', (ms) => ms.filter((m) => m.textContent.includes('Conectado')).length)) >= 10);
-    prueba('sin scroll de lado (módulos)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-6-modulos-admin.png'), fullPage: true });
-
-    // Clic en un módulo: abre la vista previa con esa pantalla
-    const [pv] = await Promise.all([ctx.waitForEvent('page'), page.click('.modulo[href="/vista-previa/#whatsapp"]')]);
-    pv.on('pageerror', (e) => errores.push(nombreVista + ' vista previa: ' + e.message));
-    await pv.waitForSelector('#view h1');
-    prueba('el enlace abre WhatsApp en la vista previa', (await pv.textContent('#view h1')).includes('WhatsApp'));
-    await pv.close();
-
-    // Inicio: ocupación por piso con el piso lleno
-    await page.waitForSelector('.op-lista li');
-    const pisosInicio = await page.$$eval('.op-lista li', (ls) => ls.map((l) => l.textContent));
-    prueba('Inicio muestra la ocupación de los 4 pisos', pisosInicio.length === 4, pisosInicio.length + ' pisos');
-    prueba('el piso 3 aparece como Lleno', pisosInicio.some((t) => t.startsWith('Piso 3') && t.includes('Lleno')));
-    prueba('cada piso dice cuántas habitaciones tiene por tipo', pisosInicio.some((t) => t.startsWith('Piso 1') && t.includes('4 habitaciones') && t.includes('4 Personal')));
-    prueba('el auditorio va en "Otros espacios" al final', pisosInicio[3].startsWith('Otros espacios'));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-9-inicio-ocupacion.png'), fullPage: true });
-
-    // Ajustes · Datos del hotel (admin: sin clave)
-    await page.click('#nav a[href="#ajustes"]');
-    await page.waitForSelector('#fDatos');
-    prueba('admin entra a Ajustes sin pedir clave', !(await page.$('#fCandado')));
-    prueba('Ajustes tiene 10 secciones', (await page.$$('.tabs [role=tab]')).length === 10);
-    prueba('los datos del hotel vienen de la base', (await page.inputValue('#dNombre')) === 'Hotel Selva Inn' && (await page.inputValue('#dTel')) === '+51 946 895 818');
-    prueba('Amazonía marcada y sin campo de IGV', (await page.isChecked('#dAmaz')) && (await page.isHidden('#dIgvCaja')));
-    await page.fill('#dRuc', '123');
-    await page.click('#dGuardar');
-    await page.waitForSelector('#dErr:not([hidden])');
-    prueba('RUC inválido avisa', (await page.textContent('#dErr')).includes('11 números'));
-    await page.fill('#dRuc', '20999999999');
-    await page.fill('#dRazon', 'Empresa de Prueba S.A.C.');
-    await page.click('#dGuardar');
-    await page.waitForFunction(() => /guardados/.test(((document.querySelector('#aviso') || {}).textContent || '')));
-    prueba('guardar datos del hotel', E.tablas.config[0].ruc === '20999999999' && E.tablas.config[0].razon_social === 'Empresa de Prueba S.A.C.');
-    prueba('sin scroll de lado (datos del hotel)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-10-ajustes-datos.png'), fullPage: true });
-
-    // Ajustes · Pisos y habitaciones
-    await page.click('.tabs [data-p="habitaciones"]');
-    await page.waitForSelector('.piso');
-    prueba('habitaciones agrupadas en 4 pisos', (await page.$$('.piso')).length === 4);
-    prueba('el piso 3 se marca como lleno', (await page.$$('.piso.lleno')).length === 1 && (await page.textContent('.piso.lleno h2')) === 'Piso 3');
-    prueba('colores por estado: ocupada, reservada hoy y libre',
-      !!(await page.$('.hab.h-occ[data-n="301"]')) && !!(await page.$('.hab.h-res[data-n="201"]')) && !!(await page.$('.hab.h-libre[data-n="104"]')));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-11-pisos.png'), fullPage: true });
-
-    await page.click('#bAgregarHab');
-    await page.fill('#fNums', '401 a 403');
-    await page.selectOption('#fTipo', 'D');
-    await page.click('#mOk');
-    await page.waitForSelector('#velo', { state: 'hidden' });
-    await page.waitForSelector('.hab[data-n="403"]');
-    prueba('agregar 401 a 403 crea 3 habitaciones en el piso 4',
-      ['401', '402', '403'].every((n) => E.tablas.habitaciones.some((h) => h.numero === n && h.piso === 4 && h.tipo === 'D')));
-    prueba('aparece el piso 4 con 3 Doble', (await page.textContent('.piso:has(h2:text-is("Piso 4"))')).includes('3 Doble'));
-
-    await page.click('#bAgregarHab');
-    await page.fill('#fNums', '101');
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('no deja repetir una habitación', (await page.textContent('#mError')).includes('ya existe'));
-    await page.click('#mCancelar');
-
-    await page.click('.hab[data-n="104"]');
-    await page.check('#fFuera');
-    await page.click('#mOk');
-    await page.waitForSelector('.hab.h-fuera[data-n="104"]');
-    prueba('poner una habitación fuera de venta', E.tablas.habitaciones.find((h) => h.numero === '104').fuera_de_venta === true);
-
-    await page.click('.hab[data-n="301"]');
-    await page.click('#fEliminar');
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('no deja eliminar una habitación con reservas', (await page.textContent('#mError')).includes('Fuera de venta'));
-    await page.click('#mCancelar');
-
-    await page.click('.hab[data-n="403"]');
-    await page.click('#fEliminar');
-    await page.click('#mOk');
-    await page.waitForSelector('.hab[data-n="403"]', { state: 'detached' });
-    prueba('eliminar una habitación sin reservas', !E.tablas.habitaciones.some((h) => h.numero === '403'));
-
-    // Ajustes · Tipos y tarifas
-    await page.click('.tabs [data-p="tipos"]');
-    await page.waitForSelector('#bAgregarTipo');
-    prueba('lista los 5 tipos', (await page.$$('#ajPanel tbody tr')).length === 5);
-    await page.click('#bAgregarTipo');
-    await page.fill('#fNom', 'Suite Matrimonial');
-    await page.fill('#fTar', '280');
-    await page.click('#mOk');
-    await page.waitForSelector('#ajPanel tr:has-text("Suite Matrimonial")');
-    prueba('agregar el tipo Suite Matrimonial', E.tablas.tipos_habitacion.some((t) => t.nombre === 'Suite Matrimonial' && t.tarifa === 280));
-    await page.click('#ajPanel tr:has-text("Personal") button[data-act="editar"]');
-    await page.fill('#fNom', 'Individual Simple');
-    await page.click('#mOk');
-    await page.waitForSelector('#ajPanel tr:has-text("Individual Simple")');
-    prueba('renombrar Personal a Individual Simple', E.tablas.tipos_habitacion.find((t) => t.codigo === 'P').nombre === 'Individual Simple');
-    await page.click('#ajPanel tr:has-text("Individual Simple") button[data-act="eliminar"]');
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('no deja eliminar un tipo que tiene habitaciones', (await page.textContent('#mError')).includes('cámbialas'));
-    await page.click('#mCancelar');
-    prueba('sin scroll de lado (tipos)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-12-tipos.png'), fullPage: true });
-
-    // Ajustes · Clave de administrador
-    await page.click('.tabs [data-p="clave"]');
-    await page.waitForSelector('#fClaveAdm');
-    prueba('sin clave: ofrece crearla', (await page.textContent('#fClaveAdm h2')).includes('Crear'));
-    await page.fill('#kNue', 'Clave-1234');
-    await page.fill('#kRep', 'otra');
-    await page.click('#fClaveAdm button[type=submit]');
-    await page.waitForSelector('#kErr:not([hidden])');
-    prueba('claves distintas avisa', (await page.textContent('#kErr')).includes('no son iguales'));
-    await page.fill('#kRep', 'Clave-1234');
-    await page.click('#fClaveAdm button[type=submit]');
-    await page.waitForFunction(() => /Clave creada/.test(((document.querySelector('#aviso') || {}).textContent || '')));
-    prueba('crear la clave de administrador', E.clave === 'Clave-1234');
-
-    // ===== Un día del hotel: personal, panel, reserva, cobro, caja, ventas, check-out, limpieza, reportes, auditoría =====
-    await page.click('.tabs [data-p="personal"]');
-    await page.waitForSelector('#crNuevo');
-    await page.click('#crNuevo');
-    await page.fill('#cr_nombre', 'Camarera de Prueba');
-    await page.fill('#cr_cargo', 'Housekeeping');
-    await page.click('#mOk');
-    await page.waitForSelector('#ajPanel tr:has-text("Camarera de Prueba")');
-    prueba('Ajustes: agregar personal', E.tablas.personal.some((x) => x.nombre === 'Camarera de Prueba'));
-
-    await page.click('#nav a[href="#panel"]');
-    await page.waitForSelector('#pnl .kpis');
-    prueba('Panel: muestra indicadores del día', (await page.$$('#pnl .kpi')).length === 5);
-    prueba('Panel: la 301 ocupada muestra al huésped', (await page.textContent('.hab[data-n="301"]')).includes('Huésped Ficticio Uno'));
-    prueba('Panel: la 201 llega hoy', !!(await page.$('.hab.h-res[data-n="201"]')));
-    prueba('sin scroll de lado (panel)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-14-panel.png'), fullPage: true });
-
-    await page.click('.hab[data-n="103"]');
-    await page.waitForSelector('#nHabs .hab');
-    prueba('Nueva reserva: llega con la 103 elegida', !!(await page.$('#nHabs .hab.elegida[data-n="103"]')));
-    await page.fill('#nSal', diaLima(2));
-    await page.waitForFunction(() => /2 noches/.test(((document.querySelector('#nInfo') || {}).textContent || '')));
-    await page.click('#nNuevoCli');
-    await page.selectOption('#cTipo', '1');
-    await page.fill('#cDoc', '123');
-    await page.fill('#cNom', 'Cliente de Prueba');
-    await page.click('#nCrear');
-    await page.waitForSelector('#nErr:not([hidden])');
-    prueba('Nueva reserva: DNI inválido avisa', (await page.textContent('#nErr')).includes('8 números'));
-    await page.fill('#cDoc', '99999999');
-    prueba('sin scroll de lado (nueva reserva)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-15-nueva.png'), fullPage: true });
-    await page.click('#nCrear');
-    await page.waitForSelector('#det .acciones-res');
-    const nueva = E.tablas.reservas.find((r) => r.habitacion === '103');
-    prueba('Nueva reserva: se crea con tarifa del tipo y 2 noches', nueva && Number(nueva.tarifa) === 160 && nueva.salida === diaLima(2) && nueva.estado === 'confirmado');
-    prueba('Nueva reserva: crea el cliente', E.tablas.clientes.some((c) => c.num_doc === '99999999'));
-
-    // Ficha: check-in, consumo, cobro
-    await page.click('[data-a="checkin"]'); await page.click('#mOk');
-    await page.waitForSelector('[data-a="checkout"]');
-    prueba('Ficha: check-in', nueva.estado === 'ocupado');
-    await page.click('[data-a="consumo"]');
-    await page.fill('#kDesc', 'Lavandería'); await page.fill('#kCant', '2'); await page.fill('#kPre', '4');
-    await page.click('#mOk');
-    await page.waitForFunction(() => /Lavandería/.test(((document.querySelector('.cuenta') || {}).textContent || '')));
-    prueba('Ficha: consumo suma a la cuenta (2×160 + 8 = 328)', (await page.textContent('.cuenta .total')).includes('328.00'));
-    await page.click('[data-a="cobrar"]');
-    await page.selectOption('#pFor', 'Efectivo');
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('Cobro en efectivo con caja cerrada avisa', (await page.textContent('#mError')).includes('caja está cerrada'));
-    await page.selectOption('#pFor', 'Yape');
-    await page.click('#mOk');
-    await page.waitForSelector('.cuenta .saldo.ok');
-    prueba('Cobro con Yape y boleta aceptada', E.tablas.pagos.some((x) => x.monto === 328 && x.forma_pago === 'Yape' && x.comprobante_id) && (await page.textContent('.pagos')).includes('B001-1'));
-    prueba('sin scroll de lado (ficha)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-16-ficha.png'), fullPage: true });
-
-    // Caja
-    await page.click('#nav a[href="#caja"]');
-    await page.waitForSelector('#fAbrir');
-    await page.fill('#aMon', '100');
-    await page.click('#fAbrir button[type=submit]');
-    await page.waitForSelector('#bSal');
-    await page.click('#bSal');
-    await page.fill('#mMot', 'Compra de útiles'); await page.fill('#mMon', '20');
-    await page.click('#mOk');
-    await page.waitForFunction(() => /80\.00/.test(((document.querySelector('.kpis') || {}).textContent || '')));
-    prueba('Caja: inicial 100 − salida 20 = debe haber 80', true);
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-17-caja.png'), fullPage: true });
-    await page.click('#bCerrar');
-    await page.fill('#kCon', '80');
-    prueba('Caja: el arqueo dice que cuadra', (await page.textContent('#kDif')).includes('Cuadra'));
-    await page.click('#mOk');
-    await page.waitForSelector('#fAbrir');
-    prueba('Caja: se cierra con nota "Cuadra"', E.tablas.caja_turnos[0].notas.startsWith('Cuadra'));
-
-    // Ventas
-    await page.click('#nav a[href="#ventas"]');
-    await page.waitForSelector('#vLista .tabla');
-    prueba('Ventas: lista la boleta aceptada', (await page.textContent('#vLista')).includes('B001-1') && (await page.textContent('#vLista')).includes('Aceptado'));
-    prueba('sin scroll de lado (ventas)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-18-ventas.png'), fullPage: true });
-
-    // Check-out → limpieza
-    await page.evaluate((id) => { location.hash = '#reserva/' + id; }, nueva.id);
-    await page.waitForSelector('[data-a="checkout"]');
-    await page.click('[data-a="checkout"]'); await page.click('#mOk');
-    await page.waitForFunction(() => /Finalizada/.test(((document.querySelector('#det') || {}).textContent || '')));
-    prueba('Check-out: reserva finalizada y habitación por limpiar', nueva.estado === 'finalizada' && E.tablas.limpieza.some((l) => l.habitacion === '103' && l.estado === 'sucia'));
-    await page.click('#nav a[href="#limpieza"]');
-    await page.waitForSelector('.tarea');
-    await page.click('.tarea [data-a="asignar"]'); await page.click('#mOk');
-    await page.waitForFunction(() => /Camarera de Prueba/.test(((document.querySelector('.tablero') || {}).textContent || '')));
-    prueba('Limpieza: asignar camarera', true);
-    const limp103 = () => E.tablas.limpieza.find((l) => l.habitacion === '103');
-    for (const esperado of ['limpiando', 'revisar', 'lista']) {
-      await page.click('.tarea [data-a="avanzar"]');
-      for (let i = 0; i < 40 && limp103().estado !== esperado; i++) await page.waitForTimeout(100);
-      await page.waitForTimeout(300);
-    }
-    await page.waitForFunction(() => /Hab\. 103/.test(((document.querySelector('#lz > section') || {}).textContent || '')));
-    prueba('Limpieza: por limpiar → limpiando → revisar → lista', E.tablas.limpieza.find((l) => l.habitacion === '103').estado === 'lista');
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-19-limpieza.png'), fullPage: true });
-
-    // Anular otra reserva (admin, sin clave)
-    await page.evaluate(() => { location.hash = '#reserva/4'; });
-    await page.waitForSelector('[data-a="anular"]');
-    await page.click('[data-a="anular"]');
-    await page.fill('#kMot', 'Prueba de anulación');
-    await page.click('#mOk');
-    await page.waitForFunction(() => /Anulada/.test(((document.querySelector('#det') || {}).textContent || '')));
-    prueba('Anular reserva (admin)', E.tablas.reservas.find((r) => r.id === 4).estado === 'anulada');
-
-    // Reportes
-    await page.click('#nav a[href="#reportes"]');
-    await page.waitForSelector('#rp .rep');
-    prueba('Reportes: 5 reportes', (await page.$$('#rp .rep')).length === 5);
-    const [bajada] = await Promise.all([page.waitForEvent('download'), page.click('#repTodo')]);
-    prueba('Reportes: descargar todos (Excel/CSV)', /Reportes/.test(bajada.suggestedFilename()));
-    prueba('sin scroll de lado (reportes)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-20-reportes.png'), fullPage: true });
-
-    // Auditoría
-    await page.click('#nav a[href="#auditoria"]');
-    await page.waitForSelector('.audit li');
-    prueba('Auditoría: muestra cambios y alertas', (await page.$$('.audit li')).length >= 2 && !!(await page.$('.audit li.alerta')));
-    await page.selectOption('#auTipo', 'alerta');
-    prueba('Auditoría: filtrar alertas', (await page.$$('.audit li')).length === 1);
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-21-auditoria.png'), fullPage: true });
-
-    // ===== Productos, Almacén, Restaurante, Timeline, Cierre, Resumen y Nota de crédito =====
-    async function nuevoProducto(nombre, cat, tipo, precio, destino) {
-      await page.click('#crNuevo');
-      await page.fill('#cr_nombre', nombre); await page.fill('#cr_categoria', cat);
-      await page.selectOption('#cr_tipo', tipo); await page.fill('#cr_precio', String(precio));
-      await page.selectOption('#cr_unidad', tipo === 'Producto' ? 'NIU' : 'ZZ');
-      await page.check('#cr_en_restaurante'); await page.selectOption('#cr_destino', destino);
-      await page.click('#mOk');
-      await page.waitForSelector('#ajPanel tr:has-text("' + nombre + '")');
-    }
-    await page.evaluate(() => { location.hash = '#ajustes/productos'; });
-    await page.waitForSelector('#crNuevo');
-    await nuevoProducto('Agua mineral', 'Bebidas', 'Producto', 4, 'Barra');
-    await nuevoProducto('Lomo saltado', 'Platos', 'Kit', 32, 'Cocina');
-    prueba('Productos: agregar para el restaurante', E.tablas.productos.length === 2 && E.tablas.productos.every((x) => x.en_restaurante));
-
-    await page.click('#nav a[href="#almacen"]');
-    await page.waitForSelector('#alEnt');
-    await page.click('#alEnt');
-    await page.fill('#amC', '10'); await page.fill('#amR', 'Guía de prueba');
-    await page.click('#mOk');
-    await page.waitForFunction(() => /Guía de prueba/.test(((document.querySelector('#al') || {}).textContent || '')));
-    const agua = E.tablas.productos.find((x) => x.nombre === 'Agua mineral');
-    prueba('Almacén: entrada suma stock (10)', Number(agua.stock) === 10);
-    await page.click('#alSal');
-    await page.fill('#amC', '50'); await page.fill('#amR', 'Merma');
-    await page.click('#mOk');
-    await page.waitForSelector('#mError:not([hidden])');
-    prueba('Almacén: no deja sacar más de lo que hay', (await page.textContent('#mError')).includes('stock'));
-    await page.click('#mCancelar');
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-22-almacen.png'), fullPage: true });
-
-    await page.click('#nav a[href="#restaurante"]');
-    await page.waitForSelector('.mesas .hab');
-    await page.click('.mesas .hab[data-m="S1"]');
-    await page.waitForSelector('.carta');
-    await page.click('.segm [data-c="Platos"]');
-    await page.click('.carta [data-p]');
-    await page.waitForSelector('.cuenta');
-    await page.click('.segm [data-c="Bebidas"]');
-    await page.click('.carta [data-p]');
-    await page.waitForFunction(() => /Agua mineral/.test(((document.querySelector('.cuenta') || {}).textContent || '')));
-    await page.locator('[data-mas]').last().click();
-    await page.waitForFunction(() => /Total\s*S\/ 40\.00/.test(((document.querySelector('.cuenta .total') || {}).textContent || '')));
-    prueba('Restaurante: pedido Lomo + 2 Agua = S/ 40', true);
-    await page.click('[data-x="comanda"]');
-    await page.waitForSelector('#mTitulo:has-text("Comanda")');
-    prueba('Restaurante: comanda separa Cocina y Barra', (await page.textContent('#mCuerpo')).includes('Cocina') && (await page.textContent('#mCuerpo')).includes('Barra'));
-    await page.click('#mOk');
-    await page.waitForSelector('[data-x="cobrar"]');
-    prueba('sin scroll de lado (mesa)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-23-mesa.png'), fullPage: true });
-    await page.click('[data-x="cobrar"]');
-    await page.selectOption('#rFor', 'Yape');
-    await page.click('#mOk');
-    await page.waitForSelector('.mesas .hab');
-    const ped = E.tablas.pedidos[0];
-    prueba('Restaurante: cobrar cierra el pedido y emite boleta', ped.estado === 'cobrada' && E.tablas.comprobantes.some((c) => c.pedido_id === ped.id));
-    prueba('Restaurante: la venta descuenta el agua del almacén (10 − 2 = 8)', Number(agua.stock) === 8);
-    await page.click('.mesas .hab[data-m="S2"]');
-    await page.waitForSelector('.carta');
-    await page.click('.segm [data-c="Bebidas"]');
-    await page.click('.carta [data-p]');
-    await page.waitForSelector('[data-x="cargar"]');
-    await page.click('[data-x="cargar"]');
-    await page.click('#mOk');
-    await page.waitForSelector('.mesas .hab');
-    prueba('Restaurante: cargar a la habitación suma el consumo a la cuenta', E.tablas.consumos.some((c) => c.pedido_id && /restaurante/.test(c.descripcion)) && E.tablas.pedidos[1].estado === 'cargada');
-
-    await page.click('#nav a[href="#timeline"]');
-    await page.waitForSelector('.tl tbody tr');
-    prueba('Timeline: una fila por habitación', (await page.$$('.tl tbody tr')).length === E.tablas.habitaciones.length);
-    prueba('Timeline: muestra las reservas', (await page.$$('.tl td.tl-r')).length >= 3);
-    prueba('sin scroll de lado (timeline)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-24-timeline.png'), fullPage: true });
-    await page.click('.tl td.tl-libre button[data-h="402"]');
-    await page.waitForSelector('#nHabs .hab');
-    prueba('Timeline: tocar un espacio libre abre Nueva reserva con esa habitación', !!(await page.$('#nHabs .hab.elegida[data-n="402"]')));
-
-    await page.click('#nav a[href="#cierre"]');
-    await page.waitForSelector('#ciCerrar');
-    prueba('Cierre: muestra la revisión de pendientes', (await page.$$('#ci .cuenta li')).length >= 5);
-    await page.click('#ciCerrar'); await page.click('#mOk');
-    await page.waitForFunction(() => /ya se cerró/.test(((document.querySelector('#ci') || {}).textContent || '')));
-    prueba('Cierre: cerrar el día guarda el cierre', E.tablas.cierres.length === 1);
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-25-cierre.png'), fullPage: true });
-
-    await page.click('#nav a[href="#inicio"]');
-    await page.waitForSelector('#resumenDia .kpi');
-    prueba('Inicio: resumen del día con 5 indicadores', (await page.$$('#resumenDia .kpi')).length === 5);
-
-    await page.click('#nav a[href="#ventas"]');
-    await page.waitForSelector('#vLista [data-a="nc"]');
-    await page.click('#vLista [data-a="nc"]');
-    await page.click('#mOk');
-    await page.waitForFunction(() => /BC01-1/.test(((document.querySelector('#vLista') || {}).textContent || '')));
-    prueba('Ventas: nota de crédito emitida', E.tablas.comprobantes.some((c) => c.tipo === 'nota_credito'));
-
-    await page.click('#nav a[href="#usuarios"]');
-    await page.waitForSelector('.tabla');
-
-    // Contraseña nueva para recepción
-    await page.click('tr:has-text("recepcion@ejemplo.test") button[data-act="clave"]');
-    await page.fill('#fClave', 'Nueva-Rec-22');
-    await page.click('#mOk');
-    await page.waitForSelector('#velo', { state: 'hidden' });
-    prueba('contraseña cambiada', E.cuentas['recepcion@ejemplo.test'].clave === 'Nueva-Rec-22');
-
-    // Salir y entrar como recepción
-    await page.click('#bSalir');
-    await page.waitForSelector('#vIngreso:not([hidden])');
-    prueba('salir vuelve al ingreso', true);
-    await entrar(page, 'recepcion@ejemplo.test', 'Nueva-Rec-22');
-    await page.waitForSelector('.bienvenida');
-    prueba('recepción ve 18 módulos (sin Usuarios)', (await page.$$('.modulo')).length === 18);
-    prueba('recepción no ve Usuarios en el menú', !(await page.textContent('#nav')).includes('Usuarios'));
-    await page.evaluate(() => { location.hash = '#usuarios'; });
-    await page.waitForTimeout(150);
-    prueba('recepción no puede abrir Usuarios', await page.isVisible('.bienvenida'));
-    await page.evaluate(() => { location.hash = '#ajustes'; });
-    await page.waitForSelector('#fCandado');
-    prueba('recepción: Ajustes pide la clave', true);
-    await page.fill('#cClave', 'mala');
-    await page.click('#fCandado button');
-    await page.waitForSelector('#cErr:not([hidden])');
-    prueba('clave incorrecta dice los intentos que quedan', (await page.textContent('#cErr')).includes('4 intentos'));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-13-candado.png') });
-    await page.fill('#cClave', 'Clave-1234');
-    await page.click('#fCandado button');
-    await page.waitForSelector('#fDatos');
-    prueba('con la clave se abre Ajustes', (await page.textContent('#ajClave')).includes('Clave abierta'));
-    await page.fill('#dTel', '+51 900 000 000');
-    await page.click('#dGuardar');
-    await page.waitForFunction(() => /guardados/.test(((document.querySelector('#aviso') || {}).textContent || '')));
-    prueba('recepción guarda con la clave abierta', E.tablas.config[0].telefono === '+51 900 000 000');
-    await page.click('#bBloquear');
-    await page.waitForSelector('#fCandado');
-    prueba('Bloquear vuelve a pedir la clave', true);
-    await page.evaluate(() => { location.hash = '#reserva/1'; });
-    await page.waitForSelector('[data-a="anular"]');
-    await page.click('[data-a="anular"]');
-    await page.waitForSelector('#fClaveAdm');
-    prueba('Recepción: anular una reserva pide la clave', (await page.textContent('#mTitulo')).includes('Clave'));
-    await page.click('#mCancelar');
-    await page.evaluate(() => { location.hash = '#auditoria'; });
-    await page.waitForSelector('#auAbrir');
-    prueba('Recepción: auditoría pide la clave', true);
-    await page.evaluate(() => { location.hash = '#inicio'; });
-    await page.waitForSelector('.bienvenida');
-    prueba('sin scroll de lado (inicio)', await sinScrollLateral(page));
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-5-recepcion.png') });
-
-    // Usuario desactivado no entra
-    await page.click('#bSalir');
-    await page.waitForSelector('#vIngreso:not([hidden])');
-    await entrar(page, 'dueno@ejemplo.test', 'Prueba-Dueno-1');
-    await page.waitForFunction(() => ((document.querySelector('#iError') || {}).textContent || '').length > 0);
-    prueba('usuario desactivado no entra', await page.isVisible('#vIngreso'));
-
-    // Dueño: solo lo que le corresponde
-    await entrar(page, 'dueno.activo@ejemplo.test', 'Prueba-Due-1');
-    await page.waitForSelector('.modulos');
-    const deDueno = await page.$$eval('.modulo b', (bs) => bs.map((b) => b.textContent));
-    prueba('dueño ve 10 módulos', deDueno.length === 10, deDueno.join(', '));
-    prueba('dueño no ve Nueva reserva, Restaurante ni Ajustes',
-      !deDueno.includes('Nueva reserva') && !deDueno.includes('Restaurante') && !deDueno.includes('Ajustes'));
-    prueba('dueño ve Reportes, Caja y Auditoría',
-      deDueno.includes('Reportes') && deDueno.includes('Caja') && deDueno.includes('Auditoría'));
-    prueba('aviso de solo lectura', (await page.textContent('.bienvenida')).includes('Solo lectura'));
-    prueba('dueño no ve Ajustes en el menú', !(await page.textContent('#nav')).includes('Ajustes'));
-    await page.waitForSelector('.op-lista li');
-    prueba('dueño ve la ocupación por piso', (await page.$$('.op-lista li')).length >= 4);
-    prueba('dueño no tiene botón para editar pisos', !(await page.$('.ocupacion a[href="#ajustes/habitaciones"]')));
-    await page.evaluate(() => { location.hash = '#ajustes'; });
-    await page.waitForTimeout(150);
-    prueba('dueño no puede abrir Ajustes', !(await page.$('#ajCuerpo')));
-    await page.evaluate(() => { location.hash = '#panel'; });
-    await page.waitForSelector('#pnl .kpis');
-    prueba('Dueño: ve el panel sin "Nueva reserva"', !(await page.$('a[href="#nueva"]')));
-    await page.evaluate(() => { location.hash = '#reserva/1'; });
-    await page.waitForSelector('#det .cuenta');
-    prueba('Dueño: ve la ficha sin botones de acción', !(await page.$('[data-a]')));
-    await page.evaluate(() => { location.hash = '#inicio'; });
-    await page.waitForSelector('.modulos');
-    await page.screenshot({ path: path.join(OUT, nombreVista + '-7-modulos-dueno.png'), fullPage: true });
-
-    // Vista previa: todas las pantallas del prototipo cargan sin errores
-    const vp = await ctx.newPage();
-    vp.on('pageerror', (e) => errores.push(nombreVista + ' vista previa: ' + e.message));
-    vp.on('console', (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) errores.push(nombreVista + ' vista previa (seguridad): ' + m.text()); });
-    let vistasOk = 0;
-    const VISTAS = ['inicio', 'panel', 'timeline', 'nueva', 'reservas', 'limpieza', 'restaurante', 'whatsapp', 'ventas',
-      'caja', 'cierre', 'productos', 'almacen', 'clientes', 'reportes', 'impresion'];
-    for (const v of VISTAS) {
-      await vp.goto(URL0 + 'vista-previa/#' + v);
-      await vp.waitForSelector('#view h1', { timeout: 5000 }).catch(() => {});
-      if (await vp.$('#view h1')) vistasOk++;
-      if (v === 'panel' || v === 'inicio') await vp.waitForTimeout(1200), await vp.screenshot({ path: path.join(OUT, nombreVista + '-8-vista-previa-' + v + '.png') });
-    }
-    prueba('vista previa: las ' + VISTAS.length + ' pantallas cargan', vistasOk === VISTAS.length, vistasOk + ' de ' + VISTAS.length);
-    prueba('vista previa sin scroll de lado', await sinScrollLateral(vp));
-    await vp.close();
-
-    await ctx.close();
-  }
-
   // ===== SISTEMA PRINCIPAL: el prototipo (mismo diseño) con datos reales =====
   for (const [nombreVista, viewport] of [['escritorio', { width: 1440, height: 900 }], ['celular', { width: 390, height: 844 }]]) {
     console.log('\nSISTEMA (diseño del prototipo) · ' + nombreVista.toUpperCase());
@@ -932,6 +387,14 @@ async function entrar(page, correo, clave) {
     await page.waitForURL(/ingreso\.html/);
     prueba('sin sesión manda a la página de ingreso', true);
     prueba('ingreso con el logo del hotel', await page.$eval('.marca-grande img', (i) => i.complete && i.naturalWidth > 0));
+    prueba('ingreso dice Hotel Selva Inn y no Nooki', (await page.textContent('body')).includes('Hotel Selva Inn') && !/nooki/i.test(await page.title()));
+    prueba('sin scroll de lado (ingreso)', await sinScrollLateral(page));
+    await entrar(page, 'oficinavirtual@nooki.pe', 'mala-clave');
+    await page.waitForSelector('#iError:not([hidden])');
+    prueba('contraseña mala avisa', (await page.textContent('#iError')).includes('incorrectos'));
+    await entrar(page, 'sinacceso@ejemplo.test', 'Prueba-Sin-1');
+    await page.waitForFunction(() => ((document.querySelector('#iError') || {}).textContent || '').includes('no tiene acceso'));
+    prueba('cuenta sin rol no entra', /ingreso/.test(page.url()));
     await page.screenshot({ path: path.join(OUT, 'sistema-' + nombreVista + '-1-ingreso.png') });
     await entrar(page, 'oficinavirtual@nooki.pe', 'Prueba-Admin-1');
     await page.waitForSelector('#view h1', { timeout: 15000 });
@@ -1040,6 +503,49 @@ async function entrar(page, correo, clave) {
       prueba('Guardar: al cerrar el día la fecha sigue siendo la real', (await page.evaluate(() => NKS.hoy())) === hoyAntes && E.tablas.cierres[0].fecha === new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date()));
       await page.evaluate(() => NKS.cerrarDia());
       prueba('Guardar: no cierra dos veces el mismo día', E.tablas.cierres.length === 1 && /ya está cerrado/.test(await page.textContent('body')));
+      // Ajustes → Usuarios (solo admin): lista, crear, editar y contraseña
+      await page.evaluate(() => { location.hash = '#ajustes'; });
+      await page.waitForSelector('[data-act="set"][data-v="usuarios"]', { timeout: 5000 });
+      await page.click('[data-act="set"][data-v="usuarios"]');
+      await page.waitForSelector('.usr-f', { timeout: 5000 });
+      prueba('Usuarios: lista las cuentas dentro de Ajustes', (await page.textContent('.usr-lista')).includes('oficinavirtual@nooki.pe'));
+      await page.addStyleTag({ content: '#toasts,.toasts,.toast{display:none!important}' });
+      await page.screenshot({ path: path.join(OUT, 'sistema-escritorio-5-usuarios.png') });
+      await page.click('[data-act="usr-new"]');
+      await page.fill('#uCorreo', 'recepcion2@ejemplo.test'); await page.fill('#uNombre', 'Recepción 2'); await page.fill('#uClave', 'corta');
+      await page.click('#uGo');
+      prueba('Usuarios: contraseña corta no se acepta', /8 caracteres/.test(await page.textContent('#uErr')));
+      await page.fill('#uClave', 'Prueba-Rec-2'); await page.click('#uGo');
+      prueba('Usuarios: crear una cuenta de recepción', await esperar(() => E.usuarios.some((u) => u.correo === 'recepcion2@ejemplo.test' && u.rol === 'recepcion')));
+      await page.waitForFunction(() => /recepcion2@ejemplo\.test/.test((document.querySelector('.usr-lista') || {}).textContent || ''), null, { timeout: 5000 });
+      const idNuevo = E.usuarios.find((u) => u.correo === 'recepcion2@ejemplo.test').id;
+      await page.click('[data-act="usr-edit"][data-id="' + idNuevo + '"]');
+      await page.click('#uRol [data-v="dueno"]'); await page.click('#uAct [data-v="no"]'); await page.click('#uGo');
+      prueba('Usuarios: cambiar rol y desactivar', await esperar(() => { const u = E.usuarios.find((x) => x.id === idNuevo); return u.rol === 'dueno' && u.activo === false; }));
+      await page.waitForSelector('[data-act="usr-clave"][data-id="' + idNuevo + '"]');
+      await page.click('[data-act="usr-clave"][data-id="' + idNuevo + '"]');
+      await page.fill('#uClave', 'Otra-Clave-9'); await page.fill('#uClave2', 'Otra-Clave-9'); await page.click('#uGo');
+      prueba('Usuarios: contraseña nueva', await esperar(() => E.cuentas['recepcion2@ejemplo.test'].clave === 'Otra-Clave-9'));
+      await page.waitForTimeout(400);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForTimeout(300);
+      prueba('Usuarios: sin scroll de lado en celular', await sinScrollLateral(page));
+      await page.screenshot({ path: path.join(OUT, 'sistema-celular-5-usuarios.png'), fullPage: true });
+      await page.setViewportSize(viewport); await page.evaluate(() => { location.hash = '#ajustes'; });
+      await page.waitForTimeout(300);
+      // Ajustes → Facturación SUNAT: probar conexión y activar avisos (de verdad, no simulado)
+      await page.click('[data-act="set"][data-v="sunat"]');
+      await page.waitForSelector('[data-act="nooki-test"]');
+      prueba('Facturación: sin el interruptor de "simular sin internet"', !/Simular que se cayó/.test(await page.textContent('#view')));
+      await page.click('[data-act="nooki-test"]');
+      await page.waitForFunction(() => /No se pudo conectar/.test(document.querySelector('.nk-card').textContent), null, { timeout: 5000 });
+      prueba('Facturación: probar conexión llama al facturador y muestra el motivo', E.llamadas.includes('facturar:probar') && /Falta configurar/.test(await page.textContent('.nk-card')));
+      await page.click('[data-act="nooki-aviso"]');
+      prueba('Facturación: activar avisos de SUNAT', await esperar(() => E.avisoActivo === true));
+      await page.waitForSelector('.modal [data-close], [data-close]');
+      prueba('Facturación: recuerda poner NOOKI_WHSEC en Supabase', /NOOKI_WHSEC/.test(await page.textContent('body')));
+      await page.screenshot({ path: path.join(OUT, 'sistema-escritorio-6-facturacion.png') });
+      await page.keyboard.press('Escape');
       await page.evaluate(() => { const t = NKS.mesas().find((x) => x.id === 'S2'); t.order = { items: [{ n: 'Café', p: 4, q: 1, sent: 0 }], since: NKS.ahora(), mozo: 'Mozo', state: 'abierta' }; NKS.refresh(); });
       await esperar(() => E.tablas.pedido_items.some((i) => i.descripcion === 'Café'));
       // Clave de administrador: el admin la crea en Ajustes (se guarda en el servidor)
@@ -1082,6 +588,7 @@ async function entrar(page, correo, clave) {
       let abierto = false;
       for (let i = 0; i < 50 && !abierto; i++) { await p2.waitForTimeout(100); abierto = !(await p2.$('#admPin')); }
       prueba('Recepción: la clave real (del servidor) abre Ajustes', abierto);
+      prueba('Recepción: no ve la pestaña Usuarios', !(await p2.$('[data-act="set"][data-v="usuarios"]')));
       await p2.screenshot({ path: path.join(OUT, 'sistema-escritorio-4-recepcion-ajustes.png') });
       await ctx2.close();
     }

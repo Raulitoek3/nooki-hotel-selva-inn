@@ -10,7 +10,7 @@ import pathlib, re, subprocess, sys
 
 raiz = pathlib.Path(__file__).resolve().parent.parent
 subprocess.run([sys.executable, "-I", str(raiz / "pruebas" / "copiar_vista_previa.py")], check=True)
-html = (raiz / "app" / "vista-previa" / "index.html").read_text(encoding="utf-8")
+html = (raiz / "pruebas" / "_generado" / "prototipo-con-marca.html").read_text(encoding="utf-8")
 
 estilos = "\n".join(re.findall(r"<style[^>]*>(.*?)</style>", html, re.S))
 fuentes = re.search(r'<link rel="stylesheet" href="https://fonts\.googleapis\.com[^"]+">', html).group(0)
@@ -24,13 +24,15 @@ datos = (raiz / "pruebas" / "datos_reales.js").read_text(encoding="utf-8")
 i = codigo.rfind(marca)
 codigo = codigo[:i] + datos + "\n" + codigo[i:]
 
-aviso = ("\n/* Aviso: todavía no se guardan los cambios */\n"
-         ".aviso-conexion{position:fixed;left:12px;bottom:12px;z-index:9999;max-width:min(92vw,420px);padding:10px 14px;border-radius:12px;"
-         "background:#7a4a10;color:#fff;font:500 13px/1.4 var(--sans);box-shadow:0 8px 24px rgba(0,0,0,.25)}\n"
-         ".aviso-conexion b{display:block;font-size:14px}.aviso-conexion a{color:#ffe2b0}\n"
-         ".carga{min-height:100vh;display:grid;place-content:center;justify-items:center;gap:10px;text-align:center;font-family:var(--sans)}\n")
+extra = ("\n/* Solo del sistema real */\n"
+         ".carga{min-height:100vh;display:grid;place-content:center;justify-items:center;gap:10px;text-align:center;font-family:var(--sans)}\n"
+         ".usr-lista{display:grid;gap:8px;margin:6px 0 4px}\n"
+         ".usr-f{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}\n"
+         ".usr-f .grow{flex:1;min-width:180px}.usr-f b{display:block}.usr-f small{color:var(--text-2);overflow-wrap:anywhere}\n"
+         ".usr-acc{display:flex;gap:6px;margin-left:auto}\n"
+         ".nk-acc{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}\n")
 
-(raiz / "app" / "sistema.css").write_text("/* GENERADO por pruebas/generar_sistema.py desde el prototipo. No editar aquí. */\n" + estilos + aviso, encoding="utf-8")
+(raiz / "app" / "sistema.css").write_text("/* GENERADO por pruebas/generar_sistema.py desde el prototipo. No editar aquí. */\n" + estilos + extra, encoding="utf-8")
 (raiz / "app" / "sistema.js").write_text("/* GENERADO por pruebas/generar_sistema.py desde el prototipo. No editar aquí. */\n" + codigo, encoding="utf-8")
 (raiz / "app" / "index.html").write_text(f"""<!doctype html>
 <html lang="es">

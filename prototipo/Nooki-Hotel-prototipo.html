@@ -2470,8 +2470,10 @@ var PAYON={};METHODS.forEach(function(m){PAYON[m]=true;});
 function activeMethods(){return METHODS.filter(function(m){return PAYON[m]!==false;});}
 var SETS=[['empresa','Empresa','building'],['sunat','Facturación SUNAT','receipt'],['horarios','Horarios y recargos','clock'],['tarifas','Habitaciones y tarifas','bed'],['temporadas','Tarifas por temporada','calendar'],['origenes','Orígenes y comisiones','list'],['pagos','Formas de pago','card'],['personal','Personal','users'],['permisos','Permisos por cargo','login'],['movcaja','Motivos de caja','wallet']];
 function inp(id,label,val,o){o=o||{};return '<div class="field'+(o.span?' span2':'')+'"><label for="'+id+'">'+label+'</label>'+(o.pre?'<div class="inp-pre"><span>'+o.pre+'</span>':'')+'<input id="'+id+'" data-cfg="'+(o.k||'')+'" type="'+(o.type||'text')+'" value="'+esc(val)+'"'+(o.ph?' placeholder="'+esc(o.ph)+'"':'')+(o.attr||'')+' autocomplete="off">'+(o.pre?'</div>':'')+(o.hint?'<span class="hint">'+o.hint+'</span>':'')+'</div>';}
+var SET_BODY={};   /* pestañas extra de Ajustes: SET_BODY[clave]=función que devuelve el contenido */
 function renderAjustes(){
   var k=state.set,body='';
+  if(SET_BODY[k])body=SET_BODY[k]();
   if(k==='empresa')body='<div class="g2">'+inp('cfName','Nombre comercial',CFG.name,{k:'name'})+inp('cfLegal','Razón social',CFG.legal,{k:'legal',ph:'Como figura en SUNAT'})+inp('cfRuc','RUC',CFG.ruc,{k:'ruc',ph:'11 dígitos',attr:' inputmode="numeric" maxlength="11"'})+inp('cfAddr','Dirección',CFG.addr,{k:'addr'})+inp('cfPhone','Teléfono',CFG.phone,{k:'phone',ph:'Opcional'})+inp('cfMail','Correo',CFG.mail,{k:'mail',ph:'Opcional',type:'email'})+'</div><p class="hint">El nombre y la dirección salen en la cabecera de cada comprobante.</p>';
   if(k==='sunat')body=sunatBody();
   if(k==='seguridad')body=seguridadBody();

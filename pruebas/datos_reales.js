@@ -76,6 +76,7 @@
   CFG.igv = Number(cfg.igv_pct != null ? cfg.igv_pct : CFG.igv); CFG.amazonia = !!cfg.amazonia;
   CFG.ci = hora(cfg.hora_checkin, CFG.ci); CFG.co = hora(cfg.hora_checkout, CFG.co); CFG.maxco = hora(cfg.hora_max_checkout, CFG.maxco);
   CFG.env = cfg.ambiente_nooki === 'produccion' ? 'Producción' : 'Beta';
+  CFG.adel = cfg.adelanto_comprobante === 'checkout' ? 'checkout' : 'cobro'; CFG.autoPrint = cfg.impresion_automatica !== false;
 
   state.caja = !!D.caja;
   if (D.caja) { state.cajaSince = hhmm(new Date(D.caja.abierto_en)); state.cajaOpenAmt = Number(D.caja.monto_inicial || 0); }
@@ -225,6 +226,147 @@ Object.assign(ACT, {
   'adm-lock': function () { PUENTE.sb.rpc('bloquear_clave').then(function () {}, function () {}); if (admLockBase) admLockBase.apply(this, arguments); }
 });
 
+/* ====== Ajustes → Usuarios (solo el administrador) ======
+   Cuentas que entran al sistema. Las crea la Edge Function "usuarios" (la contraseña nunca pasa por el chat). */
+var USR = { lista: null, cargando: false, error: '' };
+var ROL_TXT = { admin: 'Administrador', recepcion: 'Recepción', dueno: 'Dueño' };
+if (window.PUENTE && PUENTE.rol === 'admin') SETS.push(['usuarios', 'Usuarios', 'users']);
+function repintarAjustes(k) { if (state.view === 'ajustes' && state.set === k) render({ soft: true }); }
+function cargarUsuarios() {
+  if (USR.cargando) return; USR.cargando = true;
+  funcion('usuarios', { accion: 'listar' }, 'no se pudo leer la lista').then(function (d) { USR.lista = d.usuarios || []; USR.error = ''; },
+    function (e) { USR.lista = []; USR.error = 'No se pudo leer la lista de usuarios: ' + e.mensaje; })
+    .then(function () { USR.cargando = false; repintarAjustes('usuarios'); });
+}
+function fechaHora(t) { var x = new Date(t); return isNaN(x) ? '' : new Intl.DateTimeFormat('es-PE', { timeZone: 'America/Lima', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(x); }
+SET_BODY.usuarios = function () {
+  if (PUENTE.rol !== 'admin') return '<p class="hint">Solo el administrador maneja los usuarios.</p>';
+  if (!USR.lista) { cargarUsuarios(); return '<p class="hint" style="margin-top:0">Cargando usuarios…</p>'; }
+  return '<p class="hint" style="margin-top:0">Cuentas que pueden entrar al sistema. <b>Recepción</b> trabaja en la PC del hotel; el <b>dueño</b> solo mira. Las contraseñas no se mandan por chat.</p>' +
+    (USR.error ? '<div class="warn">' + ic('alert') + '<span>' + esc(USR.error) + '</span></div>' : '') +
+    '<div class="usr-lista">' + USR.lista.map(function (u) {
+      var yo = u.id === PUENTE.id;
+      return '<div class="usr-f"><span class="av sm">' + esc(ini(u.nombre || '?')) + '</span><span class="grow"><b>' + esc(u.nombre) + (yo ? ' (tú)' : '') + '</b><small>' + esc(u.correo || '') +
+        (u.ultimo_ingreso ? ' · último ingreso ' + fechaHora(u.ultimo_ingreso) : ' · todavía no entra') + '</small></span>' +
+        '<span class="pill st-' + (u.rol === 'admin' ? 'conf' : u.rol === 'dueno' ? 'res' : 'ok') + '">' + (ROL_TXT[u.rol] || u.rol) + '</span>' +
+        '<span class="pill st-' + (u.activo ? 'ok' : 'off') + '">' + (u.activo ? 'Activo' : 'Desactivado') + '</span>' +
+        '<span class="usr-acc"><button type="button" class="btn btn-sm" data-act="usr-edit" data-id="' + esc(u.id) + '">Editar</button><button type="button" class="btn btn-sm" data-act="usr-clave" data-id="' + esc(u.id) + '">Contraseña</button></span></div>';
+    }).join('') + '</div>' +
+    '<div class="add-r"><button type="button" class="btn btn-primary" data-act="usr-new">' + ic('plus') + 'Agregar usuario</button></div>';
+};
+function rolSeg(actual) {
+  return '<div class="field"><span class="lb" id="uRolL">Rol</span><div class="segm" role="radiogroup" aria-labelledby="uRolL" id="uRol">' +
+    [['recepcion', 'Recepción'], ['dueno', 'Dueño (solo mira)'], ['admin', 'Administrador']].map(function (r) {
+      return '<button type="button" role="radio" data-v="' + r[0] + '" aria-checked="' + (actual === r[0]) + '">' + r[1] + '</button>';
+    }).join('') + '</div></div>';
+}
+function segmClic(w, id) {
+  var g = $('#' + id, w); if (!g) return;
+  g.querySelectorAll('button').forEach(function (b) { b.onclick = function () { g.querySelectorAll('button').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); }); }; });
+}
+function segmValor(w, id) { var b = $('#' + id + ' [aria-checked="true"]', w); return b ? b.dataset.v : null; }
+function modalUsuario(titulo, cuerpo, boton, enviar, alMontar) {
+  openModal({ title: titulo, width: 480, body: cuerpo + '<p class="ferr" id="uErr" hidden></p>',
+    foot: '<button class="btn" data-close>Cancelar</button><button class="btn btn-primary" id="uGo">' + ic('check') + boton + '</button>',
+    onMount: function (w) {
+      if (alMontar) alMontar(w);
+      var b = $('#uGo', w), e = $('#uErr', w);
+      b.onclick = function () {
+        var datos = enviar(w); if (typeof datos === 'string') { e.textContent = datos; e.hidden = false; return; }
+        b.disabled = true;
+        funcion('usuarios', datos, 'no se pudo guardar').then(function () {
+          closeModal(true); toast(titulo + ': listo', { icon: 'check' }); USR.lista = null; repintarAjustes('usuarios');
+        }, function (x) { b.disabled = false; e.textContent = x.mensaje; e.hidden = false; });
+      };
+    } });
+}
+Object.assign(ACT, {
+  'usr-new': function () {
+    modalUsuario('Agregar usuario',
+      inp('uCorreo', 'Correo', '', { type: 'email', ph: 'recepcion@…' }) + inp('uNombre', 'Nombre', '', { ph: 'Ej.: Recepción' }) + rolSeg('recepcion') +
+      inp('uClave', 'Contraseña', '', { type: 'password', hint: 'Mínimo 8 caracteres. Dísela a la persona en persona, no por chat.' }),
+      'Crear usuario', function (w) {
+        var c = $('#uCorreo', w).value.trim().toLowerCase(), n = $('#uNombre', w).value.trim(), k = $('#uClave', w).value;
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c)) return 'Escribe un correo válido.';
+        if (!n) return 'Escribe el nombre.';
+        if (k.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+        return { accion: 'crear', correo: c, nombre: n, rol: segmValor(w, 'uRol'), clave: k };
+      }, function (w) { segmClic(w, 'uRol'); });
+  },
+  'usr-edit': function (a) {
+    var u = (USR.lista || []).filter(function (x) { return String(x.id) === a.dataset.id; })[0]; if (!u) return;
+    modalUsuario('Editar ' + u.nombre,
+      inp('uNombre', 'Nombre', u.nombre) + rolSeg(u.rol) +
+      '<div class="field"><span class="lb" id="uActL">Estado</span><div class="segm" role="radiogroup" aria-labelledby="uActL" id="uAct">' +
+      '<button type="button" role="radio" data-v="si" aria-checked="' + !!u.activo + '">Activo</button><button type="button" role="radio" data-v="no" aria-checked="' + !u.activo + '">Desactivado (no puede entrar)</button></div></div>',
+      'Guardar', function (w) {
+        var n = $('#uNombre', w).value.trim(); if (!n) return 'Escribe el nombre.';
+        return { accion: 'cambiar', id: u.id, nombre: n, rol: segmValor(w, 'uRol'), activo: segmValor(w, 'uAct') === 'si' };
+      }, function (w) { segmClic(w, 'uRol'); segmClic(w, 'uAct'); });
+  },
+  'usr-clave': function (a) {
+    var u = (USR.lista || []).filter(function (x) { return String(x.id) === a.dataset.id; })[0]; if (!u) return;
+    modalUsuario('Contraseña de ' + u.nombre,
+      inp('uClave', 'Contraseña nueva', '', { type: 'password', hint: 'Mínimo 8 caracteres.' }) + inp('uClave2', 'Repite la contraseña', '', { type: 'password' }),
+      'Cambiar contraseña', function (w) {
+        var k = $('#uClave', w).value;
+        if (k.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+        if (k !== $('#uClave2', w).value) return 'Las dos contraseñas no son iguales.';
+        return { accion: 'clave', id: u.id, clave: k };
+      });
+  }
+});
+
+/* ====== Ajustes → Facturación SUNAT: conexión real con el facturador (Nooki) ====== */
+var PRUEBA_FACT = null;
+function sunatBody() {
+  var p = PRUEBA_FACT, cls = !p ? 'off' : p.ok ? 'ok' : 'dan';
+  var series = p && p.ok && p.series.length ? p.series : seriesHotel().map(function (x) { return { t: x[0], s: x[1] }; });
+  return '<div class="nk-card st-' + cls + '"><span class="hi">' + ic(p && p.ok ? 'check' : 'alert') + '</span><div class="grow"><b>' +
+      (!p ? 'Conexión con el facturador (Nooki)' : p.ok ? 'Conectado al facturador' + (p.ambiente ? ' · ' + esc(p.ambiente) : '') : 'No se pudo conectar con el facturador') + '</b><p>' +
+      (!p ? 'Toca «Probar conexión» para revisar que las llaves de Nooki estén puestas en Supabase.' : esc(p.texto)) + '</p>' +
+      '<div class="nk-acc"><button type="button" class="btn btn-sm" data-act="nooki-test">' + ic('arrow') + 'Probar conexión</button>' +
+      (PUENTE.rol === 'admin' ? '<button type="button" class="btn btn-sm" data-act="nooki-aviso">' + ic('check') + 'Activar avisos de SUNAT</button>' : '') + '</div></div></div>' +
+    '<div class="g2">' +
+      '<div class="field"><span class="lb">RUC del hotel</span><div class="secret ' + (CFG.ruc ? 'ok' : '') + '">' + ic(CFG.ruc ? 'check' : 'alert') + '<span>' + (CFG.ruc ? esc(CFG.ruc) + ' · ' + esc(CFG.legal || CFG.name) : 'Falta: escríbelo en Empresa') + '</span></div></div>' +
+      '<div class="field"><span class="lb">Certificado digital y usuario SOL</span><div class="secret ok">' + ic('check') + '<span>Se suben en el portal de Nooki (portal.nooki.pe), cifrados. Nunca en este sistema.</span></div></div>' +
+    '</div>' +
+    '<h3>Series</h3>' + lt('minmax(0,1.6fr) 120px', ['Comprobante', '>Serie'], series.map(function (x) { return '<div class="lt-r">' + cell('Comprobante', esc(x.t), 'wide') + cell('Serie', '<b class="mono">' + esc(x.s) + '</b>', 'r') + '</div>'; })) +
+    '<p class="hint">Las series las crea Nooki. ' + (p && p.ok ? 'Estas son las que Nooki tiene activas.' : 'Prueba la conexión para ver las que Nooki tiene activas.') + '</p>' +
+    '<h3>Impuesto</h3><div class="g2">' + (CFG.amazonia ? '' : inp('cfIgv', 'Porcentaje de IGV', CFG.igv, { k: 'igv', type: 'number', pre: '%', attr: ' min="0" max="18" step="0.5"' })) +
+      '<label class="rsw"><span><b>Exonerado por la Ley de la Amazonía</b><small>' + (CFG.amazonia ? 'Activo: el hospedaje sale sin IGV (Ley 27037)' : 'Ley 27037 · Madre de Dios y demás zonas de la Amazonía') + '</small></span>' + sw(CFG.amazonia, 'cfg-amaz', '', 'Exonerado por la Ley de la Amazonía') + '</label></div>' +
+    '<p class="hint">Lo confirma el contador del hotel. En Nooki la empresa también debe estar marcada Amazonía.</p>' +
+    '<h3>Al cobrar</h3><div class="g2">' +
+      '<div class="field"><span class="lb" id="adL">Adelantos de reservas</span><div class="segm" role="radiogroup" aria-labelledby="adL">' + [['cobro', 'Comprobante al cobrar'], ['checkout', 'Comprobante en el check-out']].map(function (x) { return '<button type="button" role="radio" data-act="cfg-adel" data-v="' + x[0] + '" aria-checked="' + (CFG.adel === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><span class="hint">Lo define el contador.</span></div>' +
+      '<label class="rsw"><span><b>Imprimir el ticket al emitir</b><small>' + (CFG.autoPrint ? 'Sale solo en la ticketera de recepción' : 'Se imprime con el botón del comprobante') + '</small></span>' + sw(CFG.autoPrint, 'cfg-print', '', 'Imprimir ticket al emitir') + '</label>' +
+    '</div>';
+}
+function lista(x) { return Array.isArray(x) ? x : x && (Array.isArray(x.series) ? x.series : Array.isArray(x.data) ? x.data : Array.isArray(x.items) ? x.items : []) || []; }
+var TIPO_SERIE = { '01': 'Factura', '03': 'Boleta', '07': 'Nota de crédito', '08': 'Nota de débito', boleta: 'Boleta', factura: 'Factura', nota_credito: 'Nota de crédito', nota_debito: 'Nota de débito' };
+Object.assign(ACT, {
+  'nooki-test': function (a) {
+    if (a) a.disabled = true;
+    facturar({ accion: 'probar' }).then(function (d) {
+      var e = (d && d.empresa) || {}; e = e.empresa || e;
+      var amb = String(e.ambiente || '').toLowerCase();
+      PRUEBA_FACT = { ok: true, ambiente: /prod/.test(amb) ? 'Producción' : amb ? 'Beta (pruebas)' : '',
+        texto: [e.razon_social || e.nombre || '', e.ruc ? 'RUC ' + e.ruc : '', e.amazonia === true ? 'marcada Amazonía' : e.amazonia === false ? 'NO está marcada Amazonía: pídelo en el chat del facturador' : ''].filter(Boolean).join(' · ') || 'Nooki respondió bien.',
+        series: lista(d && d.series).map(function (x) { return { t: TIPO_SERIE[x.tipo || x.tipo_doc] || x.tipo || x.tipo_doc || 'Serie', s: x.serie || x.codigo || '' }; }).filter(function (x) { return x.s; }) };
+      toast('Conexión con el facturador correcta', { icon: 'check' });
+    }, function (e) { PRUEBA_FACT = { ok: false, texto: e.mensaje, series: [] }; toast('No se pudo conectar con el facturador', { icon: 'alert' }); })
+      .then(function () { repintarAjustes('sunat'); });
+  },
+  'nooki-aviso': function (a) {
+    if (a) a.disabled = true;
+    facturar({ accion: 'configurar_aviso' }).then(function () {
+      openModal({ title: 'Avisos de SUNAT activados', width: 460,
+        body: '<p>Nooki ya sabe a dónde avisar cuando SUNAT responde.</p><p><b>Falta un paso:</b> en el portal de Nooki copia el <b>secreto de los avisos</b> (empieza con <span class="mono">whsec_</span>) y ponlo en Supabase como <b class="mono">NOOKI_WHSEC</b> (Edge Functions → Secrets). No lo pegues en el chat.</p>',
+        foot: '<button class="btn btn-primary" data-close>Entendido</button>' });
+    }, function (e) { toast('No se activaron los avisos: ' + e.mensaje, { icon: 'alert' }); })
+      .then(function () { if (a) a.disabled = false; });
+  }
+});
+
 /* El administrador (Nooki) nunca necesita la clave */
 function adminActivo() { return (window.PUENTE && PUENTE.rol === 'admin') || Date.now() < ADM.hasta; }
 function actualizarAdmChip() {
@@ -234,12 +376,12 @@ function actualizarAdmChip() {
   if (on) { var s = Math.max(0, Math.round((ADM.hasta - Date.now()) / 1000)); b.innerHTML = ic('login') + '<span>Administrador · ' + Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) + '</span><b>Bloquear</b>'; b.setAttribute('aria-label', 'Modo administrador abierto. Tocar para bloquear'); }
 }
 
-/* Menú del usuario: nombre real, tema, Usuarios y facturación (sistema anterior) y Salir */
+/* Menú del usuario: nombre real, tema, Usuarios (solo admin) y Salir */
 Object.assign(ACT, {
   'me': function (a) {
     var items = [{ head: ME() + ' · ' + CFG.name },
       { label: effTheme() === 'dark' ? 'Usar tema claro' : 'Usar tema oscuro', icon: effTheme() === 'dark' ? 'sun' : 'moon', run: toggleTheme }];
-    if (PUENTE.rol === 'admin') items.push({ label: 'Usuarios y conexión con el facturador', icon: 'search', run: function () { location.href = '/anterior.html#usuarios'; } });
+    if (PUENTE.rol === 'admin') items.push({ label: 'Usuarios', icon: 'users', run: function () { state.set = 'usuarios'; go('ajustes'); } });
     items.push({ label: 'Salir', icon: 'login', run: PUENTE.salir });
     menu(a, items, { width: 280 });
   }
@@ -290,7 +432,7 @@ function lugarMesa(t) { return 'Mesa ' + t.n + ' · ' + t.amb; }
 function foto(r) { return { state: r.state, rate: Number(r.rate), ci: r.ci, co: r.co, room: r.room, persons: r.persons }; }
 function roomFoto(h) { return { n: h.n, t: h.t, f: h.f, off: !!h.off }; }
 function prodFoto(p) { return { n: p.n, c: p.c, p: p.p, t: p.t, min: p.min, rest: !!p.rest, dest: p.dest || '', on: p.on !== false }; }
-function cfgFoto() { return { n: CFG.name, l: CFG.legal, r: CFG.ruc, a: CFG.addr, p: CFG.phone, m: CFG.mail, i: CFG.igv, z: !!CFG.amazonia, ci: CFG.ci, co: CFG.co, mx: CFG.maxco, w: WEEKEND.on, wp: WEEKEND.pct }; }
+function cfgFoto() { return { n: CFG.name, l: CFG.legal, r: CFG.ruc, a: CFG.addr, p: CFG.phone, m: CFG.mail, i: CFG.igv, z: !!CFG.amazonia, ci: CFG.ci, co: CFG.co, mx: CFG.maxco, w: WEEKEND.on, wp: WEEKEND.pct, ad: CFG.adel, ap: !!CFG.autoPrint }; }
 
 var DOC_COD = { 'DNI': '1', 'Carné de extranjería': '4', 'Pasaporte': '7', 'RUC': '6', 'Sin documento': '0' };
 function db(promesa) { return promesa.then(function (r) { if (r.error) throw r.error; return r.data; }); }
@@ -383,13 +525,14 @@ function cambiosConsumos(r) {
 }
 
 var TIPO_COMP = { 'Boleta': 'boleta', 'Factura': 'factura', 'Nota de venta': 'nota_venta' };
-function facturar(cuerpo) {
-  return PUENTE.sb.functions.invoke('facturar', { body: cuerpo }).then(function (r) {
+function funcion(nombre, cuerpo, porDefecto) {
+  return PUENTE.sb.functions.invoke(nombre, { body: cuerpo }).then(function (r) {
     if (!r.error) return r.data;
     var ctx = r.error.context;
-    return (ctx && ctx.json ? ctx.json() : Promise.resolve(null)).then(function (j) { throw { mensaje: (j && j.error && j.error.mensaje) || 'el facturador no respondió' }; });
+    return (ctx && ctx.json ? ctx.json().catch(function () { return null; }) : Promise.resolve(null)).then(function (j) { throw { mensaje: (j && j.error && j.error.mensaje) || porDefecto }; });
   });
 }
+function facturar(cuerpo) { return funcion('facturar', cuerpo, 'el facturador no respondió'); }
 function cliPago(r, p) {
   if (!r) {   // cobro del restaurante
     var c = p.cli || {}, doc = c.doc && c.doc !== '—' ? c.doc : null;
@@ -653,7 +796,8 @@ function cambiosAjustes() {
     SYNC.cfg = c;
     enCola(function () {
       var d = { nombre_comercial: CFG.name, razon_social: CFG.legal || null, ruc: CFG.ruc || null, direccion: CFG.addr || null, telefono: CFG.phone || null, correo: CFG.mail || null,
-        amazonia: !!CFG.amazonia, hora_checkin: CFG.ci, hora_checkout: CFG.co, hora_max_checkout: CFG.maxco, fin_semana_activo: !!WEEKEND.on, fin_semana_pct: Number(WEEKEND.pct || 0) };
+        amazonia: !!CFG.amazonia, hora_checkin: CFG.ci, hora_checkout: CFG.co, hora_max_checkout: CFG.maxco, fin_semana_activo: !!WEEKEND.on, fin_semana_pct: Number(WEEKEND.pct || 0),
+        adelanto_comprobante: CFG.adel === 'checkout' ? 'checkout' : 'al_cobrar', impresion_automatica: !!CFG.autoPrint };
       if (!CFG.amazonia) d.igv_pct = Number(CFG.igv);
       return db(PUENTE.sb.from('config').update(d).eq('id', 1).select('id')).then(function (f) { if (!f.length) throw { code: '42501' }; }).catch(function (e) { avisoError('los datos del hotel', e); });
     });

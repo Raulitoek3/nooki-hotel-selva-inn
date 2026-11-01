@@ -1,4 +1,4 @@
-"""Copia el prototipo a app/vista-previa/index.html (vista previa publicada)
+"""Copia el prototipo con la marca del hotel a pruebas/_generado/ (paso intermedio de generar_sistema.py; no se publica)
 y le pone la marca del hotel (logo, nombre, colores y letras de su web).
 El prototipo original (prototipo/) no se toca.
 
@@ -72,7 +72,7 @@ for viejo, nuevo, veces in CAMBIOS:
     out = out.replace(viejo, nuevo)
 assert "Nooki Hotel" not in out, "Quedó 'Nooki Hotel' en la vista previa"
 
-destino = raiz / "app" / "vista-previa" / "index.html"
+destino = raiz / "pruebas" / "_generado" / "prototipo-con-marca.html"   # paso intermedio (no se publica)
 destino.parent.mkdir(parents=True, exist_ok=True)
 destino.write_text(out, encoding="utf-8")
-print("Vista previa actualizada:", destino.relative_to(raiz))
+print("Prototipo con la marca del hotel:", destino.relative_to(raiz))

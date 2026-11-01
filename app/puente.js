@@ -22,10 +22,10 @@
   sb.auth.getSession().then(function (r) {
     var s = r.data && r.data.session;
     if (!s) { location.replace('/ingreso.html'); return; }
-    return q(sb.from('usuarios').select('nombre, rol, activo').eq('id', s.user.id)).then(function (u) {
+    return q(sb.from('usuarios').select('id, nombre, rol, activo').eq('id', s.user.id)).then(function (u) {
       u = u[0];
       if (!u || !u.activo) { sb.auth.signOut(); location.replace('/ingreso.html?sin_acceso=1'); return; }
-      PUENTE.nombre = u.nombre; PUENTE.rol = u.rol;
+      PUENTE.nombre = u.nombre; PUENTE.rol = u.rol; PUENTE.id = u.id;
       var hoy = hoyLima();
       return Promise.all([
         q(sb.from('config').select('*').eq('id', 1)),

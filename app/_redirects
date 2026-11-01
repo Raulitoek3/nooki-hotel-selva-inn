@@ -1,0 +1,5 @@
+# Direcciones viejas: el sistema anterior y la vista previa ya no existen; todo va al sistema.
+/anterior        /  301
+/anterior.html   /  301
+/vista-previa    /  301
+/vista-previa/*  /  301
