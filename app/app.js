@@ -85,10 +85,11 @@
   });
 
   /* ---------------- Sistema ---------------- */
+  // Orden del menú. Los módulos en otros archivos se registran con HS.vista(...)
   var VISTAS = {
-    inicio:   { l: 'Inicio',   roles: ['admin', 'recepcion', 'dueno'], render: renderInicio },
-    ajustes:  { l: 'Ajustes',  roles: ['admin', 'recepcion'], render: renderAjustes },
-    usuarios: { l: 'Usuarios', roles: ['admin'], render: renderUsuarios }
+    inicio:   { l: 'Inicio',   roles: ['admin', 'recepcion', 'dueno'], render: renderInicio, orden: 0 },
+    ajustes:  { l: 'Ajustes',  roles: ['admin', 'recepcion'], render: renderAjustes, orden: 90 },
+    usuarios: { l: 'Usuarios', roles: ['admin'], render: renderUsuarios, orden: 95 }
   };
 
   function entrar() {
@@ -109,11 +110,13 @@
   function mostrarVista() {
     if (!yo) return;
     var v = vistaActual();
+    var activa = VISTAS[v].padre || v;
     $('#nav').innerHTML = Object.keys(VISTAS).filter(function (k) {
-      return VISTAS[k].roles.indexOf(yo.rol) >= 0;
-    }).map(function (k) {
-      return '<a href="#' + k + '"' + (k === v ? ' class="on" aria-current="page"' : '') + '>' + VISTAS[k].l + '</a>';
+      return VISTAS[k].roles.indexOf(yo.rol) >= 0 && VISTAS[k].menu !== false;
+    }).sort(function (a, b) { return (VISTAS[a].orden != null ? VISTAS[a].orden : 50) - (VISTAS[b].orden != null ? VISTAS[b].orden : 50); }).map(function (k) {
+      return '<a href="#' + k + '"' + (k === activa ? ' class="on" aria-current="page"' : '') + '>' + VISTAS[k].l + '</a>';
     }).join('');
+    window.scrollTo(0, 0);
     VISTAS[v].render(location.hash.split('/')[1]);
   }
   window.addEventListener('hashchange', mostrarVista);
@@ -167,8 +170,10 @@
   }
 
   /* ---------------- Usuarios ---------------- */
-  function llamar(cuerpo) {
-    return sb.functions.invoke('usuarios', { body: cuerpo }).then(function (r) {
+  function llamar(cuerpo) { return funcion('usuarios', cuerpo); }
+  // Llama a una Edge Function del hotel y devuelve sus datos, o lanza { mensaje }
+  function funcion(nombre, cuerpo) {
+    return sb.functions.invoke(nombre, { body: cuerpo }).then(function (r) {
       if (!r.error) return r.data;
       var ctx = r.error.context;
       if (ctx && typeof ctx.json === 'function') {
@@ -283,6 +288,7 @@
     ctx = ctx || {};
     if (!e) return 'No se pudo completar.';
     if (e.code === '23505') return ctx.repetido || 'Ese dato ya existe.';
+    if (e.code === '23P01') return ctx.cruce || 'La habitación ya está ocupada o reservada en esas fechas.';
     if (e.code === '23503') return ctx.enUso || 'Está en uso y no se puede borrar.';
     if (e.code === '23514' || e.code === '22P02' || e.code === '22007') return ctx.invalido || 'Algún dato no es válido.';
     if (e.code === '42501') return 'No tienes permiso o la clave de administrador se cerró.';
@@ -471,7 +477,7 @@
   }
   function pintarPestana() {
     $('#ajPanel').innerHTML = '<div class="card vacio">Cargando…</div>';
-    ({ datos: pestanaDatos, habitaciones: pestanaHabitaciones, tipos: pestanaTipos, clave: pestanaClave })[aj.pestana]();
+    (PESTANA_FN[aj.pestana] || { datos: pestanaDatos, habitaciones: pestanaHabitaciones, tipos: pestanaTipos, clave: pestanaClave }[aj.pestana])();
   }
 
   // ---- Datos del hotel ----
@@ -505,7 +511,12 @@
           campo('dMax', 'Máximo para salir', hora(c.hora_max_checkout), 'type="time"') +
         '</div></section>' +
         '<p class="err" id="dErr" hidden></p>' +
-        '<div class="aj-pie"><button class="btn btn-pri" type="submit" id="dGuardar">Guardar cambios</button></div></form>';
+        '<div class="aj-pie"><button class="btn btn-pri" type="submit" id="dGuardar">Guardar cambios</button></div></form>' +
+        '<section class="card aj-sec fact"><h2>Conexión con el facturador electrónico</h2>' +
+        '<p class="ayuda">Las llaves se guardan como secretos del servidor (nunca aquí). Prueba la conexión después de configurarlas.</p>' +
+        '<div class="acciones"><button class="btn" type="button" id="fProbar">Probar conexión</button>' +
+        (yo.rol === 'admin' ? '<button class="btn" type="button" id="fAviso">Activar avisos de SUNAT</button>' : '') + '</div>' +
+        '<div id="fRes" class="ayuda"></div></section>';
       function amaz() {
         var on = $('#dAmaz').checked;
         $('#dIgvCaja').hidden = on;
@@ -514,6 +525,18 @@
           : 'Las ventas salen con el IGV de abajo.';
       }
       $('#dAmaz').addEventListener('change', amaz); amaz();
+      $('#fProbar').addEventListener('click', function () {
+        $('#fRes').textContent = 'Probando…';
+        funcion('facturar', { accion: 'probar' }).then(function (r) {
+          var e = r.empresa || {}, emp = e.empresa || e;
+          $('#fRes').innerHTML = '<span class="pill e-on">Conectado</span> ' + esc([emp.razon_social || emp.nombre, emp.ruc ? 'RUC ' + emp.ruc : '', emp.ambiente ? 'Ambiente: ' + emp.ambiente : '',
+            emp.amazonia != null ? 'Amazonía: ' + (emp.amazonia ? 'sí' : 'NO (márcala en Nooki)') : ''].filter(Boolean).join(' · '));
+        }, function (e) { $('#fRes').innerHTML = '<span class="pill r-anul">Sin conexión</span> ' + esc(e.mensaje); });
+      });
+      if ($('#fAviso')) $('#fAviso').addEventListener('click', function () {
+        funcion('facturar', { accion: 'configurar_aviso' }).then(function (r) { $('#fRes').innerHTML = '<span class="pill e-on">Avisos activados</span> ' + esc(r.url); },
+          function (e) { $('#fRes').innerHTML = '<span class="pill r-anul">No se pudo</span> ' + esc(e.mensaje); });
+      });
       $('#fDatos').addEventListener('submit', function (ev) {
         ev.preventDefault();
         var err = $('#dErr'); err.hidden = true;
@@ -748,6 +771,25 @@
     }, function (e) { $('#ajPanel').innerHTML = '<div class="card vacio">' + esc(e.mensaje) + '</div>'; });
   }
 
+  // Ejecuta "accion" si la clave está abierta (o es admin); si no, la pide en una ventana.
+  function conClave(motivo, accion) {
+    if (yo.rol === 'admin') return accion();
+    q(sb.rpc('admin_abierto')).then(function (abierta) {
+      if (abierta) { accion(); return; }
+      abrirModal({
+        titulo: 'Clave de administrador', ok: 'Continuar',
+        cuerpo: '<p>' + esc(motivo) + ' pide la clave de administrador.</p><label>Clave<input id="fClaveAdm" type="password" autocomplete="off"></label>',
+        guardar: function () {
+          return q(sb.rpc('verificar_clave', { p_clave: $('#fClaveAdm').value })).then(function (r) {
+            if (r && r.ok) { aj.hasta = r.hasta; setTimeout(accion, 0); return; }
+            throw { mensaje: { incorrecta: 'Clave incorrecta. Te quedan ' + (r && r.intentos_restantes) + ' intentos.', espera: 'Demasiados intentos. Espera 1 minuto.',
+              sin_clave: 'Todavía no hay clave de administrador: créala en Ajustes.', sin_permiso: 'Tu cuenta no puede hacer esto.' }[r && r.motivo] || 'No se pudo verificar la clave.' };
+          });
+        }
+      });
+    }, function (e) { aviso(e.mensaje); });
+  }
+
   /* ---------------- Ventana ---------------- */
   var modalActual = null, focoAntes = null;
   function abrirModal(m) {
@@ -780,11 +822,28 @@
     });
   });
 
+  /* ---------------- API para los módulos (reservas.js, caja.js, …) ---------------- */
+  window.HS = {
+    sb: sb, $: $, esc: esc, q: q, qFilas: qFilas, aviso: aviso, abrirModal: abrirModal, cerrarModal: cerrarModal,
+    confirmar: confirmar, conClave: conClave, renovarClave: renovarClave, hoyLima: hoyLima, soles: soles, hora: hora, fecha: fecha,
+    cargarHotel: cargarHotel, pisosDe: pisosDe, estadoHab: estadoHab, nombrePiso: nombrePiso, nombreTipo: nombreTipo, EST_HAB: EST_HAB,
+    estadoPisoHtml: estadoPisoHtml, tiposPisoHtml: tiposPisoHtml, cuentaPisoTxt: cuentaPisoTxt, leerNumeros: leerNumeros,
+    yo: function () { return yo; },
+    vista: function (k, def) { VISTAS[k] = def; },
+    conectar: function (k) { MODULOS.forEach(function (m) { if (m.k === k) m.conectado = true; }); },
+    ir: function (h) { if (location.hash === h) mostrarVista(); else location.hash = h; },
+    refrescar: function () { mostrarVista(); },
+    pestanaAjustes: function (k, l, fn) { PESTANAS.splice(PESTANAS.length - 1, 0, [k, l]); PESTANA_FN[k] = fn; },
+    funcion: funcion,
+    facturar: function (cuerpo) { return funcion('facturar', cuerpo); }
+  };
+  var PESTANA_FN = {};
+
   /* ---------------- Arranque ---------------- */
-  sb.auth.getSession().then(function (r) {
+  window.addEventListener('load', function () { sb.auth.getSession().then(function (r) {
     var s = r.data && r.data.session;
     if (s) cargarPerfil(s.user); else mostrarIngreso();
-  });
+  }); });
   sb.auth.onAuthStateChange(function (ev) {
     if (ev === 'SIGNED_OUT' && yo) { yo = null; mostrarIngreso('Tu sesión terminó. Vuelve a entrar.'); }
   });

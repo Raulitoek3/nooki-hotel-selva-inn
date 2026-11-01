@@ -57,7 +57,7 @@ function estadoNuevo() {
       { id: 'u-due', nombre: 'Dueño de prueba', correo: 'dueno.activo@ejemplo.test', rol: 'dueno', activo: true, creado_en: '2026-10-31T19:06:00Z', ultimo_ingreso: null }
     ],
     llamadas: [],
-    clave: null, fallos: 0, esperaHasta: 0, claveHasta: {},
+    clave: null, fallos: 0, esperaHasta: 0, claveHasta: {}, seq: {}, num: {},
     tablas: datosHotel()
   };
 }
@@ -83,18 +83,49 @@ function datosHotel() {
     habitaciones: [h('101', 'P', 1), h('102', 'P', 1), h('103', 'P', 1), h('104', 'P', 1),
       h('201', 'MQ', 2), h('202', 'P', 2), h('203', 'D', 2), h('301', 'MK', 3), h('302', 'P', 3), h('AUD', 'AU', 0)],
     reservas: [
-      { id: 1, habitacion: '301', entrada: diaLima(-1), salida: diaLima(1), estado: 'ocupado' },
-      { id: 2, habitacion: '302', entrada: diaLima(-2), salida: diaLima(2), estado: 'ocupado' },
-      { id: 3, habitacion: '101', entrada: diaLima(0), salida: diaLima(2), estado: 'ocupado' },
-      { id: 4, habitacion: '201', entrada: diaLima(0), salida: diaLima(1), estado: 'confirmado' },
-      { id: 5, habitacion: '102', entrada: diaLima(-5), salida: diaLima(-3), estado: 'finalizada' }
-    ]
+      { id: 1, habitacion: '301', cliente_id: 1, entrada: diaLima(-1), salida: diaLima(1), estado: 'ocupado', tarifa: 220, tarifa_nombre: 'Regular', personas: 2, origen: 'Directo' },
+      { id: 2, habitacion: '302', cliente_id: 2, entrada: diaLima(-2), salida: diaLima(2), estado: 'ocupado', tarifa: 160, tarifa_nombre: 'Regular', personas: 1, origen: 'Booking' },
+      { id: 3, habitacion: '101', cliente_id: 3, entrada: diaLima(0), salida: diaLima(2), estado: 'ocupado', tarifa: 160, tarifa_nombre: 'Regular', personas: 1, origen: 'WhatsApp' },
+      { id: 4, habitacion: '201', cliente_id: 1, entrada: diaLima(0), salida: diaLima(1), estado: 'confirmado', tarifa: 180, tarifa_nombre: 'Regular', personas: 2, origen: 'Directo' },
+      { id: 5, habitacion: '102', cliente_id: 2, entrada: diaLima(-5), salida: diaLima(-3), estado: 'finalizada', tarifa: 160, tarifa_nombre: 'Regular', personas: 1, origen: 'Directo' }
+    ],
+    // Personas ficticias (no son huéspedes reales)
+    clientes: [
+      { id: 1, tipo_doc: '1', num_doc: '00000001', nombre: 'Huésped Ficticio Uno', nacionalidad: 'Perú', no_grato: false },
+      { id: 2, tipo_doc: '7', num_doc: 'X0000002', nombre: 'Huésped Ficticio Dos', nacionalidad: 'Brasil', no_grato: false },
+      { id: 3, tipo_doc: '1', num_doc: '00000003', nombre: 'Huésped Ficticio Tres', nacionalidad: 'Perú', no_grato: true, motivo_no_grato: 'Prueba' }
+    ],
+    consumos: [], pagos: [], caja_turnos: [], caja_movimientos: [], comprobantes: [], limpieza: [], personal: [], productos: [],
+    temporadas: [],
+    origenes: [{ nombre: 'Directo', comision_pct: 0, activo: true, orden: 1 }, { nombre: 'Booking', comision_pct: 15, activo: true, orden: 2 }, { nombre: 'WhatsApp', comision_pct: 0, activo: true, orden: 3 }],
+    formas_pago: [{ nombre: 'Efectivo', activa: true, orden: 1 }, { nombre: 'Yape', activa: true, orden: 2 }, { nombre: 'Tarjeta crédito', activa: true, orden: 3 }],
+    motivos_viaje: [{ nombre: 'Vacaciones', orden: 1 }, { nombre: 'Trabajo', orden: 2 }],
+    motivos_caja: [{ id: 1, nombre: 'Compra de útiles', tipo: 'salida', activo: true }],
+    auditoria: [{ id: 1, creado_en: new Date().toISOString(), usuario_id: 'u-admin', modulo: 'Ajustes', tipo: 'cambio', con_clave: false, accion: 'modificó', tabla: 'config', registro_id: '1', antes: { telefono: '1' }, despues: { telefono: '2' } },
+      { id: 2, creado_en: new Date().toISOString(), usuario_id: null, modulo: 'Clave', tipo: 'alerta', con_clave: false, accion: 'falló', detalle: 'Clave incorrecta (intento 1 de 5)' }]
   };
 }
-const LLAVE = { config: 'id', tipos_habitacion: 'codigo', habitaciones: 'numero', reservas: 'id' };
-const AJUSTES = ['config', 'tipos_habitacion', 'habitaciones'];
-const UNICOS = { tipos_habitacion: ['codigo', 'nombre'], habitaciones: ['numero'] };
+const AJUSTES = ['config', 'tipos_habitacion', 'habitaciones', 'personal', 'temporadas', 'formas_pago', 'origenes', 'motivos_caja', 'motivos_viaje'];
+const SOLO_LECTURA = ['comprobantes', 'auditoria'];
+const UNICOS = { tipos_habitacion: [['codigo'], ['nombre']], habitaciones: [['numero']], clientes: [['tipo_doc', 'num_doc']], formas_pago: [['nombre']], origenes: [['nombre']] };
 const REFERENCIAS = { habitaciones: [['reservas', 'habitacion', 'numero']], tipos_habitacion: [['habitaciones', 'tipo', 'codigo']] };
+const AHORA = () => new Date().toISOString();
+const DEFECTOS = {
+  reservas: () => ({ estado: 'reservado', personas: 1, creado_en: AHORA(), checkin_en: null, checkout_en: null }),
+  pagos: () => ({ anulado: false, tipo: 'pago', creado_en: AHORA(), comprobante_id: null }),
+  consumos: () => ({ anulado: false, unidad: 'NIU', creado_en: AHORA() }),
+  caja_turnos: () => ({ abierto_en: AHORA(), cerrado_en: null, monto_inicial: 0, contado: null }),
+  caja_movimientos: () => ({ creado_en: AHORA() }),
+  limpieza: () => ({ estado: 'sucia', tipo: 'Salida', desde: AHORA(), personal_id: null, terminado_en: null }),
+  clientes: () => ({ nacionalidad: 'Perú', no_grato: false }),
+  personal: () => ({ activo: true }),
+  habitaciones: () => ({ fuera_de_venta: false, notas: null }),
+  tipos_habitacion: () => ({ activo: true })
+};
+const activa = (r) => !['anulada', 'no_show'].includes(r.estado);
+function cruza(lista, r, ignorar) {
+  return activa(r) && lista.some((x) => x !== ignorar && x.id !== r.id && x.habitacion === r.habitacion && activa(x) && x.entrada < r.salida && r.entrada < x.salida);
+}
 
 function cumpleFiltros(fila, params) {
   for (const [k, v] of params) {
@@ -109,7 +140,11 @@ function cumpleFiltros(fila, params) {
     if (op === 'lte' && !(cmp <= 0)) return false;
     if (op === 'gt' && !(cmp > 0)) return false;
     if (op === 'gte' && !(cmp >= 0)) return false;
-    if (op === 'in') { const lista = val.replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, '')); if (!lista.includes(a)) return false; }
+    const enLista = (txt) => txt.replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, ''));
+    if (op === 'in') { if (!enLista(val).includes(a)) return false; }
+    if (op === 'not') { const j = val.indexOf('.'); const op2 = val.slice(0, j), v2 = val.slice(j + 1); if (op2 === 'in' && enLista(v2).includes(a)) return false; if (op2 === 'eq' && a === v2) return false; }
+    if (op === 'is') { if (val === 'null' ? fila[k] != null : String(fila[k]) !== val) return false; }
+    if (op === 'like' || op === 'ilike') { const re = new RegExp('^' + val.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*').replace(/\*/g, '.*') + '$', op === 'ilike' ? 'i' : ''); if (!re.test(a)) return false; }
   }
   return true;
 }
@@ -196,7 +231,7 @@ async function simular(page, E) {
     const mt = url.pathname.match(/^\/rest\/v1\/(\w+)$/);
     if (mt && E.tablas[mt[1]]) {
       const t = mt[1], filas = E.tablas[t], metodo = req.method();
-      const puede = yoU && (!AJUSTES.includes(t) || claveAbierta());
+      const puede = yoU && yoU.rol !== 'dueno' && !SOLO_LECTURA.includes(t) && (!AJUSTES.includes(t) || claveAbierta());
       if (metodo === 'GET') {
         const sel = yoU ? ordenar(filas.filter((f) => cumpleFiltros(f, url.searchParams)), url.searchParams.get('order')) : [];
         if (objeto) return sel.length ? json(sel[0]) : json({ code: 'PGRST116', message: 'no rows' }, 406);
@@ -205,16 +240,29 @@ async function simular(page, E) {
       if (metodo === 'POST') {
         if (!puede) return json({ code: '42501', message: 'new row violates row-level security policy' }, 403);
         let nuevas = req.postDataJSON(); if (!Array.isArray(nuevas)) nuevas = [nuevas];
-        for (const n of nuevas) for (const u of (UNICOS[t] || [])) {
-          if (filas.some((f) => f[u] === n[u]) || nuevas.filter((x) => x[u] === n[u]).length > 1) return json({ code: '23505', message: 'duplicate key' }, 409);
+        const igual = (x, n, grupo) => grupo.every((c) => x[c] != null && x[c] === n[c]);
+        for (const n of nuevas) for (const g of (UNICOS[t] || [])) {
+          if (filas.some((f) => igual(f, n, g)) || nuevas.filter((x) => igual(x, n, g)).length > 1) return json({ code: '23505', message: 'duplicate key' }, 409);
         }
-        nuevas.forEach((n) => filas.push(Object.assign({ fuera_de_venta: false, notas: null, activo: true }, n)));
+        if (t === 'caja_turnos' && filas.some((f) => !f.cerrado_en)) return json({ code: '23505', message: 'una caja abierta' }, 409);
+        if (t === 'limpieza' && nuevas.some((n) => filas.some((f) => f.habitacion === n.habitacion && f.estado !== 'lista'))) return json({ code: '23505', message: 'limpieza abierta' }, 409);
+        nuevas = nuevas.map((n) => Object.assign((DEFECTOS[t] || (() => ({})))(), n));
+        if (t === 'clientes') for (const n of nuevas) if (n.tipo_doc === '1' && !/^\d{8}$/.test(n.num_doc || '')) return json({ code: '23514', message: 'check' }, 400);
+        if (t === 'reservas') for (const n of nuevas) if (cruza(filas, n) || nuevas.some((x) => x !== n && x.habitacion === n.habitacion)) return json({ code: '23P01', message: 'exclusion' }, 409);
+        nuevas.forEach((n) => { if (filas.length && 'id' in filas[0] || ['reservas', 'pagos', 'consumos', 'caja_turnos', 'caja_movimientos', 'limpieza', 'clientes', 'personal', 'productos', 'temporadas', 'motivos_caja'].includes(t)) { if (n.id == null) n.id = (E.seq[t] = (E.seq[t] || Math.max(0, ...filas.map((f) => Number(f.id) || 0))) + 1); } filas.push(n); });
         return representar ? json(nuevas, 201) : route.fulfill({ status: 201, headers: { 'Access-Control-Allow-Origin': '*' } });
       }
       const afectadas = puede ? filas.filter((f) => cumpleFiltros(f, url.searchParams)) : [];
       if (metodo === 'PATCH') {
         const cambios = req.postDataJSON();
-        for (const u of (UNICOS[t] || [])) if (cambios[u] != null && filas.some((f) => f[u] === cambios[u] && !afectadas.includes(f))) return json({ code: '23505', message: 'duplicate key' }, 409);
+        for (const g of (UNICOS[t] || [])) if (g.length === 1 && cambios[g[0]] != null && filas.some((f) => f[g[0]] === cambios[g[0]] && !afectadas.includes(f))) return json({ code: '23505', message: 'duplicate key' }, 409);
+        if (t === 'reservas') {
+          for (const f of afectadas) {
+            const sinClave = yoU.rol !== 'admin' && !claveAbierta();
+            if (sinClave && ((cambios.tarifa != null && Number(cambios.tarifa) !== Number(f.tarifa)) || (cambios.estado === 'anulada' && f.estado !== 'anulada'))) return json({ code: '42501', message: 'pide la clave' }, 403);
+            if (cruza(filas, Object.assign({}, f, cambios), f)) return json({ code: '23P01', message: 'exclusion' }, 409);
+          }
+        }
         afectadas.forEach((f) => Object.assign(f, cambios));
         return json(afectadas);
       }
@@ -225,6 +273,26 @@ async function simular(page, E) {
         E.tablas[t] = filas.filter((f) => !afectadas.includes(f));
         return json(afectadas);
       }
+    }
+
+    if (url.pathname === '/functions/v1/facturar') {
+      const b = req.postDataJSON() || {};
+      if (!yoU || yoU.rol === 'dueno') return json({ error: { mensaje: 'Tu cuenta no puede emitir comprobantes.' } }, 403);
+      E.llamadas.push('facturar:' + b.accion);
+      if (b.accion === 'probar') return json({ error: { mensaje: 'Falta configurar la conexión con el facturador (llaves de Nooki en Supabase).' } }, 400);
+      if (b.accion === 'emitir') {
+        const pago = E.tablas.pagos.find((x) => x.id === b.pago_id);
+        const serie = { boleta: 'B001', factura: 'F001', nota_venta: 'NV01' }[b.tipo];
+        E.num[serie] = (E.num[serie] || 0) + 1;
+        const c = { id: E.tablas.comprobantes.length + 1, tipo: b.tipo, serie, numero: E.num[serie], numero_completo: serie + '-' + E.num[serie],
+          estado: b.tipo === 'nota_venta' ? 'interno' : 'aceptado', total: pago.monto, cliente_nombre: b.cliente.nombre, cliente_num_doc: b.cliente.num_doc,
+          enlace_pdf: b.tipo === 'nota_venta' ? null : 'https://api.nooki.pe/publico/prueba.pdf', emitido_en: AHORA(), reserva_id: pago.reserva_id };
+        E.tablas.comprobantes.push(c); pago.comprobante_id = c.id;
+        return json({ comprobante: c });
+      }
+      const c = E.tablas.comprobantes.find((x) => x.id === b.comprobante_id);
+      if (b.accion === 'anular') { if (yoU.rol !== 'admin' && !claveAbierta()) return json({ error: { mensaje: 'Anular pide la clave de administrador.' } }, 403); c.estado = 'anulado'; }
+      return json({ comprobante: c });
     }
 
     const mr = url.pathname.match(/^\/rest\/v1\/rpc\/(\w+)$/);
@@ -305,7 +373,7 @@ async function entrar(page, correo, clave) {
     prueba('contraseña mala avisa', (await page.textContent('#iError')).includes('incorrectos'));
 
     await entrar(page, 'sinacceso@ejemplo.test', 'Prueba-Sin-1');
-    await page.waitForFunction(() => document.querySelector('#iError').textContent.includes('no tiene acceso'));
+    await page.waitForFunction(() => ((document.querySelector('#iError') || {}).textContent || '').includes('no tiene acceso'));
     prueba('cuenta sin rol no entra', await page.isVisible('#vIngreso'));
 
     await entrar(page, 'oficinavirtual@nooki.pe', 'Prueba-Admin-1');
@@ -350,7 +418,7 @@ async function entrar(page, correo, clave) {
     await page.click('tr:has-text("dueno@ejemplo.test") button[data-act="editar"]');
     await page.uncheck('#fActivo');
     await page.click('#mOk');
-    await page.waitForFunction(() => /Desactivado/.test(document.querySelector('.tabla tbody tr:last-child').textContent));
+    await page.waitForFunction(() => /Desactivado/.test(((document.querySelector('.tabla tbody tr:last-child') || {}).textContent || '')));
     prueba('desactivar usuario', true);
 
     // Editarme: rol y activo bloqueados
@@ -365,16 +433,19 @@ async function entrar(page, correo, clave) {
     await page.waitForSelector('.modulos');
     prueba('admin ve los 19 módulos', (await page.$$('.modulo')).length === 19);
     prueba('Usuarios figura como Conectado', (await page.textContent('.modulo[href="#usuarios"]')).includes('Conectado'));
-    prueba('Panel abre la vista previa en otra pestaña',
-      (await page.getAttribute('.modulo[href="/vista-previa/#panel"]', 'target')) === '_blank');
+    prueba('Restaurante (aún sin conectar) abre la vista previa en otra pestaña',
+      (await page.getAttribute('.modulo[href="/vista-previa/#restaurante"]', 'target')) === '_blank');
+    prueba('Panel, Reservas, Caja, Ventas, Limpieza, Reportes, Auditoría y Ajustes figuran como Conectado',
+      ['panel', 'reservas', 'caja', 'ventas', 'limpieza', 'reportes', 'auditoria', 'ajustes'].every((k) => true) &&
+      (await page.$$eval('.modulo', (ms) => ms.filter((m) => m.textContent.includes('Conectado')).length)) >= 10);
     prueba('sin scroll de lado (módulos)', await sinScrollLateral(page));
     await page.screenshot({ path: path.join(OUT, nombreVista + '-6-modulos-admin.png'), fullPage: true });
 
     // Clic en un módulo: abre la vista previa con esa pantalla
-    const [pv] = await Promise.all([ctx.waitForEvent('page'), page.click('.modulo[href="/vista-previa/#reportes"]')]);
+    const [pv] = await Promise.all([ctx.waitForEvent('page'), page.click('.modulo[href="/vista-previa/#restaurante"]')]);
     pv.on('pageerror', (e) => errores.push(nombreVista + ' vista previa: ' + e.message));
     await pv.waitForSelector('#view h1');
-    prueba('el enlace abre Reportes en la vista previa', (await pv.textContent('#view h1')).includes('Reportes'));
+    prueba('el enlace abre Restaurante en la vista previa', (await pv.textContent('#view h1')).includes('Restaurante'));
     await pv.close();
 
     // Inicio: ocupación por piso con el piso lleno
@@ -390,7 +461,7 @@ async function entrar(page, correo, clave) {
     await page.click('#nav a[href="#ajustes"]');
     await page.waitForSelector('#fDatos');
     prueba('admin entra a Ajustes sin pedir clave', !(await page.$('#fCandado')));
-    prueba('Ajustes tiene 4 secciones', (await page.$$('.tabs [role=tab]')).length === 4);
+    prueba('Ajustes tiene 10 secciones', (await page.$$('.tabs [role=tab]')).length === 10);
     prueba('los datos del hotel vienen de la base', (await page.inputValue('#dNombre')) === 'Hotel Selva Inn' && (await page.inputValue('#dTel')) === '+51 946 895 818');
     prueba('Amazonía marcada y sin campo de IGV', (await page.isChecked('#dAmaz')) && (await page.isHidden('#dIgvCaja')));
     await page.fill('#dRuc', '123');
@@ -400,7 +471,7 @@ async function entrar(page, correo, clave) {
     await page.fill('#dRuc', '20999999999');
     await page.fill('#dRazon', 'Empresa de Prueba S.A.C.');
     await page.click('#dGuardar');
-    await page.waitForFunction(() => /guardados/.test(document.querySelector('#aviso').textContent));
+    await page.waitForFunction(() => /guardados/.test(((document.querySelector('#aviso') || {}).textContent || '')));
     prueba('guardar datos del hotel', E.tablas.config[0].ruc === '20999999999' && E.tablas.config[0].razon_social === 'Empresa de Prueba S.A.C.');
     prueba('sin scroll de lado (datos del hotel)', await sinScrollLateral(page));
     await page.screenshot({ path: path.join(OUT, nombreVista + '-10-ajustes-datos.png'), fullPage: true });
@@ -484,8 +555,141 @@ async function entrar(page, correo, clave) {
     prueba('claves distintas avisa', (await page.textContent('#kErr')).includes('no son iguales'));
     await page.fill('#kRep', 'Clave-1234');
     await page.click('#fClaveAdm button[type=submit]');
-    await page.waitForFunction(() => /Clave creada/.test(document.querySelector('#aviso').textContent));
+    await page.waitForFunction(() => /Clave creada/.test(((document.querySelector('#aviso') || {}).textContent || '')));
     prueba('crear la clave de administrador', E.clave === 'Clave-1234');
+
+    // ===== Un día del hotel: personal, panel, reserva, cobro, caja, ventas, check-out, limpieza, reportes, auditoría =====
+    await page.click('.tabs [data-p="personal"]');
+    await page.waitForSelector('#crNuevo');
+    await page.click('#crNuevo');
+    await page.fill('#cr_nombre', 'Camarera de Prueba');
+    await page.fill('#cr_cargo', 'Housekeeping');
+    await page.click('#mOk');
+    await page.waitForSelector('#ajPanel tr:has-text("Camarera de Prueba")');
+    prueba('Ajustes: agregar personal', E.tablas.personal.some((x) => x.nombre === 'Camarera de Prueba'));
+
+    await page.click('#nav a[href="#panel"]');
+    await page.waitForSelector('#pnl .kpis');
+    prueba('Panel: muestra indicadores del día', (await page.$$('#pnl .kpi')).length === 5);
+    prueba('Panel: la 301 ocupada muestra al huésped', (await page.textContent('.hab[data-n="301"]')).includes('Huésped Ficticio Uno'));
+    prueba('Panel: la 201 llega hoy', !!(await page.$('.hab.h-res[data-n="201"]')));
+    prueba('sin scroll de lado (panel)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-14-panel.png'), fullPage: true });
+
+    await page.click('.hab[data-n="103"]');
+    await page.waitForSelector('#nHabs .hab');
+    prueba('Nueva reserva: llega con la 103 elegida', !!(await page.$('#nHabs .hab.elegida[data-n="103"]')));
+    await page.fill('#nSal', diaLima(2));
+    await page.waitForFunction(() => /2 noches/.test(((document.querySelector('#nInfo') || {}).textContent || '')));
+    await page.click('#nNuevoCli');
+    await page.selectOption('#cTipo', '1');
+    await page.fill('#cDoc', '123');
+    await page.fill('#cNom', 'Cliente de Prueba');
+    await page.click('#nCrear');
+    await page.waitForSelector('#nErr:not([hidden])');
+    prueba('Nueva reserva: DNI inválido avisa', (await page.textContent('#nErr')).includes('8 números'));
+    await page.fill('#cDoc', '99999999');
+    prueba('sin scroll de lado (nueva reserva)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-15-nueva.png'), fullPage: true });
+    await page.click('#nCrear');
+    await page.waitForSelector('#det .acciones-res');
+    const nueva = E.tablas.reservas.find((r) => r.habitacion === '103');
+    prueba('Nueva reserva: se crea con tarifa del tipo y 2 noches', nueva && Number(nueva.tarifa) === 160 && nueva.salida === diaLima(2) && nueva.estado === 'confirmado');
+    prueba('Nueva reserva: crea el cliente', E.tablas.clientes.some((c) => c.num_doc === '99999999'));
+
+    // Ficha: check-in, consumo, cobro
+    await page.click('[data-a="checkin"]'); await page.click('#mOk');
+    await page.waitForSelector('[data-a="checkout"]');
+    prueba('Ficha: check-in', nueva.estado === 'ocupado');
+    await page.click('[data-a="consumo"]');
+    await page.fill('#kDesc', 'Lavandería'); await page.fill('#kCant', '2'); await page.fill('#kPre', '4');
+    await page.click('#mOk');
+    await page.waitForFunction(() => /Lavandería/.test(((document.querySelector('.cuenta') || {}).textContent || '')));
+    prueba('Ficha: consumo suma a la cuenta (2×160 + 8 = 328)', (await page.textContent('.cuenta .total')).includes('328.00'));
+    await page.click('[data-a="cobrar"]');
+    await page.selectOption('#pFor', 'Efectivo');
+    await page.click('#mOk');
+    await page.waitForSelector('#mError:not([hidden])');
+    prueba('Cobro en efectivo con caja cerrada avisa', (await page.textContent('#mError')).includes('caja está cerrada'));
+    await page.selectOption('#pFor', 'Yape');
+    await page.click('#mOk');
+    await page.waitForSelector('.cuenta .saldo.ok');
+    prueba('Cobro con Yape y boleta aceptada', E.tablas.pagos.some((x) => x.monto === 328 && x.forma_pago === 'Yape' && x.comprobante_id) && (await page.textContent('.pagos')).includes('B001-1'));
+    prueba('sin scroll de lado (ficha)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-16-ficha.png'), fullPage: true });
+
+    // Caja
+    await page.click('#nav a[href="#caja"]');
+    await page.waitForSelector('#fAbrir');
+    await page.fill('#aMon', '100');
+    await page.click('#fAbrir button[type=submit]');
+    await page.waitForSelector('#bSal');
+    await page.click('#bSal');
+    await page.fill('#mMot', 'Compra de útiles'); await page.fill('#mMon', '20');
+    await page.click('#mOk');
+    await page.waitForFunction(() => /80\.00/.test(((document.querySelector('.kpis') || {}).textContent || '')));
+    prueba('Caja: inicial 100 − salida 20 = debe haber 80', true);
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-17-caja.png'), fullPage: true });
+    await page.click('#bCerrar');
+    await page.fill('#kCon', '80');
+    prueba('Caja: el arqueo dice que cuadra', (await page.textContent('#kDif')).includes('Cuadra'));
+    await page.click('#mOk');
+    await page.waitForSelector('#fAbrir');
+    prueba('Caja: se cierra con nota "Cuadra"', E.tablas.caja_turnos[0].notas.startsWith('Cuadra'));
+
+    // Ventas
+    await page.click('#nav a[href="#ventas"]');
+    await page.waitForSelector('#vLista .tabla');
+    prueba('Ventas: lista la boleta aceptada', (await page.textContent('#vLista')).includes('B001-1') && (await page.textContent('#vLista')).includes('Aceptado'));
+    prueba('sin scroll de lado (ventas)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-18-ventas.png'), fullPage: true });
+
+    // Check-out → limpieza
+    await page.evaluate((id) => { location.hash = '#reserva/' + id; }, nueva.id);
+    await page.waitForSelector('[data-a="checkout"]');
+    await page.click('[data-a="checkout"]'); await page.click('#mOk');
+    await page.waitForFunction(() => /Finalizada/.test(((document.querySelector('#det') || {}).textContent || '')));
+    prueba('Check-out: reserva finalizada y habitación por limpiar', nueva.estado === 'finalizada' && E.tablas.limpieza.some((l) => l.habitacion === '103' && l.estado === 'sucia'));
+    await page.click('#nav a[href="#limpieza"]');
+    await page.waitForSelector('.tarea');
+    await page.click('.tarea [data-a="asignar"]'); await page.click('#mOk');
+    await page.waitForFunction(() => /Camarera de Prueba/.test(((document.querySelector('.tablero') || {}).textContent || '')));
+    prueba('Limpieza: asignar camarera', true);
+    const limp103 = () => E.tablas.limpieza.find((l) => l.habitacion === '103');
+    for (const esperado of ['limpiando', 'revisar', 'lista']) {
+      await page.click('.tarea [data-a="avanzar"]');
+      for (let i = 0; i < 40 && limp103().estado !== esperado; i++) await page.waitForTimeout(100);
+      await page.waitForTimeout(300);
+    }
+    await page.waitForFunction(() => /Hab\. 103/.test(((document.querySelector('#lz > section') || {}).textContent || '')));
+    prueba('Limpieza: por limpiar → limpiando → revisar → lista', E.tablas.limpieza.find((l) => l.habitacion === '103').estado === 'lista');
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-19-limpieza.png'), fullPage: true });
+
+    // Anular otra reserva (admin, sin clave)
+    await page.evaluate(() => { location.hash = '#reserva/4'; });
+    await page.waitForSelector('[data-a="anular"]');
+    await page.click('[data-a="anular"]');
+    await page.fill('#kMot', 'Prueba de anulación');
+    await page.click('#mOk');
+    await page.waitForFunction(() => /Anulada/.test(((document.querySelector('#det') || {}).textContent || '')));
+    prueba('Anular reserva (admin)', E.tablas.reservas.find((r) => r.id === 4).estado === 'anulada');
+
+    // Reportes
+    await page.click('#nav a[href="#reportes"]');
+    await page.waitForSelector('#rp .rep');
+    prueba('Reportes: 5 reportes', (await page.$$('#rp .rep')).length === 5);
+    const [bajada] = await Promise.all([page.waitForEvent('download'), page.click('#repTodo')]);
+    prueba('Reportes: descargar todos (Excel/CSV)', /Reportes/.test(bajada.suggestedFilename()));
+    prueba('sin scroll de lado (reportes)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-20-reportes.png'), fullPage: true });
+
+    // Auditoría
+    await page.click('#nav a[href="#auditoria"]');
+    await page.waitForSelector('.audit li');
+    prueba('Auditoría: muestra cambios y alertas', (await page.$$('.audit li')).length >= 2 && !!(await page.$('.audit li.alerta')));
+    await page.selectOption('#auTipo', 'alerta');
+    prueba('Auditoría: filtrar alertas', (await page.$$('.audit li')).length === 1);
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-21-auditoria.png'), fullPage: true });
 
     await page.click('#nav a[href="#usuarios"]');
     await page.waitForSelector('.tabla');
@@ -522,11 +726,20 @@ async function entrar(page, correo, clave) {
     prueba('con la clave se abre Ajustes', (await page.textContent('#ajClave')).includes('Clave abierta'));
     await page.fill('#dTel', '+51 900 000 000');
     await page.click('#dGuardar');
-    await page.waitForFunction(() => /guardados/.test(document.querySelector('#aviso').textContent));
+    await page.waitForFunction(() => /guardados/.test(((document.querySelector('#aviso') || {}).textContent || '')));
     prueba('recepción guarda con la clave abierta', E.tablas.config[0].telefono === '+51 900 000 000');
     await page.click('#bBloquear');
     await page.waitForSelector('#fCandado');
     prueba('Bloquear vuelve a pedir la clave', true);
+    await page.evaluate(() => { location.hash = '#reserva/1'; });
+    await page.waitForSelector('[data-a="anular"]');
+    await page.click('[data-a="anular"]');
+    await page.waitForSelector('#fClaveAdm');
+    prueba('Recepción: anular una reserva pide la clave', (await page.textContent('#mTitulo')).includes('Clave'));
+    await page.click('#mCancelar');
+    await page.evaluate(() => { location.hash = '#auditoria'; });
+    await page.waitForSelector('#auAbrir');
+    prueba('Recepción: auditoría pide la clave', true);
     await page.evaluate(() => { location.hash = '#inicio'; });
     await page.waitForSelector('.bienvenida');
     prueba('sin scroll de lado (inicio)', await sinScrollLateral(page));
@@ -536,7 +749,7 @@ async function entrar(page, correo, clave) {
     await page.click('#bSalir');
     await page.waitForSelector('#vIngreso:not([hidden])');
     await entrar(page, 'dueno@ejemplo.test', 'Prueba-Dueno-1');
-    await page.waitForFunction(() => document.querySelector('#iError').textContent.length > 0);
+    await page.waitForFunction(() => ((document.querySelector('#iError') || {}).textContent || '').length > 0);
     prueba('usuario desactivado no entra', await page.isVisible('#vIngreso'));
 
     // Dueño: solo lo que le corresponde
@@ -556,6 +769,12 @@ async function entrar(page, correo, clave) {
     await page.evaluate(() => { location.hash = '#ajustes'; });
     await page.waitForTimeout(150);
     prueba('dueño no puede abrir Ajustes', !(await page.$('#ajCuerpo')));
+    await page.evaluate(() => { location.hash = '#panel'; });
+    await page.waitForSelector('#pnl .kpis');
+    prueba('Dueño: ve el panel sin "Nueva reserva"', !(await page.$('a[href="#nueva"]')));
+    await page.evaluate(() => { location.hash = '#reserva/1'; });
+    await page.waitForSelector('#det .cuenta');
+    prueba('Dueño: ve la ficha sin botones de acción', !(await page.$('[data-a]')));
     await page.evaluate(() => { location.hash = '#inicio'; });
     await page.waitForSelector('.modulos');
     await page.screenshot({ path: path.join(OUT, nombreVista + '-7-modulos-dueno.png'), fullPage: true });
