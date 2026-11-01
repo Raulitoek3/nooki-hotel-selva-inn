@@ -96,6 +96,9 @@ function datosHotel() {
       { id: 3, tipo_doc: '1', num_doc: '00000003', nombre: 'Huésped Ficticio Tres', nacionalidad: 'Perú', no_grato: true, motivo_no_grato: 'Prueba' }
     ],
     consumos: [], pagos: [], caja_turnos: [], caja_movimientos: [], comprobantes: [], limpieza: [], personal: [], productos: [],
+    pedidos: [], pedido_items: [], movimientos_stock: [], cierres: [],
+    mesas: [{ id: 'S1', nombre: '1', ambiente: 'Salón', asientos: 4, orden: 101, activa: true }, { id: 'S2', nombre: '2', ambiente: 'Salón', asientos: 4, orden: 102, activa: true },
+      { id: 'P1', nombre: 'P1', ambiente: 'Piscina', asientos: 4, orden: 201, activa: true }],
     temporadas: [],
     origenes: [{ nombre: 'Directo', comision_pct: 0, activo: true, orden: 1 }, { nombre: 'Booking', comision_pct: 15, activo: true, orden: 2 }, { nombre: 'WhatsApp', comision_pct: 0, activo: true, orden: 3 }],
     formas_pago: [{ nombre: 'Efectivo', activa: true, orden: 1 }, { nombre: 'Yape', activa: true, orden: 2 }, { nombre: 'Tarjeta crédito', activa: true, orden: 3 }],
@@ -107,7 +110,7 @@ function datosHotel() {
 }
 const AJUSTES = ['config', 'tipos_habitacion', 'habitaciones', 'personal', 'temporadas', 'formas_pago', 'origenes', 'motivos_caja', 'motivos_viaje'];
 const SOLO_LECTURA = ['comprobantes', 'auditoria'];
-const UNICOS = { tipos_habitacion: [['codigo'], ['nombre']], habitaciones: [['numero']], clientes: [['tipo_doc', 'num_doc']], formas_pago: [['nombre']], origenes: [['nombre']] };
+const UNICOS = { tipos_habitacion: [['codigo'], ['nombre']], habitaciones: [['numero']], clientes: [['tipo_doc', 'num_doc']], formas_pago: [['nombre']], origenes: [['nombre']], cierres: [['fecha']], productos: [['nombre']] };
 const REFERENCIAS = { habitaciones: [['reservas', 'habitacion', 'numero']], tipos_habitacion: [['habitaciones', 'tipo', 'codigo']] };
 const AHORA = () => new Date().toISOString();
 const DEFECTOS = {
@@ -119,6 +122,11 @@ const DEFECTOS = {
   limpieza: () => ({ estado: 'sucia', tipo: 'Salida', desde: AHORA(), personal_id: null, terminado_en: null }),
   clientes: () => ({ nacionalidad: 'Perú', no_grato: false }),
   personal: () => ({ activo: true }),
+  productos: () => ({ activo: true, en_restaurante: false, stock: null, creado_en: AHORA() }),
+  pedidos: () => ({ estado: 'abierta', abierto_en: AHORA(), reserva_id: null, cerrado_en: null }),
+  pedido_items: () => ({ enviados: 0, creado_en: AHORA() }),
+  movimientos_stock: () => ({ creado_en: AHORA() }),
+  cierres: () => ({ cerrado_en: AHORA() }),
   habitaciones: () => ({ fuera_de_venta: false, notas: null }),
   tipos_habitacion: () => ({ activo: true })
 };
@@ -246,10 +254,17 @@ async function simular(page, E) {
         }
         if (t === 'caja_turnos' && filas.some((f) => !f.cerrado_en)) return json({ code: '23505', message: 'una caja abierta' }, 409);
         if (t === 'limpieza' && nuevas.some((n) => filas.some((f) => f.habitacion === n.habitacion && f.estado !== 'lista'))) return json({ code: '23505', message: 'limpieza abierta' }, 409);
+        if (t === 'pedidos' && nuevas.some((n) => filas.some((f) => f.mesa_id === n.mesa_id && ['abierta', 'precuenta'].includes(f.estado)))) return json({ code: '23505', message: 'pedido abierto' }, 409);
+        if (t === 'movimientos_stock') for (const n of nuevas) {
+          const pr = E.tablas.productos.find((x) => x.id === n.producto_id);
+          if (!pr || pr.tipo !== 'Producto') return json({ code: 'P0001', message: 'solo productos' }, 400);
+          if (n.tipo === 'salida' && Number(pr.stock || 0) < Number(n.cantidad)) return json({ code: 'P0001', message: 'Solo hay ' + pr.stock }, 400);
+          pr.stock = Number(pr.stock || 0) + (n.tipo === 'entrada' ? 1 : -1) * Number(n.cantidad);
+        }
         nuevas = nuevas.map((n) => Object.assign((DEFECTOS[t] || (() => ({})))(), n));
         if (t === 'clientes') for (const n of nuevas) if (n.tipo_doc === '1' && !/^\d{8}$/.test(n.num_doc || '')) return json({ code: '23514', message: 'check' }, 400);
         if (t === 'reservas') for (const n of nuevas) if (cruza(filas, n) || nuevas.some((x) => x !== n && x.habitacion === n.habitacion)) return json({ code: '23P01', message: 'exclusion' }, 409);
-        nuevas.forEach((n) => { if (filas.length && 'id' in filas[0] || ['reservas', 'pagos', 'consumos', 'caja_turnos', 'caja_movimientos', 'limpieza', 'clientes', 'personal', 'productos', 'temporadas', 'motivos_caja'].includes(t)) { if (n.id == null) n.id = (E.seq[t] = (E.seq[t] || Math.max(0, ...filas.map((f) => Number(f.id) || 0))) + 1); } filas.push(n); });
+        nuevas.forEach((n) => { if (filas.length && 'id' in filas[0] || ['reservas', 'pagos', 'consumos', 'caja_turnos', 'caja_movimientos', 'limpieza', 'clientes', 'personal', 'productos', 'temporadas', 'motivos_caja', 'pedidos', 'pedido_items', 'movimientos_stock', 'cierres'].includes(t)) { if (n.id == null) n.id = (E.seq[t] = (E.seq[t] || Math.max(0, ...filas.map((f) => Number(f.id) || 0))) + 1); } filas.push(n); });
         return representar ? json(nuevas, 201) : route.fulfill({ status: 201, headers: { 'Access-Control-Allow-Origin': '*' } });
       }
       const afectadas = puede ? filas.filter((f) => cumpleFiltros(f, url.searchParams)) : [];
@@ -286,12 +301,19 @@ async function simular(page, E) {
         E.num[serie] = (E.num[serie] || 0) + 1;
         const c = { id: E.tablas.comprobantes.length + 1, tipo: b.tipo, serie, numero: E.num[serie], numero_completo: serie + '-' + E.num[serie],
           estado: b.tipo === 'nota_venta' ? 'interno' : 'aceptado', total: pago.monto, cliente_nombre: b.cliente.nombre, cliente_num_doc: b.cliente.num_doc,
-          enlace_pdf: b.tipo === 'nota_venta' ? null : 'https://api.nooki.pe/publico/prueba.pdf', emitido_en: AHORA(), reserva_id: pago.reserva_id };
+          enlace_pdf: b.tipo === 'nota_venta' ? null : 'https://api.nooki.pe/publico/prueba.pdf', emitido_en: AHORA(), reserva_id: pago.reserva_id || null, pedido_id: pago.pedido_id || null };
         E.tablas.comprobantes.push(c); pago.comprobante_id = c.id;
         return json({ comprobante: c });
       }
       const c = E.tablas.comprobantes.find((x) => x.id === b.comprobante_id);
       if (b.accion === 'anular') { if (yoU.rol !== 'admin' && !claveAbierta()) return json({ error: { mensaje: 'Anular pide la clave de administrador.' } }, 403); c.estado = 'anulado'; }
+      if (b.accion === 'nota_credito') {
+        if (yoU.rol !== 'admin' && !claveAbierta()) return json({ error: { mensaje: 'Esto pide la clave de administrador.' } }, 403);
+        E.num.BC01 = (E.num.BC01 || 0) + 1;
+        const nc = { id: E.tablas.comprobantes.length + 1, tipo: 'nota_credito', serie: 'BC01', numero: E.num.BC01, numero_completo: 'BC01-' + E.num.BC01, estado: 'aceptado',
+          total: c.total, cliente_nombre: c.cliente_nombre, afectado_id: c.id, emitido_en: AHORA() };
+        E.tablas.comprobantes.push(nc); return json({ comprobante: nc });
+      }
       return json({ comprobante: c });
     }
 
@@ -433,8 +455,8 @@ async function entrar(page, correo, clave) {
     await page.waitForSelector('.modulos');
     prueba('admin ve los 19 módulos', (await page.$$('.modulo')).length === 19);
     prueba('Usuarios figura como Conectado', (await page.textContent('.modulo[href="#usuarios"]')).includes('Conectado'));
-    prueba('Restaurante (aún sin conectar) abre la vista previa en otra pestaña',
-      (await page.getAttribute('.modulo[href="/vista-previa/#restaurante"]', 'target')) === '_blank');
+    prueba('WhatsApp (aún sin conectar) abre la vista previa en otra pestaña',
+      (await page.getAttribute('.modulo[href="/vista-previa/#whatsapp"]', 'target')) === '_blank');
     prueba('Panel, Reservas, Caja, Ventas, Limpieza, Reportes, Auditoría y Ajustes figuran como Conectado',
       ['panel', 'reservas', 'caja', 'ventas', 'limpieza', 'reportes', 'auditoria', 'ajustes'].every((k) => true) &&
       (await page.$$eval('.modulo', (ms) => ms.filter((m) => m.textContent.includes('Conectado')).length)) >= 10);
@@ -442,10 +464,10 @@ async function entrar(page, correo, clave) {
     await page.screenshot({ path: path.join(OUT, nombreVista + '-6-modulos-admin.png'), fullPage: true });
 
     // Clic en un módulo: abre la vista previa con esa pantalla
-    const [pv] = await Promise.all([ctx.waitForEvent('page'), page.click('.modulo[href="/vista-previa/#restaurante"]')]);
+    const [pv] = await Promise.all([ctx.waitForEvent('page'), page.click('.modulo[href="/vista-previa/#whatsapp"]')]);
     pv.on('pageerror', (e) => errores.push(nombreVista + ' vista previa: ' + e.message));
     await pv.waitForSelector('#view h1');
-    prueba('el enlace abre Restaurante en la vista previa', (await pv.textContent('#view h1')).includes('Restaurante'));
+    prueba('el enlace abre WhatsApp en la vista previa', (await pv.textContent('#view h1')).includes('WhatsApp'));
     await pv.close();
 
     // Inicio: ocupación por piso con el piso lleno
@@ -690,6 +712,104 @@ async function entrar(page, correo, clave) {
     await page.selectOption('#auTipo', 'alerta');
     prueba('Auditoría: filtrar alertas', (await page.$$('.audit li')).length === 1);
     await page.screenshot({ path: path.join(OUT, nombreVista + '-21-auditoria.png'), fullPage: true });
+
+    // ===== Productos, Almacén, Restaurante, Timeline, Cierre, Resumen y Nota de crédito =====
+    async function nuevoProducto(nombre, cat, tipo, precio, destino) {
+      await page.click('#crNuevo');
+      await page.fill('#cr_nombre', nombre); await page.fill('#cr_categoria', cat);
+      await page.selectOption('#cr_tipo', tipo); await page.fill('#cr_precio', String(precio));
+      await page.selectOption('#cr_unidad', tipo === 'Producto' ? 'NIU' : 'ZZ');
+      await page.check('#cr_en_restaurante'); await page.selectOption('#cr_destino', destino);
+      await page.click('#mOk');
+      await page.waitForSelector('#ajPanel tr:has-text("' + nombre + '")');
+    }
+    await page.evaluate(() => { location.hash = '#ajustes/productos'; });
+    await page.waitForSelector('#crNuevo');
+    await nuevoProducto('Agua mineral', 'Bebidas', 'Producto', 4, 'Barra');
+    await nuevoProducto('Lomo saltado', 'Platos', 'Kit', 32, 'Cocina');
+    prueba('Productos: agregar para el restaurante', E.tablas.productos.length === 2 && E.tablas.productos.every((x) => x.en_restaurante));
+
+    await page.click('#nav a[href="#almacen"]');
+    await page.waitForSelector('#alEnt');
+    await page.click('#alEnt');
+    await page.fill('#amC', '10'); await page.fill('#amR', 'Guía de prueba');
+    await page.click('#mOk');
+    await page.waitForFunction(() => /Guía de prueba/.test(((document.querySelector('#al') || {}).textContent || '')));
+    const agua = E.tablas.productos.find((x) => x.nombre === 'Agua mineral');
+    prueba('Almacén: entrada suma stock (10)', Number(agua.stock) === 10);
+    await page.click('#alSal');
+    await page.fill('#amC', '50'); await page.fill('#amR', 'Merma');
+    await page.click('#mOk');
+    await page.waitForSelector('#mError:not([hidden])');
+    prueba('Almacén: no deja sacar más de lo que hay', (await page.textContent('#mError')).includes('stock'));
+    await page.click('#mCancelar');
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-22-almacen.png'), fullPage: true });
+
+    await page.click('#nav a[href="#restaurante"]');
+    await page.waitForSelector('.mesas .hab');
+    await page.click('.mesas .hab[data-m="S1"]');
+    await page.waitForSelector('.carta');
+    await page.click('.segm [data-c="Platos"]');
+    await page.click('.carta [data-p]');
+    await page.waitForSelector('.cuenta');
+    await page.click('.segm [data-c="Bebidas"]');
+    await page.click('.carta [data-p]');
+    await page.waitForFunction(() => /Agua mineral/.test(((document.querySelector('.cuenta') || {}).textContent || '')));
+    await page.locator('[data-mas]').last().click();
+    await page.waitForFunction(() => /Total\s*S\/ 40\.00/.test(((document.querySelector('.cuenta .total') || {}).textContent || '')));
+    prueba('Restaurante: pedido Lomo + 2 Agua = S/ 40', true);
+    await page.click('[data-x="comanda"]');
+    await page.waitForSelector('#mTitulo:has-text("Comanda")');
+    prueba('Restaurante: comanda separa Cocina y Barra', (await page.textContent('#mCuerpo')).includes('Cocina') && (await page.textContent('#mCuerpo')).includes('Barra'));
+    await page.click('#mOk');
+    await page.waitForSelector('[data-x="cobrar"]');
+    prueba('sin scroll de lado (mesa)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-23-mesa.png'), fullPage: true });
+    await page.click('[data-x="cobrar"]');
+    await page.selectOption('#rFor', 'Yape');
+    await page.click('#mOk');
+    await page.waitForSelector('.mesas .hab');
+    const ped = E.tablas.pedidos[0];
+    prueba('Restaurante: cobrar cierra el pedido y emite boleta', ped.estado === 'cobrada' && E.tablas.comprobantes.some((c) => c.pedido_id === ped.id));
+    prueba('Restaurante: la venta descuenta el agua del almacén (10 − 2 = 8)', Number(agua.stock) === 8);
+    await page.click('.mesas .hab[data-m="S2"]');
+    await page.waitForSelector('.carta');
+    await page.click('.segm [data-c="Bebidas"]');
+    await page.click('.carta [data-p]');
+    await page.waitForSelector('[data-x="cargar"]');
+    await page.click('[data-x="cargar"]');
+    await page.click('#mOk');
+    await page.waitForSelector('.mesas .hab');
+    prueba('Restaurante: cargar a la habitación suma el consumo a la cuenta', E.tablas.consumos.some((c) => c.pedido_id && /restaurante/.test(c.descripcion)) && E.tablas.pedidos[1].estado === 'cargada');
+
+    await page.click('#nav a[href="#timeline"]');
+    await page.waitForSelector('.tl tbody tr');
+    prueba('Timeline: una fila por habitación', (await page.$$('.tl tbody tr')).length === E.tablas.habitaciones.length);
+    prueba('Timeline: muestra las reservas', (await page.$$('.tl td.tl-r')).length >= 3);
+    prueba('sin scroll de lado (timeline)', await sinScrollLateral(page));
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-24-timeline.png'), fullPage: true });
+    await page.click('.tl td.tl-libre button[data-h="402"]');
+    await page.waitForSelector('#nHabs .hab');
+    prueba('Timeline: tocar un espacio libre abre Nueva reserva con esa habitación', !!(await page.$('#nHabs .hab.elegida[data-n="402"]')));
+
+    await page.click('#nav a[href="#cierre"]');
+    await page.waitForSelector('#ciCerrar');
+    prueba('Cierre: muestra la revisión de pendientes', (await page.$$('#ci .cuenta li')).length >= 5);
+    await page.click('#ciCerrar'); await page.click('#mOk');
+    await page.waitForFunction(() => /ya se cerró/.test(((document.querySelector('#ci') || {}).textContent || '')));
+    prueba('Cierre: cerrar el día guarda el cierre', E.tablas.cierres.length === 1);
+    await page.screenshot({ path: path.join(OUT, nombreVista + '-25-cierre.png'), fullPage: true });
+
+    await page.click('#nav a[href="#inicio"]');
+    await page.waitForSelector('#resumenDia .kpi');
+    prueba('Inicio: resumen del día con 5 indicadores', (await page.$$('#resumenDia .kpi')).length === 5);
+
+    await page.click('#nav a[href="#ventas"]');
+    await page.waitForSelector('#vLista [data-a="nc"]');
+    await page.click('#vLista [data-a="nc"]');
+    await page.click('#mOk');
+    await page.waitForFunction(() => /BC01-1/.test(((document.querySelector('#vLista') || {}).textContent || '')));
+    prueba('Ventas: nota de crédito emitida', E.tablas.comprobantes.some((c) => c.tipo === 'nota_credito'));
 
     await page.click('#nav a[href="#usuarios"]');
     await page.waitForSelector('.tabla');

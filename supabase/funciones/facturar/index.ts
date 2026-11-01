@@ -6,6 +6,7 @@
 // POST { accion: "consultar", comprobante_id }      → actualiza el estado desde Nooki
 // POST { accion: "reenviar",  comprobante_id }      → reintenta uno en error / sin conexión
 // POST { accion: "anular",    comprobante_id, motivo }
+// POST { accion: "nota_credito", comprobante_id, motivo: "01"|"02"|"06", descripcion }  (pide clave abierta o admin)
 // POST { accion: "probar" }                         → datos de la empresa en Nooki (ambiente, Amazonía, series)
 // POST { accion: "configurar_aviso" }               → registra la URL de nooki-aviso en Nooki (solo admin)
 
@@ -88,8 +89,21 @@ Deno.serve(async (req) => {
     return data;
   };
 
-  // Envía a Nooki un comprobante ya guardado (boleta o factura)
+  async function claveAbierta() {
+    if (perfil!.rol === "admin") return true;
+    const { data: ses } = await sb.from("sesiones_admin").select("hasta").eq("usuario_id", yo!.id).maybeSingle();
+    return !!ses && new Date(ses.hasta) > new Date();
+  }
+
+  // Envía a Nooki un comprobante ya guardado (boleta, factura o nota de crédito)
   async function enviar(c: any) {
+    if (c.tipo === "nota_credito") {
+      const { data: af } = await sb.from("comprobantes").select("nooki_id, numero_completo").eq("id", c.afectado_id).maybeSingle();
+      const r = await nooki("POST", "/v1/notas-credito", { serie: c.serie, comprobante_afectado_id: af?.nooki_id, comprobante_afectado: af?.numero_completo,
+        motivo: c.motivo_nota, descripcion_motivo: c.descripcion_motivo }, c.idempotency_key);
+      if (r.ok) return await guardar(c.id, desdeNooki(r.data));
+      return await guardar(c.id, { estado: "error", mensaje_sunat: String(r.data?.error?.mensaje ?? `El facturador respondió ${r.status}.`).slice(0, 500) });
+    }
     const ruta = c.tipo === "factura" ? "/v1/facturas" : "/v1/boletas";
     const cliente = c.cliente_tipo_doc && c.cliente_tipo_doc !== "0"
       ? { tipo_doc: c.cliente_tipo_doc, num_doc: c.cliente_num_doc, razon_social: c.cliente_nombre, ...(c.cliente_direccion ? { direccion: c.cliente_direccion } : {}) }
@@ -111,23 +125,34 @@ Deno.serve(async (req) => {
       const { data: ya } = await sb.from("comprobantes").select("*").eq("id", pago.comprobante_id).single();
       return json({ comprobante: ya, repetido: true });
     }
-    const { data: r } = await sb.from("reservas").select("*").eq("id", pago.reserva_id).maybeSingle();
-    if (!r) return error("Por ahora solo se facturan pagos de reservas.");
-    const [{ data: hab }, { data: cfg }, { data: serie }] = await Promise.all([
-      sb.from("habitaciones").select("numero, tipo").eq("numero", r.habitacion).maybeSingle(),
+    const [{ data: cfg }, { data: serie }] = await Promise.all([
       sb.from("config").select("amazonia").eq("id", 1).maybeSingle(),
       sb.from("series").select("serie").eq("tipo", tipo).eq("activa", true).order("serie").limit(1).maybeSingle(),
     ]);
     if (!serie) return error("No hay una serie activa para " + tipo + ".");
-    const { data: th } = await sb.from("tipos_habitacion").select("nombre").eq("codigo", hab?.tipo ?? "").maybeSingle();
+    const exo = (it: Record<string, unknown>) => (cfg?.amazonia && tipo !== "nota_venta" ? { ...it, tip_afe_igv: "20" } : it);   // Ley de la Amazonía
+    let items: Record<string, unknown>[] = [];
+    let r: any = null;
+    if (pago.reserva_id) {
+      ({ data: r } = await sb.from("reservas").select("*").eq("id", pago.reserva_id).maybeSingle());
+      if (!r) return error("No existe la reserva del pago.");
+      const { data: hab } = await sb.from("habitaciones").select("numero, tipo").eq("numero", r.habitacion).maybeSingle();
+      const { data: th } = await sb.from("tipos_habitacion").select("nombre").eq("codigo", hab?.tipo ?? "").maybeSingle();
+      const desc = `Hospedaje Hab. ${r.habitacion}${th?.nombre ? " " + th.nombre : ""} · ${fCorta(r.entrada)} al ${fCorta(r.salida)}${pago.tipo === "adelanto" ? " (adelanto)" : ""}`;
+      items = [exo({ descripcion: desc, unidad: "ZZ", cantidad: 1, precio_unitario: Number(pago.monto) })];
+    } else if (pago.pedido_id) {
+      const { data: its } = await sb.from("pedido_items").select("*").eq("pedido_id", pago.pedido_id);
+      const ids = (its ?? []).map((i: any) => i.producto_id).filter(Boolean);
+      const { data: prods } = ids.length ? await sb.from("productos").select("id, unidad").in("id", ids) : { data: [] };
+      const unidad = new Map((prods ?? []).map((p: any) => [p.id, p.unidad]));
+      items = (its ?? []).map((i: any) => exo({ descripcion: i.descripcion, unidad: unidad.get(i.producto_id) ?? "NIU", cantidad: Number(i.cantidad), precio_unitario: Number(i.precio) }));
+      if (!items.length) return error("El pedido no tiene productos.");
+    } else return error("El pago no es de una reserva ni de un pedido.");
 
     const cli = b.cliente ?? {};
     if (tipo === "factura" && !/^(10|15|16|17|20)\d{9}$/.test(String(cli.num_doc ?? ""))) return error("La factura necesita un RUC válido.");
     if (tipo === "boleta" && Number(pago.monto) > 700 && (!cli.num_doc || cli.tipo_doc === "0")) return error("Una boleta de más de S/ 700 necesita el documento del cliente.");
 
-    const desc = `Hospedaje Hab. ${r.habitacion}${th?.nombre ? " " + th.nombre : ""} · ${fCorta(r.entrada)} al ${fCorta(r.salida)}${pago.tipo === "adelanto" ? " (adelanto)" : ""}`;
-    const item: Record<string, unknown> = { descripcion: desc, unidad: "ZZ", cantidad: 1, precio_unitario: Number(pago.monto) };
-    if (cfg?.amazonia && tipo !== "nota_venta") item.tip_afe_igv = "20";   // exonerado por la Ley de la Amazonía
 
     const idem = `hotel:pago:${pago.id}`;
     let { data: c } = await sb.from("comprobantes").select("*").eq("idempotency_key", idem).maybeSingle();
@@ -135,8 +160,8 @@ Deno.serve(async (req) => {
       const ins = await sb.from("comprobantes").insert({
         tipo, serie: serie.serie, cliente_tipo_doc: cli.tipo_doc ?? "0", cliente_num_doc: cli.num_doc ?? null,
         cliente_nombre: cli.nombre ?? "Clientes varios", cliente_direccion: cli.direccion ?? null,
-        items: [item], total: Number(pago.monto), estado: tipo === "nota_venta" ? "interno" : "pendiente",
-        idempotency_key: idem, reserva_id: r.id, creado_por: yo.id,
+        items, total: Number(pago.monto), estado: tipo === "nota_venta" ? "interno" : "pendiente",
+        idempotency_key: idem, reserva_id: r?.id ?? null, pedido_id: pago.pedido_id ?? null, creado_por: yo.id,
       }).select().single();
       if (ins.error) return error("No se pudo guardar el comprobante.", 500);
       c = ins.data;
@@ -158,7 +183,7 @@ Deno.serve(async (req) => {
   }
 
   // ---------------- acciones sobre un comprobante ----------------
-  if (["consultar", "reenviar", "anular"].includes(b.accion)) {
+  if (["consultar", "reenviar", "anular", "nota_credito"].includes(b.accion)) {
     const { data: c } = await sb.from("comprobantes").select("*").eq("id", Number(b.comprobante_id)).maybeSingle();
     if (!c) return error("No existe ese comprobante.", 404);
     if (c.tipo === "nota_venta") return error("Las notas de venta son internas: no van a SUNAT.");
@@ -179,10 +204,29 @@ Deno.serve(async (req) => {
       await auditar("reenvió", `${nuevo.numero_completo ?? nuevo.serie} · ${nuevo.estado}`, c.id);
       return json({ comprobante: nuevo });
     }
-    // anular: pide la clave de administrador abierta (o ser admin)
-    if (perfil.rol !== "admin") {
-      const { data: ses } = await sb.from("sesiones_admin").select("hasta").eq("usuario_id", yo.id).maybeSingle();
-      if (!ses || new Date(ses.hasta) < new Date()) return error("Anular pide la clave de administrador.", 403);
+    // anular y nota de crédito: piden la clave de administrador abierta (o ser admin)
+    if (!(await claveAbierta())) return error("Esto pide la clave de administrador.", 403);
+    if (b.accion === "nota_credito") {
+      if (!["aceptado", "observado"].includes(c.estado) || !["boleta", "factura"].includes(c.tipo)) return error("Solo se hace nota de crédito de boletas o facturas aceptadas.");
+      if (!["01", "02", "06"].includes(String(b.motivo))) return error("Elige el motivo de la nota de crédito.");
+      const tipoSerie = c.tipo === "factura" ? "nota_credito_factura" : "nota_credito_boleta";
+      const { data: sNc } = await sb.from("series").select("serie").eq("tipo", tipoSerie).eq("activa", true).limit(1).maybeSingle();
+      if (!sNc) return error("No hay serie activa para notas de crédito.");
+      const idem = `hotel:nc:${c.id}`;
+      let { data: nc } = await sb.from("comprobantes").select("*").eq("idempotency_key", idem).maybeSingle();
+      if (!nc) {
+        const ins = await sb.from("comprobantes").insert({
+          tipo: "nota_credito", serie: sNc.serie, cliente_tipo_doc: c.cliente_tipo_doc, cliente_num_doc: c.cliente_num_doc, cliente_nombre: c.cliente_nombre,
+          cliente_direccion: c.cliente_direccion, items: c.items, total: c.total, estado: "pendiente", afectado_id: c.id, motivo_nota: String(b.motivo),
+          descripcion_motivo: String(b.descripcion ?? "").slice(0, 250) || "Anulación de la operación", reserva_id: c.reserva_id, pedido_id: c.pedido_id,
+          idempotency_key: idem, creado_por: yo.id,
+        }).select().single();
+        if (ins.error) return error("No se pudo guardar la nota de crédito.", 500);
+        nc = ins.data;
+      }
+      nc = await enviar(nc);
+      await auditar("emitió nota de crédito", `${nc.numero_completo ?? nc.serie} sobre ${c.numero_completo} · ${nc.estado}`, nc.id, "con_clave");
+      return json({ comprobante: nc });
     }
     if (!["aceptado", "observado"].includes(c.estado)) return error("Solo se anulan comprobantes aceptados por SUNAT.");
     if (!b.motivo) return error("Escribe el motivo.");

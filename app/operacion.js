@@ -254,7 +254,10 @@
     tabla: 'productos', llave: 'id', orden: ['categoria', 'nombre'], ayuda: 'Lo que se carga a la habitación: desayunos, bebidas, lavandería…',
     campos: [{ k: 'nombre', l: 'Nombre', req: true }, { k: 'categoria', l: 'Categoría', req: true, ayuda: 'Ej.: Bebidas, Desayuno, Servicios' },
       { k: 'tipo', l: 'Tipo', tipo: 'select', opciones: ['Servicio', 'Producto', 'Kit'] }, { k: 'precio', l: 'Precio (S/)', tipo: 'number', req: true },
-      { k: 'unidad', l: 'Unidad SUNAT', tipo: 'select', opciones: ['ZZ', 'NIU'], ayuda: 'ZZ para servicios, NIU para productos.' }, { k: 'activo', l: 'Se vende', tipo: 'check' }],
+      { k: 'unidad', l: 'Unidad SUNAT', tipo: 'select', opciones: ['ZZ', 'NIU'], ayuda: 'ZZ para servicios, NIU para productos.' },
+      { k: 'stock_minimo', l: 'Stock mínimo (solo productos)', tipo: 'number', ayuda: 'Avisa en Almacén cuando quedan menos.' },
+      { k: 'en_restaurante', l: 'Se vende en el restaurante', tipo: 'check' }, { k: 'destino', l: 'Comanda va a', tipo: 'select', opciones: ['', 'Cocina', 'Barra'] },
+      { k: 'activo', l: 'Se vende', tipo: 'check' }],
     columnas: [['Producto', function (f) { return f.nombre; }], ['Categoría', function (f) { return f.categoria; }], ['Precio', function (f) { return soles(f.precio); }], ['Se vende', function (f) { return siNo(f.activo); }]],
     nuevo: { tipo: 'Servicio', unidad: 'ZZ', activo: true },
     validar: function (d) { return d.precio >= 0 ? '' : 'El precio no puede ser negativo.'; }

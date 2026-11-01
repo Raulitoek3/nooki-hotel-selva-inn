@@ -159,6 +159,7 @@
       '<div class="card bienvenida"><h2>Módulos del sistema</h2>' +
       '<p>' + intro + ' ' + listos + ' de ' + mios.length + ' ya ' + (listos === 1 ? 'funciona' : 'funcionan') +
       ' con datos reales. Los marcados <b>Vista previa</b> abren el diseño final con <b>datos de ejemplo</b>: puedes probarlos, pero nada se guarda.</p></div>' +
+      '<div id="resumenDia"></div>' +
       '<section class="card ocupacion" id="ocupacionPisos"><p class="vacio">Cargando la ocupación por piso…</p></section>' +
       '<div class="modulos">' + mios.map(function (m) {
         var href = m.conectado ? '#' + m.k : '/vista-previa/#' + m.k;
@@ -167,6 +168,7 @@
           '<b>' + esc(m.l) + '</b><span class="ayuda">' + esc(m.d) + '</span></a>';
       }).join('') + '</div>';
     cargarOcupacionInicio();
+    if (window.HS && HS.resumenDia) HS.resumenDia($('#resumenDia'));
   }
 
   /* ---------------- Usuarios ---------------- */

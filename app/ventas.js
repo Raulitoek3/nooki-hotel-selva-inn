@@ -38,6 +38,7 @@
             if (op && ['pendiente', 'enviando', 'por_verificar'].indexOf(x.estado) >= 0) acc.push('<button class="btn btn-sm" type="button" data-a="consultar">Consultar</button>');
             if (op && ['error', 'sin_internet'].indexOf(x.estado) >= 0) acc.push('<button class="btn btn-sm" type="button" data-a="reenviar">Reenviar</button>');
             if (op && ['aceptado', 'observado'].indexOf(x.estado) >= 0 && (x.tipo === 'boleta' || x.tipo === 'factura')) acc.push('<button class="btn btn-sm" type="button" data-a="anular">Anular</button>');
+            if (op && ['aceptado', 'observado'].indexOf(x.estado) >= 0 && (x.tipo === 'boleta' || x.tipo === 'factura')) acc.push('<button class="btn btn-sm" type="button" data-a="nc">Nota de crédito</button>');
             return '<tr data-id="' + x.id + '"><td><b>' + esc(x.numero_completo || x.serie + '-…') + '</b><small>' + esc(TIPOS[x.tipo] || x.tipo) + ' · ' + HS.fecha(x.emitido_en) + '</small></td>' +
               '<td><b>' + esc(x.cliente_nombre || 'Clientes varios') + '</b><small>' + esc(x.cliente_num_doc || '') + '</small></td>' +
               '<td class="c-dato" data-l="Total">' + soles(x.total) + '</td>' +
@@ -79,6 +80,21 @@
         });
       });
     }
+  };
+  ACC.nc = function (x) {
+    HS.conClave('Emitir una nota de crédito', function () {
+      HS.abrirModal({
+        titulo: 'Nota de crédito sobre ' + (x.numero_completo || ''), ok: 'Emitir nota de crédito', peligro: true,
+        cuerpo: '<p>Devuelve o corrige el total de ' + soles(x.total) + '. Queda en la auditoría.</p>' +
+          '<label>Motivo<select id="ncMot"><option value="01">01 · Anulación de la operación</option><option value="02">02 · Anulación por error en el RUC</option><option value="06">06 · Devolución total</option></select></label>' +
+          '<label>Detalle<input id="ncDes" type="text" placeholder="Ej.: El huésped canceló la reserva"></label>',
+        guardar: function () {
+          return HS.facturar({ accion: 'nota_credito', comprobante_id: x.id, motivo: $('#ncMot').value, descripcion: $('#ncDes').value.trim() }).then(function (r) {
+            HS.aviso('Nota de crédito ' + ((r.comprobante || {}).numero_completo || '') + ' · ' + ((HS.EST_COMP[(r.comprobante || {}).estado] || ['enviada'])[0]) + '.'); renderVentas();
+          });
+        }
+      });
+    });
   };
   function fin(msg) { return function () { HS.aviso(msg); renderVentas(); }; }
   function falla(b) { return function (e) { b.disabled = false; HS.aviso(e.mensaje); }; }

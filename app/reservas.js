@@ -121,7 +121,7 @@
 
   function renderNueva() {
     var hoy = HS.hoyLima(), pf = prefill || {}; prefill = null;
-    nr = { cliente: null, entrada: pf.entrada || hoy, salida: sumarDias(pf.entrada || hoy, 1), elegidas: {}, precios: {}, precioLibre: false, H: null, cat: null, libres: [] };
+    nr = { cliente: null, entrada: pf.entrada || hoy, salida: pf.salida || sumarDias(pf.entrada || hoy, 1), elegidas: {}, precios: {}, precioLibre: false, H: null, cat: null, libres: [] };
     if (pf.habitacion) nr.elegidas[pf.habitacion] = true;
     $('#contenido').innerHTML = cabeza('Nueva reserva', 'Cliente, fechas y habitaciones. El precio sale de la tarifa y la temporada.', '<a class="btn" href="#reservas">Cancelar</a>') +
       '<div class="nr">' +
@@ -623,5 +623,7 @@
   HS.vista('reserva', { l: 'Reserva', roles: TODOS, render: renderReserva, menu: false, padre: 'reservas' });
   HS.vista('clientes', { l: 'Clientes', roles: OPERAN, render: renderClientes, menu: false, padre: 'reservas' });
   ['panel', 'nueva', 'reservas', 'clientes'].forEach(HS.conectar);
-  HS.reservas = { fCorta: fCorta, noches: noches, pillRes: pillRes, sumarDias: sumarDias, clientesDe: clientesDe, docTxt: docTxt, cabeza: cabeza, vacio: vacio, porId: porId };
+  HS.nuevaReserva = function (pf) { prefill = pf; HS.ir('#nueva'); };
+  HS.cuentaDe = cuentaDe;
+  HS.reservas = { fCorta: fCorta, diasEntre: diasEntre, fLarga: fLarga, catalogos: catalogos, ACTIVAS: ACTIVAS, noches: noches, pillRes: pillRes, sumarDias: sumarDias, clientesDe: clientesDe, docTxt: docTxt, cabeza: cabeza, vacio: vacio, porId: porId };
 })();

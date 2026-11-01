@@ -322,3 +322,36 @@ a.btn{text-decoration:none}
 
 .cuenta li > span{flex:1;min-width:0}
 .cuenta li > b{white-space:nowrap}
+
+/* Menú en dos filas en pantallas grandes */
+@media (min-width: 761px){
+  .top{flex-wrap:wrap}
+  .nav{flex-wrap:wrap;overflow:visible;gap:2px}
+  .nav a{min-height:40px;padding:0 10px;font-size:14px}
+}
+/* Restaurante */
+.carta{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cant{display:flex;align-items:center;gap:6px}
+.cant .btn-icon{width:40px;height:40px;border:1px solid var(--border-2)}
+.ok-txt{color:var(--libre)}
+/* Timeline */
+.tl-mes{margin:-8px 0 12px}
+.tl-caja{overflow-x:auto;padding:0}
+.tl{border-collapse:separate;border-spacing:0;font-size:13px;min-width:100%}
+.tl th,.tl td{border-bottom:1px solid var(--border);border-right:1px solid var(--border);height:44px;min-width:38px;padding:0;text-align:center}
+.tl thead th{position:sticky;top:0;background:var(--surface);font-weight:600;color:var(--text-2)}
+.tl .tl-hab{position:sticky;left:0;z-index:1;background:var(--surface);min-width:96px;text-align:left;padding:4px 10px;font-weight:700}
+.tl .tl-hab small{display:block;font-weight:400;color:var(--text-3);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
+.tl th.tl-hoy{background:var(--accent-soft);color:var(--accent)}
+.tl th.tl-fin{color:var(--text-3)}
+.tl td.tl-fuera{background:var(--sunken)}
+.tl td button{width:100%;height:44px;border:0;background:none;cursor:pointer;font:inherit}
+.tl td.tl-libre button:hover{background:var(--accent-soft)}
+.tl td.tl-r{padding:3px}
+.tl td.tl-r button{height:38px;border-radius:8px;border:1px solid var(--s);background:var(--ss);color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px;text-align:left}
+.leyenda{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.leyenda .chip{background:var(--ss);color:var(--s)}
+
+.det-grid.dos > section:last-child{grid-column:auto}
+.tl td.tl-r button{width:0;min-width:100%}
+.tl .tl-hab{width:118px;min-width:118px;max-width:118px}

@@ -1,0 +1,42 @@
+# Respaldo diario de la base del Hotel Selva Inn (el plan gratis de Supabase no hace copias).
+# También mantiene el proyecto activo para que Supabase no lo pause.
+#
+# Necesita UN secreto del repositorio (lo pone Raúl en GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL = cadena de conexión de Supabase (Project Settings → Database → Connection string → "Session pooler").
+# El respaldo queda como "artifact" privado del repositorio por 30 días (Actions → la ejecución → Artifacts).
+name: Respaldo diario
+
+on:
+  schedule:
+    - cron: "17 8 * * *"   # 03:17 de Lima todos los días
+  workflow_dispatch: {}     # también se puede correr a mano
+
+permissions:
+  contents: read
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar pg_dump 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      - name: Respaldar (esquemas public y auth)
+        env:
+          DB: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$DB" ]; then echo "::warning::Falta el secreto SUPABASE_DB_URL: no se hizo el respaldo."; echo "ARCHIVO=" >> "$GITHUB_ENV"; exit 0; fi
+          F="selvainn-$(TZ=America/Lima date +%Y-%m-%d).sql.gz"
+          /usr/lib/postgresql/17/bin/pg_dump "$DB" --no-owner --no-privileges --schema=public --schema=auth | gzip -9 > "$F"
+          ls -lh "$F"
+          echo "ARCHIVO=$F" >> "$GITHUB_ENV"
+      - name: Guardar el respaldo (30 días)
+        if: env.ARCHIVO != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARCHIVO }}
+          path: ${{ env.ARCHIVO }}
+          retention-days: 30
